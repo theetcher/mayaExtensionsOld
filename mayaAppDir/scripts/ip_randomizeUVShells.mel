@@ -1,0 +1,78 @@
+global proc ip_randomizeUVShells () {
+	//get optionVar value
+	float $ovU = `optionVar -q "ip_randomizeUVShellsU"`;
+	float $ovV = `optionVar -q "ip_randomizeUVShellsV"`;
+	
+	if (`window -exists ip_randomizeUVShellsWin`) { deleteUI ip_randomizeUVShellsWin; }
+		
+		window -title ("Randomize UVShells") ip_randomizeUVShellsWin;
+			
+		columnLayout;
+			separator -h 10 -vis 1 -st "none";
+		setParent ..;
+		/*
+		rowColumnLayout -numberOfColumns 2 -columnAttach 1 "right" 0 -columnWidth 1 50 -columnWidth 2 130;
+			text -label "shift U: ";
+			string $sU = `floatField -minValue -1 -maxValue 1 -value 0`;
+			text -label "shift V: ";
+			string $sV = `floatField -minValue -1 -maxValue 1 -value 0`;
+		setParent ..;
+		*/
+		columnLayout;// -co "left" 10;
+			string $sU = `floatSliderGrp -label "random value U" -field true -minValue 0.0 -maxValue 1.0  -value $ovU -cw 1 90 -cw 2 50 -pre 2`;
+			string $sV = `floatSliderGrp -label "random value V" -field true -minValue 0.0 -maxValue 1.0  -value $ovV -cw 1 90 -cw 2 50 -pre 2`;
+		setParent ..;
+		
+		columnLayout;
+			separator -h 20 -w 300 -vis 1 -st "in";
+		setParent ..;
+		rowColumnLayout -numberOfColumns 2 -columnWidth 1 65 -columnWidth 2 65 -columnAttach 1 "left" 100 -columnAttach 2 "left" 90;
+		button -l "  Apply  " -c ("ip_applyRandomUVShells(\""+$sU+"\", \""+$sV+"\")");
+		button -l "  Close  " -c "deleteUI ip_randomizeUVShellsWin";
+		
+		showWindow ip_randomizeUVShellsWin;
+			
+		window -e -w 310 -h 130 -s 0 ip_randomizeUVShellsWin;
+}
+
+global proc ip_applyRandomUVShells (string $sU, string $sV) {
+	float $adjustedU = `floatSliderGrp -q -v $sU`;
+	float $adjustedV = `floatSliderGrp -q -v $sV`;
+	
+	optionVar -fv "ip_randomizeUVShellsU" $adjustedU;
+	optionVar -fv "ip_randomizeUVShellsV" $adjustedV;
+
+	//get|save selection
+	string $selList[] = `ls -sl -fl`;
+	
+	//to UV
+	PolySelectConvert 4;
+	
+	//to UVShells
+	//SelectUVShell;
+	
+	string $mapList[] = `ls -sl -fl`;
+	
+	while (`size $mapList` > 0) {
+		select $mapList[0];
+		
+		//to UVShells
+		SelectUVShell;
+		
+		//randomize UV
+		$randU = `rand (0-$adjustedU) $adjustedU`;
+		$randV = `rand (0-$adjustedV) $adjustedV`;
+		
+		//shift UV
+		polyEditUV -u $randU -v $randV;
+		
+		//remove current UVs
+		$shell = `ls -sl -fl`;
+		$mapList = stringArrayRemove($shell, $mapList);
+	}
+
+	//rest selection
+	select $selList;
+}
+
+//ip_randomizeUVShells;

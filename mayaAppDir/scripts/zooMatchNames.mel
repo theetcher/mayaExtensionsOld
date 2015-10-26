@@ -1,0 +1,144 @@
+//given a list of names, and a list of targets, returns an array of targets that most closely match the source list
+global proc string[] zooMatchNames( string $sources[], string $targets[], string $optionStr ) {
+	string $matchedList[];
+	string $temp[];
+	int $strip = 0;
+	int $parity = 0;
+	int $opposite = 0;
+	int $threshold = 0;
+	int $sort = 0;
+
+	$temp = `zooGetFlagArguments $optionStr strip`; if( `size $temp` ) $strip = $temp[0];
+	$temp = `zooGetFlagArguments $optionStr parity`; if( `size $temp` ) $parity = $temp[0];
+	$temp = `zooGetFlagArguments $optionStr opposite`; if( `size $temp` ) $opposite = $temp[0];
+	$temp = `zooGetFlagArguments $optionStr threshold`; if( `size $temp` ) $threshold= $temp[0];
+	$temp = `zooGetFlagArguments $optionStr sort`; if( `size $temp` ) $sort= $temp[0];
+
+	if( $strip ) {
+		for( $n=0; $n<`size $sources`; $n++ ) $sources[$n] = `match "[^:|]+$" $sources[$n]`;
+		for( $n=0; $n<`size $targets`; $n++ ) $targets[$n] = `match "[^:|]+$" $targets[$n]`;
+		}
+
+	if( $sort ) { $sources = `sort $sources`; $targets = `sort $targets`; }
+	for( $src in $sources ) {
+		string $srcTokens[];
+		int $srcParity = `zooMatchHasParity $src`;
+		int $numSrcTokens = `tokenize $src "_|:" $srcTokens`;
+		int $tokenMatchCount[];  //this array holds the number of tokens that match between each target
+		int $count = 0;
+
+		//first, initialise the token count array
+		for( $a=0; $a<`size $targets`; $a++ ) $tokenMatchCount[$a] = 0;
+
+		//now start going through each target
+		for( $tgt in $targets ) {
+			string $tgtTokens[];
+			int $numTgtTokens = `tokenize $tgt "_|:" $tgtTokens`;
+			int $tgtParity = `zooMatchHasParity $tgt`;
+
+			//first, check to see if the names are the same
+			if( $src == $tgt && !$opposite ) {
+				$tokenMatchCount[$count] = 10*$numTgtTokens;  //this is the strongest match possible
+				$count++;
+				continue;
+				}
+
+			//are the names the same bar case differences?
+			if( `tolower $src` == `tolower $tgt` && !$opposite ) {
+				$tokenMatchCount[$count] = 8*$numTgtTokens;
+				$count++;
+				continue;
+				}
+
+			//if the user wants opposite parities matched, then swap the parity of the target to simplify additional code
+			if( $opposite ) if( $tgtParity ) $tgtParity = $tgtParity == 1? 2: 1;
+
+			//if the parities on each name don't match, continue looping.  parities must match for the match to succeed
+			if( $parity ) if( $srcParity != $tgtParity ) {
+				$count++;
+				continue;
+				}
+
+			//if the user wants opposite parities matched, then continue looping if the source has parity and it matches the target parity
+			//if( $parity && $opposite ) if( $srcParity ) if( $srcParity == $tgtParity ) {
+			//	$count++;
+			//	continue;
+			//	}
+
+			//if not, its time to see how many of the tokens match up
+			for( $srcTok in $srcTokens ) {
+				int $bestTokMatch = 0;
+				for( $tgtTok in $tgtTokens ) {
+					if( $srcTok == $tgtTok ) { $bestTokMatch = 5; break; }  //if the tokens match, this is the strongest possible match - so break from the token matching loop
+					else if( `tolower $srcTok` == `tolower $tgtTok` ) $bestTokMatch = 4;  //if the tokens are a caseless match, this is a strong match
+					else if( $bestTokMatch<2 ) if( `match (tolower($srcTok)) (tolower($tgtTok))` == tolower($srcTok)) $bestTokMatch = 2;  //this is a rough match
+					else if( $bestTokMatch<2 ) if( `match (tolower($tgtTok)) (tolower($srcTok))` == tolower($tgtTok)) $bestTokMatch = 2;
+					//else if( $bestTokMatch<1 ) if( `match (tolower($srcTok)) (tolower($tgtTok))` != "" ) $bestTokMatch = 1;  //this is a weak match
+					//else if( $bestTokMatch<1 ) if( `match (tolower($tgtTok)) (tolower($srcTok))` != "" ) $bestTokMatch = 1;
+					}
+
+				$tokenMatchCount[$count]+=$bestTokMatch;
+				}
+
+			//now increment our counter
+			$count++;
+			}
+
+		//debugging line - useful for printing match stats when fine tuning the algorithm
+		//for( $x=0; $x<`size $targets`; $x++ ) print( $targets[$x] +" - "+ $tokenMatchCount[$x] +"\n" );
+
+		//figure out which target has the highest number of token name matches
+		int $high = 0;
+		int $num = 0;
+		for( $i=0; $i<`size $tokenMatchCount`; $i++ ) if( $tokenMatchCount[$i] > $high ) {
+			$high = $tokenMatchCount[$i];
+			$num = $i;
+			}
+
+		int $mult = $threshold;
+		if( $threshold == -1 ) $mult = $numSrcTokens;
+		if( $high && $high > ($mult*4*$numSrcTokens)) $matchedList[( `size $matchedList` )] = $targets[$num];
+		else $matchedList[( `size $matchedList` )] = "";
+		}
+
+	return $matchedList;
+	}
+
+
+//returns a parity number for a given name.  parity is 0 for none, 1 for left, and 2 for right
+global proc int zooMatchHasParity( string $name ) {
+	string $parityTestsL[] = { "l","left", "lft", "lt" };
+	string $parityTestsR[] = { "r","right", "rgt", "rt" };
+	int $parity = 0;
+
+	$name = `tolower $name`;
+	for( $test in $parityTestsL ) if( size(`match ( "_" + $test + "[0-9]*$" ) $name`)) {
+		$parity = 1;
+		break;
+		}
+
+	for( $test in $parityTestsR ) if( size(`match ( "_" + $test + "[0-9]*$" ) $name`)) {
+		$parity = 2;
+		break;
+		}
+
+	return $parity;
+	}
+
+
+/*
+given a list of names, and a list of targets, returns an array of targets that most closely match the source list
+------
+
+example:
+zooMatchNames { "arm_L", "char_leg_left" }{ "an_objectName", "leg_left", "char_leg", "head_ctrl_obj", "arm_R", "char_arm_L" } "-parity 1 -threshold -1"
+returns the array: { "char_arm_Left", "char_arm_Left" }
+
+while doing:
+zooMatchNames { "arm_L", "char_leg_left" }{ "an_objectName", "leg_l", "char_leg", "head_ctrl_obj", "arm_R", "char_arm_Left" } "-parity 0 -threshold 0"
+returns the array: { "char_arm_Left", "char_leg" }
+
+names that the proc can't match get (ie that have no matches at all) get matched to the first target in the list
+*/
+
+//zoo.end

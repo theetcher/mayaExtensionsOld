@@ -1,0 +1,52 @@
+global proc fix_findObjectsWithTexture()
+{
+
+if (0 == (`optionVar -ex "fix_texWildcard"`)) optionVar -sv "fix_texWildcard" ""; 
+
+string $texWildcard = `optionVar -q "fix_texWildcard"`;
+
+string $result = `promptDialog
+	-title "Find Objects With Texture"
+	-message "Texture Wildcard: "
+	-text $texWildcard
+	-button "OK"
+	-button "Cancel"
+	-defaultButton "OK"
+	-cancelButton "Cancel"
+	-dismissString "Cancel"`;
+
+
+if ( $result == "OK" ) {
+
+	select -cl;
+	string $fileNodesWithTexture[];
+	string $texWildcard = `promptDialog -q`;
+	string $texNameAndPath;
+	string $texNameAndPathTokenized[];
+
+	optionVar -sv "fix_texWildcard" $texWildcard;
+
+	string $fileNodes[] = `ls -typ "file"`;
+	
+	$i = 0;
+	for ($fileNode in $fileNodes) {
+		$texNameAndPath = `getAttr ($fileNode+".ftn")`;
+		tokenize $texNameAndPath "\/" $texNameAndPathTokenized;
+		if (`gmatch $texNameAndPathTokenized[(size($texNameAndPathTokenized)-1)] $texWildcard`) {
+			$fileNodesWithTexture[$i] = $fileNode;
+			$i++;
+			
+		}
+	}
+	
+	watchStrArr($fileNodesWithTexture,"$fileNodesWithTexture");
+	
+	if (0 != size($fileNodesWithTexture)) {
+		string $materials[] = `listConnections -t lambert -s 0 -d 1 $fileNodesWithTexture`;
+		select `listConnections -t shadingEngine -s 0 -d 1 $materials`;
+	}
+
+}
+
+
+}

@@ -1,0 +1,38 @@
+global proc fix_moveVerticesByNormal()
+{
+
+
+string $selNodes[] = `selectedNodes`;
+
+if (0 == (`optionVar -ex "fix_vertexNormalOffset"`)) optionVar -fv "fix_vertexNormalOffset" 0; 
+float $vertexNormalOffset = `optionVar -q "fix_vertexNormalOffset"`;
+
+string $result = `promptDialog
+	-title "Move Vertices By Normal"
+	-message "Normal Offset: "
+	-text $vertexNormalOffset
+	-button "OK"
+	-button "Cancel"
+	-defaultButton "OK"
+	-cancelButton "Cancel"
+	-dismissString "Cancel"`;
+
+
+if ( $result == "OK" ) {
+
+	PolySelectConvert 3;
+	string $selVertices[] = `ls -sl -fl -l`;
+
+	$vertexNormalOffset = `promptDialog -q`;
+	optionVar -fv "fix_texWildcard" $vertexNormalOffset;
+	
+	$cmd = "moveVertexAlongDirection ";
+	for ($selVertice in $selVertices) $cmd = $cmd + "-n " + $vertexNormalOffset + " ";
+	eval($cmd);
+
+}
+
+select $selNodes;
+
+
+}

@@ -1,0 +1,83 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: GOAToggleFullScreen v1.1
+''    Author: Simon Polz
+''    Last Updated: June 24, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=interface#1795
+''  
+''  History:
+''    GOAToggleFullScreen v1.0 on June 21, 2002 by Simon Polz
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+
+
+/* ToggleFullScreen V1.1 Copyleft by Simon Polz (simon.polz@godonacid.com)
+
+Description:
+Use Ctrl + Space to toggle the visibility of the UI elements. You can quit Maya with hidden UI elements and they will be restored automatically before Maya exits so your UI configuration won't be accidently lost. Feedback is welcome.
+
+Setup:
+1. Copy the mel file to your scripts directory (e.g. C:\Documents and Settings\[username]\My Documents\maya\scripts\).
+2. Source it (Script Editor->File->Source File...). This will set up the hotkey Ctrl-Space (if available) to hide and restore the UI.
+3. Done. Use Ctrl-Space to toggle the visibility of the UI elements.
+4. If the hotkey Ctrl-Space was not available at installation set up a hotkey and let it execute the procedure GOAToggleFullScreen.
+
+Changes:
+V1.1: UI elements are automatically restored before Maya exits. Your UI elements configuration won't be lost if you quit the application with hidden UI elements.
+*/
+// global variable to remember current screen status
+global int $GOAIsFullScreen;
+
+// toggles the visiblity of the UI elements
+global proc GOAToggleFullScreen() {
+  global int $GOAIsFullScreen;
+  if ($GOAIsFullScreen == 0)
+  {
+    // unknown state - first time use - let's assume we have to restore UI elements and then hide them again
+//    setAllMainWindowComponentsVisible 1; // restore
+    RestoreUIElements;
+    setAllMainWindowComponentsVisible 0; // hide
+    if (0 == isUIComponentVisible("Shelf"))
+    	toggleUIComponentVisibility ("Shelf");
+    $GOAIsFullScreen = 1; // update status to "hidden"
+    scriptJob -e "quitApplication" GOAToggleFullScreenCleanUp;
+  }
+  else if ($GOAIsFullScreen == 1) // UI is hidden, restore UI
+  {
+    // restore UI elements
+    RestoreUIElements;
+//    setAllMainWindowComponentsVisible 1;
+    if (0 == isUIComponentVisible("Shelf"))
+    	toggleUIComponentVisibility ("Shelf");
+    $GOAIsFullScreen = 2; // update status to "restored"
+  }
+  else if ($GOAIsFullScreen == 2) // UI is restored, hide UI
+  {
+    // hide UI elements
+    setAllMainWindowComponentsVisible 0;
+    if (0 == isUIComponentVisible("Shelf"))
+    	toggleUIComponentVisibility ("Shelf");
+    $GOAIsFullScreen = 1; // update status to "hidden"
+  }
+}
+
+// restore the UI state before exiting the application to avoid loosing the UI configuration
+global proc GOAToggleFullScreenCleanUp() {
+  global int $GOAIsFullScreen;
+  if ($GOAIsFullScreen == 1) // UI is hidden, restore UI
+  {
+    // restore UI elements
+    RestoreUIElements;
+//    setAllMainWindowComponentsVisible 1;
+    $GOAIsFullScreen = 2; // update status to "restored"
+    savePrefs -g;
+  }
+}
+

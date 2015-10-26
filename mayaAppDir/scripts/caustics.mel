@@ -1,0 +1,1104 @@
+// Copyright (C) 2000 Alias|Wavefront,
+// a division of Silicon Graphics Limited.
+//
+//
+// ALIAS|WAVEFRONT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS|WAVEFRONT BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+//
+//
+//  Script File by Tom Kluyskens
+//  Report BUGs and comments to tkluyskens@aw.sgi.com
+//
+//  Creation Date:	March 29, 2000
+//  Modified last on:  June 26, 2000
+//
+//  Procedure Name:
+//	caustics
+//
+//  Description:
+//	Creates the attribute editor for the Caustics section of the spotlight, plus other caustics UI
+//	It is called upon by the AEspotLightTemplate.mel script
+//
+//  Usage : put this script in your ~/maya/scripts directory, together with the cRender.mel script.
+//	    A modified AEspotLightTemplate.mel script will call the caustics procedure in this script.
+//
+//
+
+
+
+
+global proc createCausticAttributes (string $causticLight) {
+
+	addAttr -ln "useCaustics" -at bool -dv 0 $causticLight;
+	addAttr -ln "cmapResolution" -at long -min 10 -max 100000 -dv 256 $causticLight;
+	addAttr -ln "cAdvanced" -at bool -dv 0 $causticLight;
+	addAttr -ln "cmapHoffset" -at "float" -min -10 -max 10 -dv 0 $causticLight;
+	addAttr -ln "cmapVoffset" -at "float" -min -10 -max 10 -dv 0 $causticLight;
+	addAttr -ln "cmapZoom" -at "float" -min .01 -max 100 -dv 1 $causticLight;
+	addAttr -ln "cmapWhRatio" -at "float" -min .01 -max 100 -dv 1 $causticLight;
+	addAttr -ln "cmapMult" -at "float" -min .02 -max 200 -dv 1 $causticLight;
+	
+	if (!`objExists causticRaytraceQuality`) createCausticRgNodes;
+
+}
+
+
+
+global proc createCausticRgNodes () {
+	
+	// store current selection
+	string $currentSelection[] = `selectedNodes`;
+ 	
+	// get the original render globals nodes
+	string $origRenderQuality[];
+	$origRenderQuality = `listConnections -t renderQuality defaultRenderGlobals`;
+	string $origResolution[];
+	$origResolution = `listConnections -t resolution defaultRenderGlobals`;
+
+	// create caustic render globals nodes
+	// these will be used for the caustic prerenders
+	// and store original render globals nodes as attributes
+	renderQualityNode -name causticRaytraceQuality;
+		addAttr -ln "cFirstTime" -at bool -dv 0 causticRaytraceQuality;  //if this is 0, the user has not yet set caustics to ON on any light
+		setAttr causticRaytraceQuality.edgeAntiAliasing 3;
+		setAttr causticRaytraceQuality.shadingSamples 1;  //higher antialiasing causes tiling artifacts in the cmap renders
+		setAttr causticRaytraceQuality.enableRaytracing 1;
+		addAttr -ln origRenderQuality -dt "string" causticRaytraceQuality;
+		setAttr -type "string" causticRaytraceQuality.origRenderQuality $origRenderQuality[0];
+		addAttr -ln "cRefractions" -at long -min 0 -max 100 -dv 4 causticRaytraceQuality;
+		addAttr -ln "cReflections" -at long -min 0 -max 100 -dv 1 causticRaytraceQuality;
+		addAttr -ln "cFrame" -at "float" -dv 1 causticRaytraceQuality;
+		addAttr -ln "cAnimation" -at bool -dv 0 causticRaytraceQuality;
+		addAttr -ln "cPasses" -at long -min 1 -max 100 -dv 1 causticRaytraceQuality;
+		addAttr -ln "cMotionBlur" -at "float" -min 0 -max 10 -dv 0 causticRaytraceQuality;
+       
+	resolutionNode -name causticRenderResolution;
+		setAttr causticRenderResolution.lockDeviceAspectRatio false;
+		addAttr -ln origResolution -dt "string" causticRenderResolution;
+		setAttr -type "string" causticRenderResolution.origResolution $origResolution[0];
+ 	
+	//sets the prerender script to cRender.
+	//this is the script that will coordinate the caustic prerenders
+	setAttr defaultRenderGlobals.preRenderMel -type "string" "cRender";
+ 	
+	//restore selection and refocus the AE
+	select $currentSelection;
+	global int $refreshCausticAE = 1;
+	
+}
+
+
+
+
+
+global proc cTextureSelected () {
+	
+	textScrollList -e -da cShaderList;
+	textScrollList -e -da cShaderList;
+	textScrollList -e -da cShaderList;
+	textScrollList -e -da cShaderList;
+	textScrollList -e -da cShaderList;
+	textScrollList -e -da cShaderList;
+	textScrollList -e -da cShaderList;
+	textScrollList -e -da cShaderList;
+	textScrollList -e -da cShaderList;
+	textScrollList -e -da cShaderList;
+	if (`textScrollList -q -nsi cTexList` == 0) {
+		
+		textScrollList -e -sii 1 cTexList;
+		cTextureSelected;
+		
+	} else {
+		
+		string $cSelectedTex[] = `textScrollList -q -si cTexList`;
+		showEditorExact $cSelectedTex[0];
+		
+		string $cConnectedShaders[] = `listConnections -d 1 -t lambert -p 1 ($cSelectedTex[0] + ".outColor")`;
+		for ($cConnectedShader in $cConnectedShaders) {
+
+			string $cShaderName[];
+			tokenize ($cConnectedShader, ".", $cShaderName);
+			if ($cShaderName[1] == "incandescence") textScrollList -e -si $cShaderName[0] cShaderList;
+		
+		}
+	
+		cShaderSelected;
+	
+	}
+}
+
+
+
+
+
+global proc cShaderSelected () {
+	
+	string $cAllShaders[] = `textScrollList -q -ai cShaderList`;
+	string $cSelectedTex[] = `textScrollList -q -si cTexList`;
+	string $cSelectedShaders[] = `textScrollList -q -si cShaderList`;
+	
+	int $cSelectObj = `checkBox -q -v cShowObjectsCheckBox`;
+	if ($cSelectObj) select -cl;
+	string $cSelected = "";
+	
+	for ($cShader in $cAllShaders) {
+
+		string $cConnectedTexture[] = `listConnections -s 1 ($cShader + ".incandescence")`;
+		int $cIncandConnected = size($cConnectedTexture);
+		
+		// disconnect 3d caustic textures (we will reconnect them later)
+		if ($cIncandConnected) if ($cConnectedTexture[0] == $cSelectedTex[0]) disconnectAttr ($cSelectedTex[0] + ".outColor") ($cShader + ".incandescence");
+	
+	}
+	
+	
+	for ($cSelectedShader in $cSelectedShaders) {
+
+		string $cConnectedTexture[] = `listConnections -s 1 ($cSelectedShader + ".incandescence")`;
+		int $cIncandConnected = size($cConnectedTexture);
+		
+		if ($cIncandConnected) {
+			string $message = "You are trying to connect this caustic texture\nto the incandescence of " + $cSelectedShader + ".\n\nAnother texture (" + $cConnectedTexture[0] + ") is already connected\nto the incandescence of this shader.\n\nAre you sure you want to remove the existing texture\nand replace it with this caustic texture?";
+			string $answer = `confirmDialog -title "Texture already connected to incandescence"
+				-ma "center"
+				-message $message
+				-button "Replace" -button "Cancel" -defaultButton "Cancel" -cancelButton "Replace"`;
+				
+			if ($answer == "Replace") {
+				
+				connectAttr -f ($cSelectedTex[0] + ".outColor") ($cSelectedShader + ".incandescence");
+				if ($cSelectObj) {
+			
+					hyperShade -objects $cSelectedShader;
+					string $newlySelected[] = `ls -sl`;
+			
+					for ($cSelection in $newlySelected) $cSelected += $cSelection + " ";
+			
+				}
+			
+			}
+			else textScrollList -e -di $cSelectedShader cShaderList;
+			
+		} else {
+			
+			connectAttr -f ($cSelectedTex[0] + ".outColor") ($cSelectedShader + ".incandescence");
+			
+			if ($cSelectObj) {
+			
+				hyperShade -objects $cSelectedShader;
+				string $newlySelected[] = `ls -sl`;
+			
+				for ($cSelection in $newlySelected) $cSelected += $cSelection + " ";
+			
+			}
+		}
+	}
+		
+	if ($cSelectObj && ($cSelected != "")) {
+		
+		string $cSelection[];
+		tokenize ($cSelected, " ", $cSelection);
+		select $cSelection;
+		
+	}
+
+}
+
+
+
+global proc causticTextureWindow () {
+	
+	if (`window -exists causticTexWindow`) deleteUI causticTexWindow;
+	window -title "Caustic Texture Linking Window" -s 0  -w 350 -h 435 causticTexWindow;
+	columnLayout -adj 1;
+	
+	checkBox -label "Select Objects with Material" -v 0 -al "left" -onc cShaderSelected
+		cShowObjectsCheckBox;
+		
+	paneLayout -configuration "vertical2" -h 355 -ps 1 50 100 -ps 2 50 100;
+	columnLayout -adj 1 -cal "center";
+	frameLayout -bv 0 -l "Caustic 3d Texture Nodes";
+	textScrollList -ams 0 -aas 1 -h 310 -sc cTextureSelected cTexList;
+	setParent ..;
+	button -l "New Caustic Texture" -al "center" -c newCausticTexture;
+	setParent ..; 
+	columnLayout -adj 1 -cal "center";
+	frameLayout -bv 0 -l "Shaders";
+	textScrollList -ams 1 -aas 1 -h 335 -sc cShaderSelected cShaderList;
+	setParent ..;
+	setParent ..;
+	setParent ..;
+ 		
+	string $cCommand = "deleteUI causticTexWindow";
+	button -l "Close" -al "center" -c $cCommand;
+				
+	// check if a caustic 3d texture exists
+	// if not so, create the caustic nodes needed for this script to function
+	if (size(`ls -typ CausticMap`) == 0) {
+		
+		// create caustic 3d texture
+		string $causticNode = `shadingNode -asTexture CausticMap`;
+		rename $causticNode "caustic3dTexture";
+	
+	}
+				
+	string $cTextures[] = `ls -typ CausticMap`;
+	for ($cTexture in $cTextures) textScrollList -e -append $cTexture cTexList;
+	textScrollList -e -si $cTextures[0] cTexList;
+
+	string $cShaders[] = `ls -typ lambert`;
+	for ($cShader in $cShaders) textScrollList -e -append $cShader cShaderList;
+	cTextureSelected;
+				
+	showWindow causticTexWindow;
+
+}
+
+
+
+
+global proc newCausticTexture () {
+
+	string $causticNode = `shadingNode -asTexture CausticMap`;
+	rename $causticNode "caustic3dTexture";
+
+	textScrollList -e -ra cTexList;
+	string $cTextures[] = `ls -typ CausticMap`;
+	for ($cTexture in $cTextures) textScrollList -e -append $cTexture cTexList;
+	textScrollList -e -si $cTextures[size($cTextures)-1] cTexList;
+
+	cTextureSelected;
+
+}
+
+
+
+
+
+
+
+
+
+global proc causticsReplace (string $causticLight) {
+
+	string $lightName[];
+	tokenize ($causticLight, ".", $lightName);
+	$causticLight = $lightName[0];
+	
+	setUITemplate -pst attributeEditorTemplate;
+
+	float $useCaustics = `useCausticsValue $causticLight`;
+	string $ONc = ("causticsON " +  $causticLight);
+	string $OFFc = ("causticsOFF " +  $causticLight);
+	checkBox -e -v $useCaustics
+		-onc $ONc -ofc $OFFc
+		cUseCheckBox;
+			
+	button -e -en $useCaustics cTextureButton;
+		
+	frameLayout -e -en $useCaustics -cl (!$useCaustics) cRgFrame;
+ 		
+	string $cCommand = "setAttr " + $causticLight + ".cmapResolution `intSliderGrp -q -v cResSlider`";
+	intSliderGrp -e -v (`getAttr ($causticLight + ".cmapResolution")`)
+		-en (!`getAttr ($causticLight + ".cAdvanced")`)
+		-dc $cCommand -cc $cCommand
+		cResSlider;
+
+	intSliderGrp -e -v (`getAttr causticRaytraceQuality.cRefractions`) cRefrSlider;
+	intSliderGrp -e -v (`getAttr causticRaytraceQuality.cReflections`) cReflSlider;
+
+	checkBox -e -v (`getAttr causticRaytraceQuality.cAnimation`) cAnimCheckBox;
+ 				
+	floatFieldGrp -e -en (!`getAttr causticRaytraceQuality.cAnimation`) -v1 (`getAttr causticRaytraceQuality.cFrame`) cFrameField;
+				
+	string $ONc = ("cAdvancedON " +  $causticLight);
+	string $OFFc = ("cAdvancedOFF " +  $causticLight);
+	float $cAdvValue = `getAttr ($causticLight + ".cAdvanced")`;
+	checkBox -e -v $cAdvValue
+		-onc $ONc -ofc $OFFc
+		cAdvCheckBox;
+				
+	frameLayout -e -en $cAdvValue -vis $cAdvValue -cl (!$cAdvValue) cAdvRgFrame;
+ 				
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapHoffset\" " + "`floatSliderGrp -q -v cHoffSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapHoffset\" " + "`floatSliderGrp -q -v cHoffSlider`";
+	floatSliderGrp -e -v (`getAttr ($causticLight + ".cmapHoffset")`)
+		-minValue -1 -maxValue 1
+		-fieldMinValue -10 -fieldMaxValue 10 -fs 100
+		-dc $cDragCommand -cc $cChangeCommand
+		cHoffSlider;
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapVoffset\" " + "`floatSliderGrp -q -v cVoffSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapVoffset\" " + "`floatSliderGrp -q -v cVoffSlider`";
+	floatSliderGrp -e -v (`getAttr ($causticLight + ".cmapVoffset")`)
+		-minValue -1 -maxValue 1
+		-fieldMinValue -10 -fieldMaxValue 10 -fs 100
+		-dc $cDragCommand -cc $cChangeCommand
+		cVoffSlider;
+
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapWhRatio\" " + "`floatSliderGrp -q -v cRatioSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapWhRatio\" " + "`floatSliderGrp -q -v cRatioSlider`";
+	floatSliderGrp -e -v (`getAttr ($causticLight + ".cmapWhRatio")`)
+		-minValue .1 -maxValue 10
+		-fieldMinValue .01 -fieldMaxValue 100 -fs 100
+		-dc $cDragCommand -cc $cChangeCommand
+		cRatioSlider;
+
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapZoom\" " + "`floatSliderGrp -q -v cZoomSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapZoom\" " + "`floatSliderGrp -q -v cZoomSlider`";
+	floatSliderGrp -e -v (`getAttr ($causticLight + ".cmapZoom")`)
+		-minValue .1 -maxValue 10
+		-fieldMinValue .01 -fieldMaxValue 100 -fs 100
+		-dc $cDragCommand -cc $cChangeCommand
+		cZoomSlider;
+					
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapMult\" " + "`floatSliderGrp -q -v cMultSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapMult\" " + "`floatSliderGrp -q -v cMultSlider`";
+	floatSliderGrp -e -v (`getAttr ($causticLight + ".cmapMult")`)
+		-minValue .2 -maxValue 15
+		-fieldMinValue .02 -fieldMaxValue 200 -fs 100
+		-dc $cDragCommand -cc $cChangeCommand
+		cMultSlider;
+ 
+	float $numOfSamples = (`getAttr causticRenderResolution.height`) * (`getAttr causticRenderResolution.width`) * (`getAttr causticRaytraceQuality.cPasses`);
+	floatFieldGrp -e -en 0 -v1 $numOfSamples cSamplesField;
+ 				
+	// create a camera for the caustic cam view, but only if needed
+	if (`objExists causticCamera`) {
+
+		string $tokens1[];
+		string $path1[] = `ls -l causticCamera`;
+		tokenize($path1[0], "|", $tokens1);
+		string $tokens2[];
+		string $path2[] = `ls -l $causticLight`;
+		tokenize($path2[0], "|", $tokens2);
+				
+		if ($tokens1[size($tokens1)-2] != $tokens2[size($tokens2)-2]) createCausticCamera $causticLight;
+	} 
+	
+	else createCausticCamera $causticLight;
+				
+	while (`modelPanel -ex "cModelPanel"`) deleteUI -pnl "cModelPanel";
+	setParent cCamFrame;
+	modelPanel -mbv 0 -cam causticCamera cModelPanel;
+//	setFocus cModelPanel;
+
+	intSliderGrp -e -v (`getAttr causticRaytraceQuality.cPasses`) cPassesSlider;
+					
+	floatSliderGrp -e -en ( (`checkBox -q -v cAnimCheckBox`) && (`intSliderGrp -q -v cPassesSlider` > 1) )
+		-v (`getAttr causticRaytraceQuality.cMotionBlur`)
+		cMBlurSlider;
+					
+					
+	setUITemplate -ppt;
+	
+
+	global int $refreshCausticAE;
+	if ($refreshCausticAE) {
+		$refreshCausticAE = 0;
+		showEditorExact $causticLight;
+	}
+	
+}
+
+
+
+
+
+
+
+
+
+global proc caustics (string $causticLight) {
+
+	string $lightName[];
+	tokenize($causticLight, ".", $lightName);
+	$causticLight = $lightName[0];
+	
+	
+	setUITemplate -pst attributeEditorTemplate;
+
+	
+
+	columnLayout;
+	rowLayout -nc 2;
+ 		
+	text -l "";
+	float $useCaustics = `useCausticsValue $causticLight`;
+	string $ONc = ("causticsON " +  $causticLight);
+	string $OFFc = ("causticsOFF " +  $causticLight);
+	checkBox -label "Enable Caustics on this Light"
+		-v $useCaustics
+		-al "left" -onc $ONc -ofc $OFFc
+		cUseCheckBox;
+
+	setParent ..;
+	setParent ..;
+ 		
+	columnLayout -cal "center";
+	rowLayout -nc 2 -cw 2 170;
+ 		
+	text -l "";
+	button -l "Assign and Edit Caustic Texture"
+		-en $useCaustics
+		-c causticTextureWindow
+		cTextureButton;
+				
+	setParent ..;
+	setParent ..;
+ 		
+	text -l " ";
+ 		
+	frameLayout -en $useCaustics
+		-lv 1 -l "Caustic Prerender Attributes"
+		-cll 1 -cl (!$useCaustics)
+		-li 5 -bs "etchedIn"
+		cRgFrame;
+	columnLayout -co "both" 20 cRgCol;
+ 		
+	string $cCommand = "setAttr " + $causticLight + ".cmapResolution `intSliderGrp -q -v cResSlider`";
+	intSliderGrp -label "Prerender Resolution"
+		-en (!`getAttr ($causticLight + ".cAdvanced")`)
+		-minValue 128 -maxValue 4096.0
+		-fieldMinValue 10 -fieldMaxValue 100000.0
+		-v (`getAttr ($causticLight + ".cmapResolution")`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cCommand -cc $cCommand
+		cResSlider;
+ 			
+	string $cCommand = "setAttr causticRaytraceQuality.cRefractions `intSliderGrp -q -v cRefrSlider`";
+	intSliderGrp -label "Max Refractions (global)"
+		-minValue 0 -maxValue 10.0
+		-fieldMinValue 0 -fieldMaxValue 100.0
+		-v (`getAttr causticRaytraceQuality.cRefractions`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cCommand -cc $cCommand
+		cRefrSlider;
+	string $cCommand = "setAttr causticRaytraceQuality.cReflections `intSliderGrp -q -v cReflSlider`";
+	intSliderGrp -label "Max Reflections (global)"
+		-minValue 0 -maxValue 10.0
+		-fieldMinValue 0 -fieldMaxValue 100.0
+		-v (`getAttr causticRaytraceQuality.cReflections`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cCommand -cc $cCommand
+		cReflSlider;
+ 			
+	string $cCommand = "setAttr causticRaytraceQuality.cFrame `floatFieldGrp -q -v1 cFrameField`";
+	floatFieldGrp -l "Render Caustics @ frame" -el " (global, batchrender only)"
+		-en (!`getAttr causticRaytraceQuality.cAnimation`)
+		-cal 2 "center" -ct3 "right" "both" "left" -pre 0
+		-v1 (`getAttr causticRaytraceQuality.cFrame`)
+		-dc $cCommand -cc $cCommand
+		cFrameField;
+ 				
+	columnLayout;
+	rowLayout -nc 2;
+ 		
+	text -l "";
+	string $ONc = "setAttr causticRaytraceQuality.cAnimation true ; floatFieldGrp -e -en 0 cFrameField ; if (`intSliderGrp -q -v cPassesSlider` > 1) floatSliderGrp -e -en 1 cMBlurSlider";
+	string $OFFc = "setAttr causticRaytraceQuality.cAnimation false ; floatFieldGrp -e -en 1 cFrameField ; floatSliderGrp -e -en 0 cMBlurSlider";
+	checkBox -label "Animated (global)"
+		-v (`getAttr causticRaytraceQuality.cAnimation`)
+		-al "left" -onc $ONc -ofc $OFFc
+		cAnimCheckBox;
+					
+	setParent ..;
+	setParent ..;
+ 			
+ 			
+	text -l " ";
+	separator;
+ 			
+	columnLayout;
+	rowLayout -nc 2;
+ 		
+	text -l "";
+	string $ONc = ("cAdvancedON " +  $causticLight);
+	string $OFFc = ("cAdvancedOFF " + $causticLight);
+	float $cAdvValue = `getAttr ($causticLight + ".cAdvanced")`;
+	checkBox -l "Optimize (advanced)"
+		-v $cAdvValue
+		-al "left" -onc $ONc -ofc $OFFc
+		cAdvCheckBox;
+					
+	setParent ..;
+	setParent ..;
+ 		
+	frameLayout -en $cAdvValue -vis $cAdvValue 
+		-lv 1 -l "Optimize Caustic Prerender"
+		-cll 1 -cl (!$cAdvValue)
+		-li 5 -bs "etchedIn"
+		cAdvRgFrame;
+	columnLayout -co "both" 20;
+	
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapHoffset\" " + "`floatSliderGrp -q -v cHoffSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapHoffset\" " + "`floatSliderGrp -q -v cHoffSlider`";
+	floatSliderGrp -label "Horizontal Center"
+		-minValue -1 -maxValue 1
+		-fieldMinValue -10 -fieldMaxValue 10 -fs 100
+		-v (`getAttr ($causticLight + ".cmapHoffset")`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cDragCommand -cc $cChangeCommand
+		cHoffSlider;
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapVoffset\" " + "`floatSliderGrp -q -v cVoffSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapVoffset\" " + "`floatSliderGrp -q -v cVoffSlider`";
+	floatSliderGrp -label "Vertical Center"
+		-minValue -1 -maxValue 1
+		-fieldMinValue -10 -fieldMaxValue 10 -fs 100
+		-v (`getAttr ($causticLight + ".cmapVoffset")`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cDragCommand -cc $cChangeCommand
+		cVoffSlider;
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapWhRatio\" " + "`floatSliderGrp -q -v cRatioSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapWhRatio\" " + "`floatSliderGrp -q -v cRatioSlider`";
+	floatSliderGrp -label "Width/Height Ratio"
+		-minValue .1 -maxValue 10
+		-fieldMinValue .01 -fieldMaxValue 100 -fs 100
+		-v (`getAttr ($causticLight + ".cmapWhRatio")`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cDragCommand -cc $cChangeCommand
+		cRatioSlider;
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapZoom\" " + "`floatSliderGrp -q -v cZoomSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapZoom\" " + "`floatSliderGrp -q -v cZoomSlider`";
+	floatSliderGrp -label "Zoom"
+		-minValue .1 -maxValue 10
+		-fieldMinValue .01 -fieldMaxValue 100 -fs 100
+		-v (`getAttr ($causticLight + ".cmapZoom")`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cDragCommand -cc $cChangeCommand
+		cZoomSlider;
+	string $cDragCommand = "advCausticDragCommand " + $causticLight + " \".cmapMult\" " + "`floatSliderGrp -q -v cMultSlider`";
+	string $cChangeCommand = "advCausticChangeCommand " + $causticLight + " \".cmapMult\" " + "`floatSliderGrp -q -v cMultSlider`";
+	floatSliderGrp -label "Sample Mult"
+		-minValue .2 -maxValue 15
+		-fieldMinValue .02 -fieldMaxValue 200 -fs 100
+		-v (`getAttr ($causticLight + ".cmapMult")`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cDragCommand -cc $cChangeCommand
+		cMultSlider;
+					
+	float $numOfSamples = (`getAttr causticRenderResolution.height`) * (`getAttr causticRenderResolution.width`) * (`getAttr causticRaytraceQuality.cPasses`);
+	floatFieldGrp -l "# of Samples" -el " = width*height*passes" -en 0 -pre 0 -cw 2 100 -cal 2 "center" -ct3 "right" "both" "left" -v1 $numOfSamples cSamplesField;
+ 				
+	text -l " ";
+ 				
+	// create a camera for the caustic cam view, but only if needed
+	if (`objExists causticCamera`) {
+
+		string $tokens1[];
+		string $path1[] = `ls -l causticCamera`;
+		tokenize($path1[0], "|", $tokens1);
+		string $tokens2[];
+		string $path2[] = `ls -l $causticLight`;
+		tokenize($path2[0], "|", $tokens2);
+				
+		if ($tokens1[size($tokens1)-2] != $tokens2[size($tokens2)-2]) createCausticCamera $causticLight;
+	} 
+	
+	else createCausticCamera $causticLight;
+ 				
+	while (`modelPanel -ex "cModelPanel"`) deleteUI -pnl "cModelPanel";
+	columnLayout -cw 373 -cal "center" -cat "both" 0;
+	paneLayout -configuration "single" -h 280;
+	frameLayout -lv 0 -cll 0 -bs "etchedIn" cCamFrame;
+	modelPanel -mbv 0 -cam causticCamera cModelPanel;
+//	setFocus cModelPanel;
+	setParent ..;
+	setParent ..;
+	setParent ..;
+ 				
+	text -l " ";
+ 				
+	string $cCommand = "int $passes = `intSliderGrp -q -v cPassesSlider` ; setAttr causticRaytraceQuality.cPasses $passes ; if ($passes < 2) floatSliderGrp -e -en 0 cMBlurSlider; else if (`checkBox -q -v cAnimCheckBox`) floatSliderGrp -e -en 1 cMBlurSlider;float $numOfSamples = (`getAttr causticRenderResolution.height`) * (`getAttr causticRenderResolution.width`) * (`getAttr causticRaytraceQuality.cPasses`);floatFieldGrp -e -en 0 -v1 $numOfSamples cSamplesField;";
+	intSliderGrp -label "# Render Passes (global)"
+		-minValue 1 -maxValue 10
+		-fieldMinValue 1 -fieldMaxValue 100
+		-v (`getAttr causticRaytraceQuality.cPasses`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cCommand -cc $cCommand
+		cPassesSlider;
+	string $cCommand = "setAttr causticRaytraceQuality.cMotionBlur `floatSliderGrp -q -v cMBlurSlider`";
+	floatSliderGrp -label "Motion Blur (global)"
+		-en ( (`checkBox -q -v cAnimCheckBox`) && (`intSliderGrp -q -v cPassesSlider` > 1) )
+		-minValue 0 -maxValue 1
+		-fieldMinValue 0 -fieldMaxValue 10
+		-v (`getAttr causticRaytraceQuality.cMotionBlur`)
+		-field 1 -ct3 "right" "both" "left"
+		-dc $cCommand -cc $cCommand
+		cMBlurSlider;
+					
+	setParent cRgFrame;
+	setParent ..;
+			
+	frameLayout -l "Caustic Tools"
+		-cll 1 -cl 1 -lv 1 
+		-li 5 -bs "etchedIn"
+		cToolsFrame;
+	columnLayout -co "both" 20;
+			 		
+	columnLayout -cal "center";
+	rowLayout -nc 2 -cw 2 160;
+			 		
+	text -l "";
+	button -l "Select Refractive Objects"
+		-c cSelectRefractiveObjects
+		cRefrButton;
+					 				
+	setParent ..;
+	setParent ..;
+	columnLayout -cal "center";
+	rowLayout -nc 2 -cw 2 160;
+						
+	text -l "";
+	button -l "Select Reflective Objects"
+		-c cSelectReflectiveObjects
+		cReflButton;
+					 				
+	setParent ..;
+	setParent ..;
+	columnLayout -cal "center";
+	rowLayout -nc 2 -cw 2 160;
+						
+	text -l "";
+	button -l "Select All Caustic Objects"
+		-c cSelectCausticObjects
+		cSelectButton;
+									
+	setParent ..;
+	setParent ..;
+	text -l "";
+	columnLayout -cal "center";
+	rowLayout -nc 2 -cw 2 160;
+			 		
+	text -l "";
+	button -l "Reset Caustic Maps"
+		-c cResetMaps
+		cResetButton;
+					 				
+	setParent ..;
+	setParent ..;
+
+	setUITemplate -ppt;
+	
+	
+	global int $refreshCausticAE;
+	if ($refreshCausticAE) {
+		$refreshCausticAE = 0;
+		showEditorExact $causticLight;
+	}
+
+}
+
+
+
+
+
+
+
+
+global proc cSelectRefractiveObjects () {
+
+	int $k = 0;
+	string $causticObjects[];
+	clear $causticObjects;
+				
+	$allShaders = `ls -typ lambert`;
+				
+	for ($shader in $allShaders) {
+				
+		int $isCaustic = 0;
+				
+		// check for refractivity or reflectivity
+		if (`getAttr ($shader + ".refractions")`) $isCaustic = 1;
+				
+		// get the refractive objects
+		if ($isCaustic) {
+			hyperShade -objects $shader;
+			for ($obj in `ls -sl`) {
+				$causticObjects[$k] = $obj;
+				$k++;
+			}
+		}
+				
+	}
+				
+	select $causticObjects;
+	if (size($causticObjects)) $causticObjects = `pickWalk -d up`;
+	
+}
+
+
+
+
+
+global proc cSelectReflectiveObjects () {
+
+	int $k = 0;
+	string $causticObjects[];
+	clear $causticObjects;
+
+	$allShaders = `ls -typ lambert`;
+
+	for ($shader in $allShaders) {
+
+		int $isCaustic = 0;
+
+		// check for reflectivity
+		if ( !(`objectType $shader` == "lambert") ) if (`getAttr ($shader + ".reflectivity")` > 0) $isCaustic = 1;
+
+		// get the reflective objects
+		if ($isCaustic) {
+			hyperShade -objects $shader;
+			for ($obj in `ls -sl`) {
+				$causticObjects[$k] = $obj;
+				$k++;
+			}
+		}
+
+	}
+
+	select $causticObjects;
+	if (size($causticObjects)) $causticObjects = `pickWalk -d up`;
+	
+}
+
+
+
+
+global proc cSelectCausticObjects () {
+
+	int $k = 0;
+	string $causticObjects[];
+	clear $causticObjects;
+				
+	$allShaders = `ls -typ lambert`;
+				
+	for ($shader in $allShaders) {
+				
+		int $isCaustic = 0;
+				
+		// check for refractivity or reflectivity
+		if (`getAttr ($shader + ".refractions")`) $isCaustic = 1;
+		if ( !(`objectType $shader` == "lambert") ) if (`getAttr ($shader + ".reflectivity")` > 0) $isCaustic = 1;
+				
+		// get the refractive/reflective objects
+		if ($isCaustic) {
+			hyperShade -objects $shader;
+			for ($obj in `ls -sl`) {
+				$causticObjects[$k] = $obj;
+				$k++;
+			}
+		}
+				
+	}
+			  
+	select $causticObjects;
+	if (size($causticObjects)) $causticObjects = `pickWalk -d up`;
+	
+}
+
+
+
+
+
+
+
+
+
+global proc advCausticChangeCommand (string $causticLight , string $cAttribute , float $cAdvValue) {
+	
+	setAttr ($causticLight + $cAttribute) $cAdvValue;
+
+	switch ($cAttribute) {
+
+	case ".cmapHoffset" :
+		setAttr "causticCamera.horizontalFilmOffset" $cAdvValue;
+		break;
+        
+	case ".cmapVoffset" :
+		setAttr "causticCamera.verticalFilmOffset" $cAdvValue;
+		break;
+        
+	case ".cmapZoom" :
+		$cAdvValue *= (1/ `getAttr ($causticLight + ".cmapWhRatio")`);
+		setAttr "causticCamera.horizontalFilmAperture" (1/$cAdvValue);
+		setAttr "causticCamera.overscan" (.7 + $cAdvValue);
+		break;
+		
+	case ".cmapWhRatio" :
+		setAttr causticRenderResolution.height (sqrt(1/ $cAdvValue) * 256 * `getAttr ($causticLight + ".cmapMult")`);
+		setAttr causticRenderResolution.width (sqrt($cAdvValue) * 256 * `getAttr ($causticLight + ".cmapMult")`);
+		$cAdvValue *= (1/ `getAttr ($causticLight + ".cmapZoom")`);
+		setAttr "causticCamera.horizontalFilmAperture" $cAdvValue;
+		setAttr "causticCamera.overscan" (.7 + 1/$cAdvValue);
+			
+		float $numOfSamples = (`getAttr causticRenderResolution.height`) * (`getAttr causticRenderResolution.width`) * (`getAttr causticRaytraceQuality.cPasses`);
+		floatFieldGrp -e -v1 $numOfSamples cSamplesField;
+		break;
+			
+	case ".cmapMult" :
+		setAttr causticRenderResolution.height (sqrt(1/ (float)`getAttr ($causticLight + ".cmapWhRatio")`) * 256 * $cAdvValue);
+		setAttr causticRenderResolution.width (sqrt((float)`getAttr ($causticLight + ".cmapWhRatio")`) * 256 * $cAdvValue);
+			
+		float $numOfSamples = (`getAttr causticRenderResolution.height`) * (`getAttr causticRenderResolution.width`) * (`getAttr causticRaytraceQuality.cPasses`);
+		floatFieldGrp -e -en1 0 -v1 $numOfSamples cSamplesField;
+		break;
+			
+	}	
+	
+	setAttr "causticCamera.displayResolution" 0;
+	string $currentResNode[] = `listConnections -d true -t resolution defaultRenderGlobals`;
+	if ( !($currentResNode[0]  == `getAttr causticRenderResolution.origResolution`) ) connectAttr -f (`getAttr causticRenderResolution.origResolution` + ".message") defaultRenderGlobals.resolution;
+}
+
+
+
+
+
+
+
+
+
+global proc advCausticDragCommand (string $causticLight , string $cAttribute , float $cAdvValue) {
+	
+	string $currentResNode[] = `listConnections -d true -t resolution defaultRenderGlobals`;
+	if ( !($currentResNode[0] == "causticRenderResolution") ) connectAttr -f causticRenderResolution.message defaultRenderGlobals.resolution;
+	setAttr "causticCamera.displayResolution" 1;
+	
+	setAttr ($causticLight + $cAttribute) $cAdvValue;
+
+	switch ($cAttribute) {
+
+	case ".cmapHoffset" :
+		setAttr "causticCamera.horizontalFilmOffset" $cAdvValue;
+		break;
+        
+	case ".cmapVoffset" :
+		setAttr "causticCamera.verticalFilmOffset" $cAdvValue;
+		break;
+        
+	case ".cmapZoom" :
+		$cAdvValue *= (1/ `getAttr ($causticLight + ".cmapWhRatio")`);
+		setAttr "causticCamera.horizontalFilmAperture" (1/$cAdvValue);
+		setAttr "causticCamera.overscan" (.7 + $cAdvValue);
+		break;
+		
+	case ".cmapWhRatio" :
+		setAttr causticRenderResolution.height (sqrt(1/ $cAdvValue) * 256 * `getAttr ($causticLight + ".cmapMult")`);
+ 		setAttr causticRenderResolution.width (sqrt($cAdvValue) * 256 * `getAttr ($causticLight + ".cmapMult")`);
+ 		$cAdvValue *= (1/ `getAttr ($causticLight + ".cmapZoom")`);
+ 		setAttr "causticCamera.horizontalFilmAperture" $cAdvValue;
+ 		setAttr "causticCamera.overscan" (.7 + 1/$cAdvValue);
+ 		break;
+			
+	case ".cmapMult" :
+		setAttr causticRenderResolution.height (sqrt(1/ (float)`getAttr ($causticLight + ".cmapWhRatio")`) * 256 * $cAdvValue);
+		setAttr causticRenderResolution.width (sqrt((float)`getAttr ($causticLight + ".cmapWhRatio")`) * 256 * $cAdvValue);
+			
+		float $numOfSamples = (`getAttr causticRenderResolution.height`) * (`getAttr causticRenderResolution.width`) * (`getAttr causticRaytraceQuality.cPasses`);
+		floatFieldGrp -e -en1 0 -v1 $numOfSamples cSamplesField;
+		break;
+			
+	}	
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+global proc float useCausticsValue (string $causticLight) {
+
+	if (!`attributeQuery -n $causticLight -ex "useCaustics"`) {
+	
+		// this is the first time caustics is put ON for this light, so create the caustic attributes
+		createCausticAttributes $causticLight;
+		
+	}
+	
+	else if ( !(`pluginInfo -q -l "libCausticMap"`) && (`getAttr ($causticLight + ".useCaustics")`) ) {
+	
+		// caustics are ON, but the plugin is not loaded, so put caustics OFF and warn user
+		setAttr ($causticLight + ".useCaustics") false;
+		
+		string $answer = `confirmDialog -title "Caustics Plugin NOT loaded"
+			-ma "center"
+			-message "The libCausticMap plugin is NOT loaded.\n\nIf you want to use caustics,\nplease load the plugin AND reopen the scene.\n\nThe caustics on this spotlight have been disabled for now.\n"
+			-button "OK" -button "Plugin Manager" -defaultButton "Plugin Manager" -cancelButton "OK"`;
+				
+		if ($answer == "Plugin Manager") pluginWin;
+	};
+	
+	float $uc = `getAttr ($causticLight + ".useCaustics")`;
+	return $uc;
+}
+
+
+
+
+
+global proc causticsON (string $causticLight) {
+
+	if (`pluginInfo -q -l "libCausticMap"`) {
+	
+		// plugin is loaded, so proceed
+		
+		// enable and show the caustic section in the spotlight's AE
+		setAttr ($causticLight + ".useCaustics") true;
+		button -e -en 1 cTextureButton;
+		frameLayout -e -en 1 -cl 0 cRgFrame;
+		
+		//check if this is the first time user enables caustics in this scene
+		//if so, open the Caustic Map Linking window to force user to assign a Caustic Map
+		if (!`getAttr causticRaytraceQuality.cFirstTime`) {
+			setAttr causticRaytraceQuality.cFirstTime true;
+			confirmDialog -title "Please assign a Caustic Map"
+				-ma "center"
+				-message "This is the first time you are enabling caustics in this scene.\n\nPlease assign a Caustic Map to one or more objects\nusing the Caustic Texture Linking Window."
+				-button "OK" -defaultButton "OK" -cancelButton "OK";
+			causticTextureWindow;
+		};
+		
+	} else {
+	
+		// plugin is NOT loaded, so warn user (scene has to be reloaded so the caustic nodes are recognized)
+		setAttr ($causticLight + ".useCaustics") false;
+		checkBox -e -v 0 cUseCheckBox;
+		button -e -en 0 cTextureButton;
+		frameLayout -e -en 0 -cl 1 cRgFrame;
+		
+		string $answer = `confirmDialog -title "Caustics Plugin NOT loaded"
+			-ma "center"
+			-message "The libCausticMap plugin is NOT loaded.\n\nIf you want to use caustics,\nplease load the plugin AND reopen the scene.\n"
+			-button "OK" -button "Plugin Manager" -defaultButton "Plugin Manager" -cancelButton "OK"`;
+				
+		if ($answer == "Plugin Manager") pluginWin;
+				
+	}
+
+}
+
+
+
+
+global proc causticsOFF (string $causticLight) {
+
+	//dim the caustic section
+	setAttr ($causticLight + ".useCaustics") false;
+	button -e -en 0 cTextureButton;
+	frameLayout -e -en 0 -cl 1 cRgFrame;
+	
+	cResetMaps;
+
+}
+
+
+
+
+
+
+global proc cResetMaps () {
+	
+	//wipe all caustic information (reset all caustic maps)
+	string $cMaps[]; clear $cMaps;
+	$cMaps = `ls -typ CausticMap`;
+	for ($cMap in $cMaps) setAttr ($cMap +".preRender") (!`getAttr ($cMap +".preRender")`);
+	dgeval -src $cMap;
+	for ($cMap in $cMaps) setAttr ($cMap +".preRender") (!`getAttr ($cMap +".preRender")`);
+	dgeval -src $cMap;
+	for ($cMap in $cMaps) setAttr ($cMap +".preRender") (!`getAttr ($cMap +".preRender")`);
+	dgeval -src $cMap;
+	for ($cMap in $cMaps) setAttr ($cMap +".preRender") (!`getAttr ($cMap +".preRender")`);
+	
+}
+
+
+
+
+
+global proc cAdvancedON (string $causticLight) {
+
+	// enable and show the advanced caustic section in the spotlight's AE
+	setAttr ($causticLight + ".cAdvanced") true;
+	frameLayout -e -en 1 -vis 1 -cl 0 cAdvRgFrame;
+	
+	intSliderGrp -e -en 0 cResSlider;
+	
+ 	floatFieldGrp -e -en1 0 cSamplesField;
+ 	floatSliderGrp -e -en ( (`checkBox -q -v cAnimCheckBox`) && (`intSliderGrp -q -v cPassesSlider` > 1) ) cMBlurSlider;
+
+}
+
+
+
+
+global proc cAdvancedOFF (string $causticLight) {
+
+	// dim the advanced caustic section
+	setAttr ($causticLight + ".cAdvanced") false;
+	frameLayout -e -en 0 -vis 0 -cl 1 cAdvRgFrame;
+	
+	intSliderGrp -e -en 1 cResSlider;
+
+}
+
+
+
+
+
+
+
+
+
+
+global proc createCausticCamera (string $causticLight) {
+	
+	string $currentSelection[] = `selectedNodes`;
+
+	if (`objExists causticCamera`) delete causticCamera;
+	
+	// create a new camera
+	string $causticCamera[];
+	$causticCamera = `camera`;
+	rename $causticCamera[1] causticCamera;
+	
+	// hide it
+	setAttr "causticCamera.visibility" 0;
+	
+	// set attributes on it
+	setAttr "causticCamera.horizontalFilmAperture" 1;
+	setAttr "causticCamera.verticalFilmAperture" 1;
+	setAttr causticRenderResolution.height (sqrt( 1/ (float)`getAttr ($causticLight + ".cmapWhRatio")` ) * 256 * (`getAttr ($causticLight + ".cmapMult")`));
+	setAttr causticRenderResolution.width (sqrt((float)`getAttr ($causticLight + ".cmapWhRatio")`) * 256 * `getAttr ($causticLight + ".cmapMult")`);
+	setAttr "causticCamera.overscan" 1.7;
+
+	// select spotlight transform
+	select $causticLight;
+	pickWalk -d up;
+	string $spot[] = `ls -sl`;
+	$causticLight = $spot[0];
+	
+	// position it
+	float $lightPosition[] = `xform -ws -q -t $causticLight`;
+	move $lightPosition[0] $lightPosition[1] $lightPosition[2] $causticCamera[0];
+	float $lightOrientation[] = `xform -ws -q -ro $causticLight`;
+	rotate $lightOrientation[0] $lightOrientation[1] $lightOrientation[2] $causticCamera[0];
+	
+	// parent it to the spotlight
+	parent -s -add causticCamera $causticLight;
+	delete $causticCamera[0];
+	
+	select $currentSelection;
+	global int $refreshCausticAE = 1;
+	
+}

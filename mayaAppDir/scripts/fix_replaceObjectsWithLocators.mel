@@ -1,0 +1,37 @@
+// unlike fix_replaceObjWithLoc.mel this is much simplier script:
+// its just move locator under object, resets its transforms, move it one level up and the parent all childs of old parent to new one.
+
+
+global proc fix_replaceObjectsWithLocators()
+{
+	string $objectToReplace[] = `ls -sl -l -tr`;
+	string $locator, $locatorTr, $objName, $obj;
+	string $tmpStrArr[], $childrenToReparent[];
+	
+	$obj = $objectToReplace[0];
+	tokenize $obj "|" $tmpStrArr;
+	$objName = $tmpStrArr[size($tmpStrArr)-1];
+
+	$locator = `createNode locator`;
+	$tmpStrArr = `listRelatives -p $locator`;
+	$locatorTr =  $tmpStrArr[0];
+	
+	$tmpStrArr = `parent $locatorTr $obj`;
+	$locatorTr = $tmpStrArr[0];
+	makeIdentity -apply false -t 1 -r 1 -s 1 $locatorTr;
+	$tmpStrArr = `listRelatives -p -pa $obj`;
+	
+	if ($tmpStrArr[0] != "") $tmpStrArr = `parent $locatorTr $tmpStrArr[0]`;
+		else $tmpStrArr = `parent -w $locatorTr`;
+	$locatorTr = $tmpStrArr[0];
+	
+	$childrenToReparent = `listRelatives -c -pa -typ "transform" $obj`;
+	if (size($childrenToReparent)) parent $childrenToReparent $locatorTr;
+	delete $obj;
+	select(`rename $locatorTr $objName`);
+		
+}   
+
+
+
+

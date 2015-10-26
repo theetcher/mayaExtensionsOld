@@ -1,0 +1,422 @@
+
+// polySplitUVFix  ----------------------------------------------- //
+//                                                                 //
+// Script Name:   polySplitUVFix.mel                               //
+//                                                                 //
+// Creation Date: 10th Feb 2004                                    //
+//                                                                 //
+// Last Updated:  02/13/2004                                       //
+//                                                                 //
+// Author:        David Biggs                                      //
+//                                                                 //
+// Description:   Automatically corrects UV Mapping after using	   //
+//                the PolySplit tool.                              //
+//                                                                 //
+// Setup:                                                          //
+//      Source polySplitUVFix.mel or place it in your              //
+//	~user/my Documents/maya/5.0/scripts folder                     //
+//   Command      toggle_polySplitUVFix                            //
+//      This will turn on a permanent script job that will         //
+//      correct mapping after every poly split.                    //
+//                                                                 //
+//   Command     polySplitUVFix                                    //
+//      This will attempt to fix the UVs of the curretly selected  //
+//      Vertices.                                                  //
+//                                                                 //
+//  1.1 Fixes                                                      //
+//   - Grouped objects would sometimes fail, they work fine now.   //
+//   - Made the fix func a more rubust.							   //
+//   - Improved the auto fix vert selection.                       //
+//                                                                 //
+//                                                                 //
+// NOTE:                                                           //
+//  It will sometimes fail if 3 verts of a the poly are exactly    //
+//  in line.                                                       //
+//                                                                 //
+//                                                                 //
+// --------------------------------------------------------------- //
+// 
+//
+//
+// Basically this script does this......
+//      D
+//      /\
+//     /| \ 
+//    / .  \
+//   /  B   \
+//  /   | ___\
+// /___-Q-    C
+// A
+
+// Point B is added, and we calculate the new UV coord for it.
+
+//A few nasty globals to keep track of things.
+
+global string $last_selection[];
+global string $last_Ctx;
+global int $polySplitUVFixjobNum;
+
+
+//Finds the UV of a vert given the vert and the face.
+global proc string find_uv(string $face, string $vert){
+	string $temp[];
+	$temp = `polyListComponentConversion -ff -tuv $face`;
+	$temp = `ls -flatten -l $temp`;
+	string $uv;
+	string $temp2[] = `polyListComponentConversion -fv -tuv $vert`;
+	$temp2 = `ls -l -flatten $temp2`;
+	for($faceuv in $temp){
+		for($vertuv in $temp2){
+			if($vertuv == $faceuv)	return $vertuv;
+		}
+	}
+	warning("Error finding UV of Vert " + $vert);
+	return "";
+}
+
+//strips a  polySurface15.vtx[73] to get the int of the component.
+proc int getIndex(string $a) {
+	string $temp[];
+	tokenize($a,"]",$temp);
+	tokenize($temp[0],"[",$temp);
+	int $n = $temp[1];
+	return $n;
+}
+
+proc float[] get_vector3D(float $p1[], float $p2[])
+{
+	float $vec3D[];
+	$vec3D[0] = $p2[0] - $p1[0];
+	$vec3D[1] = $p2[1] - $p1[1];
+	$vec3D[2] = $p2[2] - $p1[2];
+	return $vec3D;
+}
+
+proc float[] get_vector2D(float $p1[], float $p2[])
+{
+	float $vec2D[];
+	$vec2D[0] = $p2[0] - $p1[0];
+	$vec2D[1] = $p2[1] - $p1[1];
+	return $vec2D;
+}
+
+// gets a vert of a face that is not in the given list,  
+// also includes the face it used and the uv of that face.
+global proc string[] get_other_face_vert(string $verts[]){
+	string $vert = "";
+	string $face = "";
+	int $i = 0;
+	string $temp[] = `polyListComponentConversion -fv -te $verts`;
+	string $contained_edges[] = `polyListComponentConversion -in -fv -te $verts`;
+	$contained_edges = `ls -l -flatten $contained_edges`;
+	select -r $temp;
+	clear $temp;
+	$temp = `polyListComponentConversion -fe -tv`;
+	string $not_these_verts[] = `ls -l -flatten $temp`; //the verts
+	clear $temp;
+	string $facevert = $verts[0];
+	if(size($verts)>1) $facevert = $verts[1];
+	string $adjacent_faces[] = `polyListComponentConversion -fv -tf $facevert`;
+	$adjacent_faces = `ls -l -flatten $adjacent_faces`;
+
+	while($vert == "" && $i < size($adjacent_faces)){
+		$face = $adjacent_faces[$i];
+		$temp = `polyListComponentConversion -ff -tv $face`;
+		$temp = `ls -l -flatten $temp`;
+		$temp = stringArrayRemove($not_these_verts, $temp);
+		$vert = $temp[0];
+		$i++;
+	}
+	if($vert=="") error("Can't find a reference Vert");
+	clear $temp;
+	string $uv = find_uv($face,$vert);
+	$temp[0] = $vert;
+	$temp[1] = $face;
+	$temp[2] = $uv;
+	return $temp;
+}
+
+
+//  converted to mel from to do closest approach point from:
+//  http://astronomy.swin.edu.au/~pbourke/geometry/lineline3d/
+proc float[] LineLineCPA(float $p1[],float $p2[],float $p3[],float $p4[])
+{
+   float $p13[],$p43[],$p21[];
+   float  $d1343,$d4321,$d1321,$d4343,$d2121;
+   float $numer,$denom,$mua,$mub;
+
+   $p13[0] = $p1[0] - $p3[0];
+   $p13[1] = $p1[1] - $p3[1];
+   $p13[2] = $p1[2] - $p3[2];
+   $p43[0] = $p4[0] - $p3[0];
+   $p43[1] = $p4[1] - $p3[1];
+   $p43[2] = $p4[2] - $p3[2];
+
+   $p21[0] = $p2[0] - $p1[0];
+   $p21[1] = $p2[1] - $p1[1];
+   $p21[2] = $p2[2] - $p1[2];
+
+
+   $d1343 = $p13[0] * $p43[0] + $p13[1] * $p43[1] + $p13[2] * $p43[2];
+   $d4321 = $p43[0] * $p21[0] + $p43[1] * $p21[1] + $p43[2] * $p21[2];
+   $d1321 = $p13[0] * $p21[0] + $p13[1] * $p21[1] + $p13[2] * $p21[2];
+   $d4343 = $p43[0] * $p43[0] + $p43[1] * $p43[1] + $p43[2] * $p43[2];
+   $d2121 = $p21[0] * $p21[0] + $p21[1] * $p21[1] + $p21[2] * $p21[2];
+
+   $denom = $d2121 * $d4343 - $d4321 * $d4321;
+
+   $numer = $d1343 * $d4321 - $d1321 * $d4343;
+
+   $mua = $numer / $denom;
+   $mub = ($d1343 + $d4321 * ($mua)) / $d4343;
+
+   $pa[0] = $p1[0] + $mua * $p21[0];
+   $pa[1] = $p1[1] + $mua * $p21[1];
+   $pa[2] = $p1[2] + $mua * $p21[2];
+
+   return $pa;
+}
+	
+
+proc float vector_length(float $v1[], float $v2[]){	
+	float $dx = $v1[0] - $v2[0];
+	float $dx = abs($dx);
+	float $dy = $v1[1] - $v2[1];
+	float $dy = abs($dy);
+	float $dz = $v1[2] - $v2[2];
+	float $dz = abs($dz);
+	float $Sqrt = sqrt(($dx*$dx) + ($dy* $dy) + ($dz* $dz));
+	return $Sqrt;
+}
+
+proc float vector_length2D(float $v1[], float $v2[]){	
+	float $dx = $v1[0] - $v2[0];
+	float $dx = abs($dx);
+	float $dy = $v1[1] - $v2[1];
+	float $dy = abs($dy);
+	float $Sqrt = sqrt(($dx*$dx) + ($dy* $dy));	
+	return $Sqrt;
+}
+
+global proc string[] strip_lowest_vert(string $verts[]){
+	int $index;
+	int $min = 99999999;
+	for ($vert in $verts)
+	{
+		$index = getIndex($vert);
+		if ($index < $min)
+			$min = $index;
+	}
+	string $temp[];
+	tokenize($verts[0],"[",$temp);
+	string $lowest = $temp[0]+"["+$min+"]";
+	return stringArrayRemove({$lowest},$verts);
+
+}
+
+global proc polySplitUVFix(){
+
+	//Get all the info we need.....
+	string $temp[];
+	string $selection[] = `ls -l -sl -flatten`;
+
+//	print $selection;
+	tokenize($selection[0],".",$temp);
+	string $obj = $temp[0];
+	$temp = `polyListComponentConversion -fv -te`;
+	select -r $temp;
+	string $temp[] = `polyListComponentConversion -fe -tv`;
+	select -r $temp;
+	$temp = `ls -l -sl -flatten`;
+
+	string $endVerts[] = stringArrayRemove($selection, $temp);
+	string $vertA = $endVerts[0];
+	string $vertC = $endVerts[1];
+
+	float $vertApos[] = `pointPosition -w $vertA`;
+	float $vertCpos[] = `pointPosition -w $vertC`;
+	float $vecAC[] = get_vector3D($vertApos,$vertCpos);
+	$temp = get_other_face_vert($selection);
+	string $face = $temp[1];
+	string $vertD = $temp[0];
+	string $uvD = find_uv($face,$vertD);
+	float $vertDpos[] = `pointPosition -w $vertD`;
+	float $uvDpos[] = `polyEditUV -q $uvD`;
+	string $uvA = find_uv($face,$vertA);
+	string $uvC = find_uv($face,$vertC);
+	float $uvApos[] = `polyEditUV -q $uvA`;
+	float $uvCpos[] = `polyEditUV -q $uvC`;
+
+// This loops so we can fix a stack of verts at once.... 
+	for($vertB in $selection){
+		string $temp[] = `polyListComponentConversion -fv -tuv $vertB`; //get the UV
+		$temp = `ls -l -flatten $temp`;
+
+		string $uvB = $temp[0];
+		float $uvBpos[];
+		float $vertBpos[] = `pointPosition -w $vertB`;
+
+		float $vertQpos[];
+		$vertQpos = LineLineCPA($vertApos,$vertCpos,$vertBpos,$vertDpos);
+
+		float $vecAQ[] = get_vector3D($vertApos,$vertQpos);
+
+		float $ratio = vector_length($vertQpos,$vertApos)/vector_length($vertApos,$vertCpos);
+		float $uvQpos[];
+
+		normalize($vecAC);
+		float $dot = dotProduct($vecAQ,$vecAC,0);
+		if($dot < 0 ) $ratio *= -1;
+
+		////   UV PART
+		$uvQpos[0] = ($uvCpos[0]-$uvApos[0]) * $ratio + $uvApos[0];
+		$uvQpos[1] = ($uvCpos[1]-$uvApos[1]) * $ratio + $uvApos[1];
+
+		float $DQlength = vector_length($vertDpos,$vertQpos);
+		if($DQlength!=0){
+			float $ratio = vector_length($vertBpos,$vertDpos)/$DQlength;  //lengthDQ can be 0 Hmmmm.
+			float $vecBD[] = get_vector3D($vertBpos,$vertDpos);
+			float $vecDQ[] = get_vector3D($vertDpos,$vertQpos);
+			normalize($vecBD);
+			$dot = dotProduct($vecBD,$vecDQ,0);
+			if($dot > 0 ) $ratio *= -1;
+
+			float $tempvec[] = get_vector2D($uvDpos,$uvQpos);
+
+			$uvBpos[0] = $uvDpos[0] + $ratio * $tempvec[0];
+			$uvBpos[1] = $uvDpos[1] + $ratio * $tempvec[1];
+
+			eval("polyEditUV -r 0 -u "+$uvBpos[0]+" -v " + $uvBpos[1] + " " + $uvB);	
+
+			float $d1 = vector_length2D($uvDpos,$uvQpos);
+			float $d2 = vector_length2D($uvDpos,$uvBpos);
+		}
+		else warning("Problem fixing uvs for vert: " + $vertB);
+		select -r $selection;
+		hilite $obj;
+
+	}
+}
+
+proc int num_new_verts(float $splits[], float $desc[])
+{
+	int $i=0;
+	int $num_verts = 0;
+	for($s in $splits){
+		if($s>0 && $s<1 && $desc[$i]<0)
+			$num_verts++;
+		else if($desc[$i]>=0) 
+			$num_verts++;
+		$i++;
+	}
+	return $num_verts;
+}
+
+//see if 2 verts are connected by the same edge and neither vert has > 2 adhacent edges.
+proc int is_connected(string $v1, string $v2)
+{
+	string $adj_edges[] = `polyListComponentConversion -fv -te $v1 $v2`;
+	$adj_edges = `ls -l -fl $adj_edges`;
+	if(size($adj_edges)==3) return 1;
+	else return 0;
+}
+
+// Checks to see if you've just completed a polysplit, and then selects the new verts.
+global proc setupPolySplitUVFix(){
+	global string $last_selection[];
+	global string $last_Ctx;
+	if($last_Ctx=="polySplitContext"){
+		string $sel[] = `ls -l -sl -flatten`;
+		if(size($sel)>0) $last_selection = $sel;
+
+		select $last_selection[0];
+		string $history[] = `listHistory -lv 1`;
+		string $a = `match "polySplit" $history[1]`;
+		if($a =="polySplit"){
+
+			float $splits[] = eval("getAttr "+$history[1]+".edge");
+			int $numsplits = size($splits);
+			if($numsplits>2){//early out.
+				float $desc[] = evalEcho("getAttr "+$history[1]+".desc");
+
+				int $num_new_verts = num_new_verts($splits,$desc);
+
+				string $temp[] = `listRelatives -pa -p -ni -typ transform `;
+				string $parent = $temp[0];
+				int $inttemp[] = `polyEvaluate -v $parent`;
+				int $numverts = $inttemp[0];  //total number of verts in the mesh.
+
+				
+				select -r $parent.vtx[$numverts-$num_new_verts:$numverts]; //select all the new verts.
+				string $new_verts[] = `ls -sl -l -fl`;
+				string $adj_edges[] ;
+				string $process_verts[];
+				int $spv = 0;
+				int $j = 0;
+				for($v in $new_verts){
+					clear $adj_edges;
+					$adj_edges = `polyListComponentConversion -fv -te $v`;
+					$adj_edges = `ls -l -flatten $adj_edges`;
+
+					if(size($adj_edges)==2){ 
+						if($spv>0){
+							if(is_connected($new_verts[$j],$new_verts[$j-1])){
+								string $nv[];
+								$nv[0] = $v;
+								$process_verts = stringArrayCatenate($process_verts,$nv);
+								$spv++;
+							}
+							else{
+								select -r $process_verts;
+								polySplitUVFix();
+								clear $process_verts;
+								string $nv[];
+								$nv[0] = $v;
+								$process_verts = $nv;
+								$spv = 1;
+							}
+						}
+						else {
+							string $nv[];
+							$nv[0] = $v;
+							$process_verts = stringArrayCatenate($process_verts,$nv);
+							$spv++;
+						}
+					}
+					else {
+						if($spv > 0)
+						{
+							select -r $process_verts;
+							polySplitUVFix();
+							$spv = 0;
+							clear $process_verts;
+						}		
+					}
+//					print $process_verts;
+					$j++;
+				}
+				if($spv > 0){
+					select -r $process_verts;
+					polySplitUVFix();
+				}
+			}
+		}
+	}
+	$last_Ctx = `currentCtx`;
+}
+
+
+global proc toggle_polySplitUVFix(){
+
+	global int $polySplitUVFixjobNum;
+	if($polySplitUVFixjobNum>0) {
+		scriptJob -force -kill $polySplitUVFixjobNum;
+		$polySplitUVFixjobNum = -1;
+		print "PolySplitUVFix OFF\n";
+	}
+	else{
+		$polySplitUVFixjobNum = `scriptJob -event "ToolChanged" "setupPolySplitUVFix" -protected`;
+		print "PolySplitUVFix ON\n";
+
+	}
+}

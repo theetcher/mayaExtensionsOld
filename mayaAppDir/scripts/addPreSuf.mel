@@ -1,0 +1,210 @@
+// addPreSuf.mel ------------------------------------------------- //
+//                                                                 //
+// Script Name:   addPreSuf                                        //
+//                                                                 //
+// Creation Date: 01/05/01                                         //
+//                                                                 //
+// Last Updated:  04/22/03                                         //
+//                                                                 //
+// Author:        Morris Olmsted                                   //
+//                                                                 //
+// Description:   This script creates a window and by using a      //
+//                string, collected from the user, adds a prefix   //
+//                or a suffix to any selected nodes.               //
+//                                                                 //
+// --------------------------------------------------------------- //
+global string $preSufWin;
+global string $pre;
+global string $suf;
+
+
+// --------------------------------------------------------------- //
+// This procedure simply checks to see if the addRreSufWin window  //
+// already exists and if not calls the procedure addPreSufWindow to//
+// create the called window.                                       //
+// --------------------------------------------------------------- //
+global proc addPreSuf()
+{
+    global string $preSufWin = "addPreSufWin";
+    waitCursor -st 1;
+
+    if (!`window -ex $preSufWin`)    // simple check to make sure $RepWindow doesn't already egsist //
+        addPreSufWindow();    // call procedure addPreSufWindow which runs the guts of this MEL script //
+
+    showWindow $preSufWin;    // call to display the window //
+    waitCursor -st 0;
+
+}    // end of procedure addPreSuf //
+
+
+
+// --------------------------------------------------------------- //
+// This procedure simply provides a confirm window with help text. //
+// --------------------------------------------------------------- //
+global proc apsHelp()
+{
+    string $apsHelpMessage = "Add Prefix/Suffix Help       \n\n";
+
+    $apsHelpMessage = ($apsHelpMessage +
+      "                                                     \n" +
+      "Simply select any and all nodes you wish to add a    \n" +
+      "prefix or suffix to and then open the GUI.  Type the \n" +
+      "desired prefix or suffix string out in the provided  \n" +
+      "text field and hit the right most <ENTER> button to  \n" +
+      "indicate your finished.  Then either click the       \n" +
+      "Add Prefix or the Add Suffix buttons to rename all of\n" +
+      "the selected nodes.  Thats all!                      \n" +
+      "                                                     \n" +
+      "                                                   \n\n");
+
+    confirmDialog
+        -t "APF Help"
+        -m $apsHelpMessage
+        -b "OK"
+        -db "OK"
+        -ma left;
+
+}    // end of procedure apsHelp //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply adds a prefix to all selected nodes.      //
+// --------------------------------------------------------------- //
+global proc addPrefix()
+{
+    global string $pre;
+
+    string $selectedObjects[] = `ls -sl -fl`;
+
+    for ($current in $selectedObjects)
+    {
+        $newname = ($pre + $current);
+        rename $current $newname;
+        print ($current + "renamed to " + $newname + "/n");
+
+    }    // end of for loop //
+
+}    // end of procedure addPrefix //
+
+
+
+// --------------------------------------------------------------- //
+// This procedure simply adds a suffix to all selected nodes.      //
+// --------------------------------------------------------------- //
+global proc addSuffix()
+{
+    global string $suf;
+
+    string $selectedObjects[] = `ls -sl -fl`;
+
+    for ($current in $selectedObjects)
+    {
+        $newname = ($current + $suf);
+        rename $current $newname;
+        print ($current + "renamed to " + $newname + "/n");
+
+    }    // end of for loop //
+
+}    // end of procedure addSuffix //
+
+
+
+// --------------------------------------------------------------- //
+// This procedure simply enables the two buttons allowing the      //
+// addition of a prefix or suffix.  Also it captures the current   //
+// text found in the textFieldGrp and places it into both string   //
+// variables to be used for either addPrefix or addSuffix.         //
+// --------------------------------------------------------------- //
+global proc capturePreSuf()
+{
+    global string $pre;
+    global string $suf;
+
+    $pre = `textFieldGrp -q -tx preSufText`;
+    $suf = $pre;
+
+}    // end of procedure capturePreSuf //
+
+
+
+
+// --------------------------------------------------------------- //
+// THis procedure simply creates a window, provides a string input //
+// for both preFixes or Suffixes to be added to any selected nodes.//
+// --------------------------------------------------------------- //
+global proc addPreSufWindow()
+{
+    global string $preSufWin;
+    global string $pre;
+    global string $suf;
+
+    window    // call to create a GUI window //
+        -w 200
+        -h 200
+        -t "Add Prefix/Suffix"
+        -in "APS"
+        -mb 1
+        -tb 1
+        -mnb 1
+        -mxb 0
+        -rtf 1
+        -s 1
+        $preSufWin;
+
+        menu -l "Help";
+
+            menuItem
+                -l "APS Help"
+                -c "apsHelp;";
+
+    setParent $preSufWin;
+
+        columnLayout;
+            rowColumnLayout
+                -nc 1
+                -cw 1 200;
+
+                button
+                    -vis 0
+                    -h 1;    // if space bar is hit while this GUI is active this empty button will be pressed causing nothing //
+
+                textFieldGrp
+                    -l " Pre/Suf "
+                    -tx ""
+                    -cw 1 66
+                    -cw 2 134
+                    -cc "capturePreSuf;"
+                    preSufText;
+
+                separator
+                    -h 5;
+
+        setParent ..;
+
+            rowColumnLayout
+                -nc 3
+                -cw 1 66
+                -cw 2 66
+                -cw 3 67;
+
+                button
+                    -l " Add Prefix "
+                    -c "addPrefix;"
+                    -en 1
+                    preButton;
+
+                button
+                    -l " Add Suffix "
+                    -c "addSuffix;"
+                    -en 1
+                    sufButton;
+
+                button
+                    -l " Close "
+                    -c "deleteUI $preSufWin; source addPreSuf";
+
+    setParent $preSufWin;
+
+}    // end of procedure addPreSufWindow //
+
+

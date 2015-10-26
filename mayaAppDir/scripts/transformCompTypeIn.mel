@@ -1,0 +1,309 @@
+/*
+works only with polygonal components
+*/
+
+global proc execTtiUI (int $doTransformations)
+{
+	int $iAbsolute = `radioButton -q -sl ttiModeAbsolute`;
+	int $iKeepWindow = `checkBox -q -v ttiKeepWindow`;
+	int $iDoMove = `checkBox -q -v ttiDoMove`;
+	int $iDoRotate = `checkBox -q -v ttiDoRotate`;
+	int $iDoScale = `checkBox -q -v ttiDoScale`;
+
+	float $fTx = `floatFieldGrp -q -v1 ttiMoveVals`;
+	float $fTy = `floatFieldGrp -q -v2 ttiMoveVals`;
+	float $fTz = `floatFieldGrp -q -v3 ttiMoveVals`;
+
+	float $fRx = `floatFieldGrp -q -v1 ttiRotateVals`;
+	float $fRy = `floatFieldGrp -q -v2 ttiRotateVals`;
+	float $fRz = `floatFieldGrp -q -v3 ttiRotateVals`;
+
+	float $fSx = `floatFieldGrp -q -v1 ttiScaleVals`;
+	float $fSy = `floatFieldGrp -q -v2 ttiScaleVals`;
+	float $fSz = `floatFieldGrp -q -v3 ttiScaleVals`;
+	
+	float $bbox[] = `polyEvaluate -bc`;
+	
+	if($doTransformations)
+	{
+		if($iAbsolute)
+		{
+			if($iDoMove)
+				move   -p (($bbox[0]+$bbox[1])/2) (($bbox[2]+$bbox[3])/2) (($bbox[4]+$bbox[5])/2) -a $fTx $fTy $fTz;
+			if($iDoRotate)
+				rotate -p (($bbox[0]+$bbox[1])/2) (($bbox[2]+$bbox[3])/2) (($bbox[4]+$bbox[5])/2) -a $fRx $fRy $fRz;
+			if($iDoScale)
+				scale  -p (($bbox[0]+$bbox[1])/2) (($bbox[2]+$bbox[3])/2) (($bbox[4]+$bbox[5])/2) -a $fSx $fSy $fSz;
+//				scale  -a $fSx $fSy $fSz;
+		}
+		else
+		{
+			if($iDoMove)
+				move   -p (($bbox[0]+$bbox[1])/2) (($bbox[2]+$bbox[3])/2) (($bbox[4]+$bbox[5])/2) -r $fTx $fTy $fTz;
+			if($iDoRotate)
+				rotate -p (($bbox[0]+$bbox[1])/2) (($bbox[2]+$bbox[3])/2) (($bbox[4]+$bbox[5])/2) -r $fRx $fRy $fRz;
+			if($iDoScale)
+				scale  -p (($bbox[0]+$bbox[1])/2) (($bbox[2]+$bbox[3])/2) (($bbox[4]+$bbox[5])/2) -r $fSx $fSy $fSz;
+		}
+	}
+
+	optionVar -iv ttiModeAbsolute $iAbsolute;
+	optionVar -iv ttiKeepWindow (!$iKeepWindow);
+	optionVar -iv ttiDoMove (!$iDoMove);
+	optionVar -iv ttiDoRotate (!$iDoRotate);
+	optionVar -iv ttiDoScale (!$iDoScale);
+
+	optionVar -fv ttiMoveValX $fTx;
+	optionVar -fv ttiMoveValY $fTy;
+	optionVar -fv ttiMoveValZ $fTz;
+
+	optionVar -fv ttiRotateValX $fRx;
+	optionVar -fv ttiRotateValY $fRy;
+	optionVar -fv ttiRotateValZ $fRz;
+
+	optionVar -fv ttiScaleValX $fSx;
+	optionVar -fv ttiScaleValY $fSy;
+	optionVar -fv ttiScaleValZ $fSz;
+
+	if($doTransformations)
+		if(!$iKeepWindow)
+			deleteUI tti_ui;
+}
+
+global proc execCheckBoxes()
+{
+	int $iDoMove = `checkBox -q -v ttiDoMove`;
+	int $iDoRotate = `checkBox -q -v ttiDoRotate`;
+	int $iDoScale = `checkBox -q -v ttiDoScale`;
+	
+	floatFieldGrp -e -en $iDoMove ttiMoveVals;
+	floatFieldGrp -e -en $iDoMove ttiMoveRandomRange;
+	floatFieldGrp -e -en $iDoRotate ttiRotateVals;
+	floatFieldGrp -e -en $iDoRotate ttiRotateRandomRange;
+	floatFieldGrp -e -en $iDoScale ttiScaleVals;
+	floatFieldGrp -e -en $iDoScale ttiScaleRandomRange;
+	button -e -en $iDoMove ttiMoveRand;
+	button -e -en $iDoRotate ttiRotateRand;
+	button -e -en $iDoScale ttiScaleRand;
+}
+
+global proc restoreDefaults()
+{
+	radioButton -e -sl ttiModeRelative;
+	floatFieldGrp -e -v 0 0 0 0 ttiMoveVals;
+	floatFieldGrp -e -v 0 0 0 0 ttiRotateVals;
+	floatFieldGrp -e -v 1 1 1 0 ttiScaleVals;
+	floatFieldGrp -e -v 0 10 0 0 ttiMoveRandomRange;
+	floatFieldGrp -e -v 0 360 0 0 ttiRotateRandomRange;
+	floatFieldGrp -e -v 0 2 0 0 ttiScaleRandomRange;
+	checkBox -e -v 1 ttiDoMove;
+	checkBox -e -v 1 ttiDoRotate;
+	checkBox -e -v 1 ttiDoScale;
+	checkBox -e -v 1 ttiKeepWindow;
+	
+	execCheckBoxes;
+}
+
+global proc randomizeVals(int $iMode)
+{
+	int $iAbsolute = `radioButton -q -sl ttiModeAbsolute`;
+	int $iDoMove = `checkBox -q -v ttiDoMove`;
+	int $iDoRotate = `checkBox -q -v ttiDoRotate`;
+	int $iDoScale = `checkBox -q -v ttiDoScale`;
+	int $iKeepWindow = `checkBox -q -v ttiKeepWindow`;
+
+	float $fMrndMin = `floatFieldGrp -q -v1 ttiMoveRandomRange`;
+	float $fMrndMax = `floatFieldGrp -q -v2 ttiMoveRandomRange`;
+	float $fRrndMin = `floatFieldGrp -q -v1 ttiRotateRandomRange`;
+	float $fRrndMax = `floatFieldGrp -q -v2 ttiRotateRandomRange`;
+	float $fSrndMin = `floatFieldGrp -q -v1 ttiScaleRandomRange`;
+	float $fSrndMax = `floatFieldGrp -q -v2 ttiScaleRandomRange`;
+
+	switch ($iMode)
+	{
+		case 0:
+			floatFieldGrp -e -v (rand($fMrndMin, $fMrndMax)) (rand($fMrndMin, $fMrndMax)) (rand($fMrndMin, $fMrndMax)) 0 ttiMoveVals;
+			break;
+		case 1:
+			floatFieldGrp -e -v (rand($fRrndMin, $fRrndMax)) (rand($fRrndMin, $fRrndMax)) (rand($fRrndMin, $fRrndMax)) 0 ttiRotateVals;
+			break;
+		case 2:
+			floatFieldGrp -e -v (rand($fSrndMin, $fSrndMax)) (rand($fSrndMin, $fSrndMax)) (rand($fSrndMin, $fSrndMax)) 0 ttiScaleVals;
+			break;
+		case 3:
+			string $sList[] = `ls -sl -fl`;
+			int $iSize = size($sList), $iIndex;
+			vector $vRnd;
+			for($iIndex = 0; $iIndex < $iSize; $iIndex++)
+			{
+				select -r $sList[$iIndex];
+				if($iDoMove)
+				{
+					$vRnd = rand(<<$fMrndMin, $fMrndMin, $fMrndMin>>, <<$fMrndMax, $fMrndMax, $fMrndMax>>);
+					floatFieldGrp -e -v ($vRnd.x) ($vRnd.y) ($vRnd.z) 0 ttiMoveVals;
+					if($iAbsolute)
+						move -a ($vRnd.x) ($vRnd.y) ($vRnd.z);
+					else
+						move -r ($vRnd.x) ($vRnd.y) ($vRnd.z);
+				}
+				if($iDoRotate)
+				{
+					$vRnd = rand(<<$fRrndMin, $fRrndMin, $fRrndMin>>, <<$fRrndMax, $fRrndMax, $fRrndMax>>);
+					floatFieldGrp -e -v ($vRnd.x) ($vRnd.y) ($vRnd.z) 0 ttiRotateVals;
+					if($iAbsolute)
+						rotate -a ($vRnd.x) ($vRnd.y) ($vRnd.z);
+					else
+						rotate -r ($vRnd.x) ($vRnd.y) ($vRnd.z);
+				}
+				if($iDoScale)
+				{
+					$vRnd = rand(<<$fSrndMin, $fSrndMin, $fSrndMin>>, <<$fSrndMax, $fSrndMax, $fSrndMax>>);
+					floatFieldGrp -e -v ($vRnd.x) ($vRnd.y) ($vRnd.z) 0 ttiScaleVals;
+					if($iAbsolute)
+						scale -a ($vRnd.x) ($vRnd.y) ($vRnd.z);
+					else
+						scale -r ($vRnd.x) ($vRnd.y) ($vRnd.z);
+				}
+			}
+			select -r $sList;
+
+			optionVar -fv ttiMoveRandomMin $fMrndMin;
+			optionVar -fv ttiMoveRandomMax $fMrndMax;
+			optionVar -fv ttiRotateRandomMin $fRrndMin;
+			optionVar -fv ttiRotateRandomMax $fRrndMax;
+			optionVar -fv ttiScaleRandomMin $fSrndMin;
+			optionVar -fv ttiScaleRandomMax $fSrndMax;
+
+			if(!$iKeepWindow)
+				deleteUI tti_ui;
+
+			break;
+	}
+}
+
+global proc transformCompTypeIn()
+{
+	int $iDeveloping = true;
+	
+	if($iDeveloping)
+		if(`windowPref -ex tti_ui`)
+			windowPref -remove tti_ui;
+
+	int $iAbsolute = `optionVar -q ttiModeAbsolute`;
+	int $iKeepWindow = !`optionVar -q ttiKeepWindow`;
+	int $iDoMove = !`optionVar -q ttiDoMove`;
+	int $iDoRotate = !`optionVar -q ttiDoRotate`;
+	int $iDoScale = !`optionVar -q ttiDoScale`;
+
+	float $fTx = `optionVar -q ttiMoveValX`;
+	float $fTy = `optionVar -q ttiMoveValY`;
+	float $fTz = `optionVar -q ttiMoveValZ`;
+
+	float $fRx = `optionVar -q ttiRotateValX`;
+	float $fRy = `optionVar -q ttiRotateValY`;
+	float $fRz = `optionVar -q ttiRotateValZ`;
+
+	float $fSx = `optionVar -q ttiScaleValX`;
+	float $fSy = `optionVar -q ttiScaleValY`;
+	float $fSz = `optionVar -q ttiScaleValZ`;
+
+	float $fMrndMin = `optionVar -q ttiMoveRandomMin`;
+	float $fMrndMax;
+	if(`optionVar -ex ttiMoveRandomMax`)
+		$fMrndMax = `optionVar -q ttiMoveRandomMax`;
+	else
+		$fMrndMax = 10;
+
+	float $fRrndMin = `optionVar -q ttiRotateRandomMin`;
+	float $fRrndMax;
+	if(`optionVar -ex ttiRotateRandomMax`)
+		$fRrndMax = `optionVar -q ttiRotateRandomMax`;
+	else
+		$fRrndMax = 360;
+	
+	float $fSrndMin = `optionVar -q ttiScaleRandomMin`;
+	float $fSrndMax;
+	if(`optionVar -ex ttiScaleRandomMax`)
+		$fSrndMax = `optionVar -q ttiScaleRandomMax`;
+	else
+		$fSrndMax = 2;
+	
+	if($fSx == 0) $fSx = 1; if($fSy == 0) $fSy = 1; if($fSz == 0) $fSz = 1;
+
+	if(`window -exists tti_ui`)
+		deleteUI tti_ui;
+
+	window
+		-maximizeButton false
+		-resizeToFitChildren false
+		-title "Transform Component Type In"
+		-iconName "transformTypeIn"
+		-menuBar true
+		-widthHeight 400 352
+		tti_ui;
+		
+		menu -label "Edit";
+			menuItem -c "restoreDefaults;" -label "Reset Settings";
+			menuItem -c "execTtiUI(0);" -label "Save Settings";
+			
+		columnLayout -columnAttach "left" 12 -rowSpacing 8 -columnWidth 360 ttiLayout;
+			text -label "Component Transformations" -align "left";
+
+			rowLayout -numberOfColumns 2 ttiTransformMode;
+				radioCollection;
+				if($iAbsolute)
+				{
+					radioButton -label "Absolute" -sl ttiModeAbsolute;
+					radioButton -label "Relative" ttiModeRelative;
+				}
+				else
+				{
+					radioButton -label "Absolute" ttiModeAbsolute;
+					radioButton -label "Relative" -sl ttiModeRelative;
+				}
+			setParent ..;
+
+			rowLayout -numberOfColumns 3 -cw3 60 60 240;
+				checkBox -l "Move" -v $iDoMove -cc "execCheckBoxes" ttiDoMove;
+				button -l "Rand" -c "randomizeVals(0);" ttiMoveRand;
+				floatFieldGrp -numberOfFields 3 -v $fTx $fTy $fTz 0 -pre 3 ttiMoveVals;
+			setParent ..;
+			rowLayout -numberOfColumns 3 -cw3 60 60 240;
+				text -l "Random range";
+				text -l "" -vis 0;
+				floatFieldGrp -numberOfFields 2 -pre 3 -v $fMrndMin $fMrndMax 0 0 ttiMoveRandomRange;
+			setParent ..;
+
+			rowLayout -numberOfColumns 3 -cw3 60 60 240;
+				checkBox -l "Rotate" -v $iDoRotate -cc "execCheckBoxes" ttiDoRotate;
+				button -l "Rand" -c "randomizeVals(1);" ttiRotateRand;
+				floatFieldGrp -numberOfFields 3 -v $fRx $fRy $fRz 0 -pre 3 ttiRotateVals;
+			setParent ..;
+			rowLayout -numberOfColumns 3 -cw3 60 60 240;
+				text -l "Random range";
+				text -l "" -vis 0;
+				floatFieldGrp -numberOfFields 2 -pre 3 -v $fRrndMin $fRrndMax 0 0 ttiRotateRandomRange;
+			setParent ..;
+
+			rowLayout -numberOfColumns 3 -cw3 60 60 240;
+				checkBox -l "Scale" -v $iDoScale -cc "execCheckBoxes" ttiDoScale;
+				button -l "Rand" -c "randomizeVals(2);" ttiScaleRand;
+				floatFieldGrp -numberOfFields 3 -pre 3 -v $fSx $fSy $fSz 0 ttiScaleVals;
+			setParent ..;
+			rowLayout -numberOfColumns 3 -cw3 60 60 240;
+				text -l "Random range";
+				text -l "" -vis 0;
+				floatFieldGrp -numberOfFields 2 -pre 3 -v $fSrndMin $fSrndMax 0 0 ttiScaleRandomRange;
+			setParent ..;
+
+			rowLayout -numberOfColumns 3 ttiMainBtns;
+				button -l "Go" -w 80 -c "execTtiUI(1);" ttiGo;
+				button -l "Close" -w 80 -c "deleteUI tti_ui;" ttiClose;
+				button -l "Muddle" -w 80 -c "randomizeVals(3);" ttiMuddle;
+			setParent ..;
+
+			checkBox -l "Keep window open" -v $iKeepWindow ttiKeepWindow;
+
+	execCheckBoxes;
+	showWindow tti_ui;
+}

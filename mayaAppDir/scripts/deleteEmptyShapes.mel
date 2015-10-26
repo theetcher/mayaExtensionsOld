@@ -1,0 +1,66 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: deleteEmptyShapes v1.0
+''    Author: Sebastian Woldanski
+''    Last Updated: May 24, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=modeling#1751
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+/*
+deleteEmptyShapes.mel
+
+author : Sebastian Woldanski
+	http://woold.w.interia.pl
+	bug reports, comments, please mail to woold@interia.pl or woold@polbox.com or fwold@acn.waw.pl
+
+Description: deletes empty intermediate shapes hanging in transforms not connected to anything or only to display layer that delete history or clean up scene do not removes.
+	 The are left by  some kind graph manipulation and are not cleaned by maya . They are sometimes a very heavy luggage so run this script occasionally when it seems that scene is to havy.
+	This can happen eg when you import multiple times rigged characters that were combined or sth
+
+Usage: run it
+*/
+//
+
+global proc deleteEmptyShapes()
+{
+	string $Sell[] = `ls -l -type "mesh" -type "nurbsSurface"` ;
+	string $aa[];
+	int $i =0;
+	for ($node in $Sell)
+		{
+		string $list[] = `listConnections -sh 1 $node`;
+
+		if ( `size $list` <= 1   )
+			{
+			if ( `size $list` == 0  && (`getAttr ($node + ".intermediateObject")` ) == 1)
+				{
+
+				evalEcho ("delete " + $node);
+				$aa[$i] = $node;
+				$i++;
+				}
+			else if ( $list[0] != "")
+				{
+			//string $dd[] = `listConnections -sh 1 ($node + ".drawOverride")`;
+				if (  `nodeType  $list[0]`  == "displayLayer")
+					{
+
+						evalEcho ("delete " + $node);
+						$aa[$i] = $node;
+						$i++;
+					}
+				}
+			}
+		}
+
+	print "delete :";
+	print $aa;
+	print ("deleted "+ (`size $aa`) + " empty meshy");
+}

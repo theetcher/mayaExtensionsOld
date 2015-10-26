@@ -1,0 +1,105 @@
+global proc string getObjNameFromComponent(string $component) {
+	string $result[];
+	tokenize $component "." $result;
+	//print (" - Object name: " + $result[0] + "\n");
+	return $result[0];
+}
+
+global proc multiEdgeSubdivide(float $sliderValue) {
+	string $objects[];
+	string $psNode[];
+	string $buffer[];
+
+	string $edges[] = `ls -sl -l -fl`;
+	
+	int $oldVertsCountPerObject[];
+	int $newVertsCountPerObject[];
+	int $vertCountDifference[];
+	string $addedVerts[];
+	
+	if (size($edges) == 0) {
+		print("Nothing is selected!\n");
+		return;
+	}
+	
+	for ($edge in $edges) {
+		tokenize $edge "." $buffer;
+		$objects[size($objects)] = $buffer[0];
+	}
+	$objects = stringArrayRemoveDuplicates($objects); 
+	
+	int $i = 0;
+	for ($object in $objects) {
+		select $object;
+		PolySelectConvert 3;
+		string $oldVerts[] = `ls -sl -l -fl`;
+		$oldVertsCountPerObject[$i] = size($oldVerts);
+		$i = $i + 1;
+	}
+	
+	for ($edge in $edges) {
+		tokenize $edge "[]" $buffer;
+		select $edge;
+		eval("polySplit -ep " + $buffer[1] + " " +$sliderValue);
+		delete -ch (getObjNameFromComponent($edge));
+	}
+	
+	$i = 0;
+	string $verts[];
+	for ($object in $objects) {
+		clear $verts;
+		select $object;
+		PolySelectConvert 3;
+		string $newVerts[] = `ls -sl -l -fl`;
+		$newVertsCountPerObject[$i] = size($newVerts);
+		$vertCountDifference[$i] = $newVertsCountPerObject[$i] - $oldVertsCountPerObject[$i];
+		int $j;
+		for ($j = 0; $j<$vertCountDifference[$i]; $j++) {
+			int $vertId = $oldVertsCountPerObject[$i] + $j + 1;
+			$verts[$j] = $object + ".vtx[" + $vertId + "]";
+		}
+		appendStringArray($addedVerts, $verts, size($verts));
+		$i = $i + 1;
+	}
+	
+	select -cl;
+	for ($str in $addedVerts) {
+		select -add $str;
+	}
+}
+
+global proc fix_interEdgeSubdivide() {
+	global float $es_sliderValue = 0.5;
+	global string $es_slider;
+	string $es_buton;
+
+	if (`window -exists ESWindow` == 1)
+		deleteUI ESWindow;
+
+	string $ESWin = `window 
+				-t "Multi Edge Subdivide"
+				-in "Multi Edge Subdivide"
+				-s 1
+				-mnb 1
+				-mxb 0
+				-h 80
+				-w 500
+				ESWindow`;
+	formLayout ESWin_UIFormLayout;
+
+	//--Create Controllers--//
+
+	$es_slider = `floatSliderGrp -w 400 -h 25 -label "Split shift" -field true -minValue 0.0 -maxValue 1.0 -fieldMinValue 0.0 -fieldMaxValue 1.0 -value 0.5 -pre 2 "slider"`;
+	$es_button = `button -w 200 -h 25 -c ("$es_sliderValue = `floatSliderGrp -query -value $es_slider`; print (\"Current $sliderValue: \"+$es_sliderValue+\"\\n\"); multiEdgeSubdivide($es_sliderValue);") -label "Apply" "applyButton"`;
+
+	//--Arrange Controllers--//
+
+	formLayout -e
+		-af "slider" "left" 5
+		-af "slider" "top" 10
+		-af "applyButton" "left" 100
+		-af "applyButton" "top" 40
+		ESWin_UIFormLayout;
+
+	showWindow $ESWin;
+}

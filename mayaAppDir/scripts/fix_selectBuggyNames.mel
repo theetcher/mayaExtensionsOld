@@ -1,0 +1,20 @@
+
+// Combines objects, parents it to the first selected object's parent and deletes history //
+
+global proc fix_selectBuggyNames(string $mask, string $type, int $exact)
+{
+
+string $cmd = "ls -type "+$type+" \""+$mask+"\"";
+
+string $names[] = eval($cmd);
+
+
+watchStrArr($names,"$names");
+
+select -cl;
+for ($name in $names) {
+	if ($exact) select -add ($name);
+		else select -add ($name+"*");
+}
+
+}

@@ -1,0 +1,153 @@
+/************************************************************
+                   Clear Edges SCRIPT v1.1
+                   =======================
+Removes unnecessary polygon edges from selected object(s) or
+object components.
+
+Command: "clearEdges"
+-------
+
+Note: if you process complex objetcs, you may want to
+----  disable Undo in order to protect memory from overflow.
+
+This script is dedicated to Shri Balarama, in Whose
+Appearance Day it was made.
+(c) 2002 Nitisara das (nitisara@mail.ru, nitisara@mailru.com)
+************************************************************/
+
+global proc clearEdges()
+{
+	float $x, $y, $z, $fidelity, $coords[];
+	int $edgesNum[], $i, $totalNum, $j, $totalObjects, $oldNum, $newNum;
+	int $vertexNum[], $mode;
+	string $object, $strs[], $selection[], $str, $loc;
+	vector $n0, $n1, $n2;
+
+	$fidelity = 0.001;
+
+	$strs = `ls -sl -st`;
+	if($strs[1] == "transform") // whole objects selected
+		$mode = 1;
+	if($strs[1] == "float3") // components selected
+	{
+		$mode = 2;
+		ConvertSelectionToEdges;
+	}
+	$selection = `ls -sl -fl`;
+	$totalObjects = size($selection);
+	if($mode == 2)
+		$totalObjects = 1;
+
+	for($j = 0; $j < $totalObjects; $j ++)
+	{
+		// process edges
+		if($mode == 1)
+		{
+			$object = $selection[$j];
+			select $object;
+			$edgesNum = `polyEvaluate -e`;
+			$oldNum = $totalNum = $edgesNum[0];
+		}
+		if($mode == 2)
+		{
+			$totalNum = size($selection);
+			$edgesNum = `polyEvaluate -e`;
+			$oldNum = $edgesNum[0];
+			$strs = `ls -sl -o`;
+			if(size($strs) != 1)
+			{
+				error "In component mode only one object can be selected.";
+				return;
+			}
+			select $strs[0];
+			pickWalk -d up;
+			$strs = `ls -sl`;
+			$object = $strs[0];
+		}
+		for($i = 0; $i < $totalNum; $i ++)
+		{
+			if($mode == 1)
+				$str = $object+".e["+$i+"]";
+			if($mode == 2)
+				$str = $selection[$totalNum-1-$i];
+			select $str;
+			ConvertSelectionToFaces;
+			$strs = `polyInfo -fn`;
+			if(size($strs) != 2)
+				continue;
+			$n1 = getNormalFromString($strs[0]);
+			$n2 = getNormalFromString($strs[1]);
+			if(angle($n1, $n2) < $fidelity)
+			{
+				delete $str;
+				if($mode == 1)
+				{
+					$i --;
+					$totalNum -= 1;
+				}
+			}
+		}
+		// process vertices
+		select $object;
+		$vertexNum = `polyEvaluate -v`;
+		$totalNum = $vertexNum[0];
+		for($i = 0; $i < $totalNum; $i ++)
+		{
+			$str = $object+".vtx["+$i+"]";
+			select $str;
+			ConvertSelectionToEdges;
+			ConvertSelectionToVertices;
+			select -d $str;
+			$strs = `ls -sl -fl`;
+			if(size($strs) != 2)
+				continue;
+			select $str;
+			$coords = `pointPosition`;
+			$x = $coords[0];
+			$y = $coords[1];
+			$z = $coords[2];
+			$n0 = <<$x,$y,$z>>;
+			select $strs[0];
+			$coords = `pointPosition`;
+			$x = $coords[0];
+			$y = $coords[1];
+			$z = $coords[2];
+			$n1 = <<$x,$y,$z>>;
+			select $strs[1];
+			$coords = `pointPosition`;
+			$x = $coords[0];
+			$y = $coords[1];
+			$z = $coords[2];
+			$n2 = <<$x,$y,$z>>;
+			if(angle($n0-$n1, $n2-$n0) < $fidelity)
+			{
+				delete $str;
+				$i --;
+				$totalNum -= 1;
+			}
+		}
+
+		// output statistics
+		select $object;
+		$edgesNum = `polyEvaluate -e`;
+		$newNum = $edgesNum[0];
+		select -clear;
+		$str = "Object \""+$object+"\": before "+$oldNum+" edges, now "+$newNum+" edges.\n";
+		print $str;
+	}
+}
+
+global proc vector getNormalFromString(string $inStr)
+{
+	float $x, $y, $z;
+	int $i;
+	string $strs[];
+	vector $v;
+
+	tokenize (`substring $inStr 20 (size($inStr))`) $strs;
+	$x = $strs[0];
+	$y = $strs[1];
+	$z = $strs[2];
+	$v = <<$x,$y,$z>>;
+	return $v;
+}

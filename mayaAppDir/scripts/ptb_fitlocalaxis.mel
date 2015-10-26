@@ -1,0 +1,40 @@
+/* ptb_fitlocalaxis.mel
+
+This script may be freely distributed. Modify at your own risk.
+
+Author:		Dirk Bialluch (DirkBi@Software2000.de)
+
+Creation Date:	22.05.98
+Last Update:	24.05.99
+*/
+
+//
+// Main procedure
+//
+
+global proc ptb_fitlocalaxis ()
+{
+	string $objList[] = `ptb_filterTransforms`;
+	if (size($objList) < 2)
+		error "This function requires two or more objects to be selected";
+	int $count;
+
+	// get destination local axis rotation
+	float $dest[3] = `xform -q -ra $objList[size($objList) - 1]`;
+
+	for ($count = 0; $count < size($objList) - 1; $count++)
+	{
+		// object space
+		float $xyz[3] = `xform -q -ra $objList[$count]`;
+		if (`checkBox -q -value ptb10_xbox`)
+			$xyz[0] = $dest[0];
+		if (`checkBox -q -value ptb10_ybox`)
+			$xyz[1] = $dest[1];
+		if (`checkBox -q -value ptb10_zbox`)
+			$xyz[2] = $dest[2];
+
+		xform -a -p true -roo zyx -ra $xyz[0] $xyz[1] $xyz[2] $objList[$count];
+	}
+}
+
+// end of script

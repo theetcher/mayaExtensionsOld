@@ -1,0 +1,96 @@
+
+proc initOptionVars ()
+{
+	if (!`optionVar -exists "fix_selByVertexColor_R"`)
+		optionVar -floatValue "fix_selByVertexColor_R" 0;
+	if (!`optionVar -exists "fix_selByVertexColor_G"`)
+		optionVar -floatValue "fix_selByVertexColor_G" 0;
+	if (!`optionVar -exists "fix_selByVertexColor_B"`)
+		optionVar -floatValue "fix_selByVertexColor_B" 0;
+}
+
+proc setOptionVars ()
+{
+	float $chosenColor[] = `colorSliderGrp -q -rgbValue CS_VertexColor`;
+	optionVar -floatValue "fix_selByVertexColor_R" $chosenColor[0];
+	optionVar -floatValue "fix_selByVertexColor_G" $chosenColor[1];
+	optionVar -floatValue "fix_selByVertexColor_B" $chosenColor[2];
+}
+
+
+
+global proc fix_selectByVertexColor()
+{
+
+	initOptionVars ();
+	
+	if (`window -exists fix_selByVertexColorWindow` == 1)
+			deleteUI fix_selByVertexColorWindow;
+
+	int $winWidth = 420;
+	int $separatorWidth = $winWidth - 7;
+	
+	
+	string $fix_selByVertexColorWindow = `window 
+				-t "Select By Vertex Color"
+				-in "Select By Vertex Color"
+				-s 0
+				-mnb 1
+				-mxb 0
+				fix_selByVertexColorWindow`;
+	
+	columnLayout -co both -200;
+	
+		separator -style "none" -height 5;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 5;
+
+		colorSliderGrp
+			-label "Vertex Color"
+			-rgbValue `optionVar -q "fix_selByVertexColor_R"` `optionVar -q "fix_selByVertexColor_G"` `optionVar -q "fix_selByVertexColor_B"`
+			CS_VertexColor;
+
+		separator -style "none" -height 5;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 5;
+
+		rowColumnLayout  -numberOfColumns 3 
+			-columnWidth 1 137 
+			-columnWidth 2 137 
+			-columnWidth 3 137;
+
+			button -label "Select By Vertex Color" 
+				-ann "peform Select By Vertex Color on selected vertexes" 
+				-command "perform_selectByVertexColor;deleteUI fix_selByVertexColorWindow;";
+
+			button -label "Apply" 
+				-ann "peform Select By Vertex Color on selected vertexes and leave this window opened" 
+				-command "perform_selectByVertexColor;";
+
+			button -label "Cancel" 
+				-ann "cancel this operation" 
+				-command "deleteUI fix_selByVertexColorWindow;";
+
+		setParent ..;
+		
+	showWindow $fix_selByVertexColorWindow;
+
+	window -e -w $winWidth -h 98 $fix_selByVertexColorWindow; // width and height works only after window has been shown
+
+
+}
+
+global proc perform_selectByVertexColor()
+{
+
+	setOptionVars();
+
+	string $selection[] = `ls -l -sl -fl`;
+	float $vertexColor[];
+	select -cl;
+
+	for ($point in $selection){
+		$vertexColor = `polyColorPerVertex -q -r -g -b $point`;
+		if (($vertexColor[0] == (`optionVar -q "fix_selByVertexColor_R"`)) && ($vertexColor[1] == (`optionVar -q "fix_selByVertexColor_G"`)) && ($vertexColor[2] == (`optionVar -q "fix_selByVertexColor_B"`))) select -add $point;
+	}
+}

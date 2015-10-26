@@ -1,0 +1,24 @@
+global proc installDragSelectionIcon()
+{
+	global string $gShelfTopLevel;
+
+	if (`tabLayout -exists $gShelfTopLevel`)
+	{
+		shelfButton
+			-parent ($gShelfTopLevel + "|" + `tabLayout -q -st $gShelfTopLevel`)
+			-command "if (`contextInfo -ex  dragSelectionToolContext1`)
+								{	setToolTo dragSelectionToolContext1; }
+								else { 	dragSelectionToolContext dragSelectionToolContext1;
+									setToolTo dragSelectionToolContext1;}"
+			-image1 "dragSelectionTool.xpm"
+			-annotation "dragSelectionTool (by t::REDs)";
+	}
+	else
+	{
+		error "You need a shelf for this install to complete!  Show your shelf and retry!";
+	}
+}
+
+
+
+

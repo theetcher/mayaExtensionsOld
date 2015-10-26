@@ -1,0 +1,150 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: scatterObject v1.0
+''    Author: Javier Solsona
+''    Last Updated: May 22, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=modeling#1743
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//-----------------------------------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
+//	SCRIPT:	scatterObject.mel
+//	AUTHOR:	Javier "Goosh" Solsona
+//			jsolsona@digital-dreams.net
+//	VERSION:	1.0v
+//
+//	DESCRIPTION:	This scripts let's you duplicates as many copies of one object as you'd like 
+//			and randombly scatter them while constraining them to another (Usually a plane).
+//			eg. Creating flowers over a rolling hills. 
+//
+//-----------------------------------------------------------------------------------------------------//	
+//-----------------------------------------------------------------------------------------------------//
+
+//-----------------------------------------------------------------------------------------------------//
+//	PROC:	scatterObject
+//	
+//		This is the main procedure that creates the GUI
+//-----------------------------------------------------------------------------------------------------//
+
+global proc scatterObject()
+{
+string $win = "scatterObject";
+if (`window -exists $win`) deleteUI -window $win;
+window -title "scatterObject" - minimizeButton true -maximizeButton false -rtf true -wh 150 100 $win;
+columnLayout -adjustableColumn true -cal "left" ColumnLayout;
+frameLayout -labelVisible false -marginWidth 10 -marginHeight 10 LockFrame;
+columnLayout;
+	intSliderGrp
+		-label "Number of Objects" -field true
+		-value 5 -minValue 1 -maxValue 100 -sliderStep 1
+		objectNum;
+	floatSliderGrp
+		-label "Distribution Radius" -field true -precision 2
+		-value 10 -minValue 0 -maxValue 100 -step .1
+		distRadius;
+
+	separator -height 20 -st none;
+
+	checkBox -label "Follow Normal" FollowNormal;                        
+
+	separator -height 20 -st none;
+
+	radioButtonGrp -numberOfRadioButtons 3 -label "Aim Vector" -labelArray3 "x" "y" "z" -sl 2 AimVector;
+	radioButtonGrp -numberOfRadioButtons 2 -label "Duplicate" -labelArray2 "Copy" "Instance" -sl 1 DuplicateType; 
+
+	separator -height 20 -st none;
+	
+	button -label "Generate" -w 129 -c "genObjects()";
+                
+showWindow $win;
+}
+
+//-----------------------------------------------------------------------------------------------------//
+//	PROC:	genObjects
+//	
+//		Generates the Objects
+//-----------------------------------------------------------------------------------------------------//
+
+global proc genObjects()
+{
+
+int $objectIndex;
+
+string $mainObject[] = `ls -sl`;
+
+int $objectNumber = `intSliderGrp -q -value objectNum`;
+string $AimVectorUp = `radioButtonGrp -q -sl AimVector`;
+string $DuplicateTypeX = `radioButtonGrp -q -sl DuplicateType`;
+string $FollowNormal = `checkBox -q -value FollowNormal`;
+
+string $surfaceName = $mainObject[1];
+string $objectName = $mainObject[0];
+
+print ("Surface: " + $surfaceName);
+
+// Checks if the surface has been selected
+if ($surfaceName != "")
+{
+	// Freezes the transformations of the object so that the radius works over the object, since it works on (0,0,0)
+	FreezeTransformations $objectName;
+
+	// Creates the number of objects specified in the slider bar
+	for($objectIndex = 0; $objectIndex < $objectNumber; $objectIndex++)
+	{
+
+		// Duplicates or Instances the object
+		switch ($DuplicateTypeX)
+		{
+			case "1":
+			string $theNewObject[] = `duplicate $objectName`;
+			break;
+			case "2":
+			string $theNewObject[] = `instance $objectName`;
+			break;
+		}
+
+		// Constrains the object to the surface
+		geometryConstraint $surfaceName $theNewObject[0];
+
+		// Follows the normal if specified.
+		if ($FollowNormal == 1)
+		{
+			if ($AimVectorUp == 1)
+			{
+				normalConstraint -aimVector 1 0 0 -wut "vector" $surfaceName $theNewObject[0];
+			};
+
+			if ($AimVectorUp == 2)
+			{
+				normalConstraint -aimVector 0 1 0 -wut "vector" $surfaceName $theNewObject[0];
+			};
+
+			if ($AimVectorUp == 3)
+			{
+				normalConstraint -aimVector 0 0 1 -wut "vector" $surfaceName $theNewObject[0];
+			};
+		};
+
+		// Gets the radius where the objects will be placed
+		float $objectDradius = `floatSliderGrp -q -value distRadius`;
+		float $objectDradiusN = -$objectDradius;
+		float $distX = rand ($objectDradiusN,$objectDradius);
+		float $distZ = rand ($objectDradiusN,$objectDradius);
+
+		// Changes the xz of the object
+		string $distObject[] = {($theNewObject[0] + ".tx"), ($theNewObject[0] + ".ty"), ($theNewObject[0] + ".tz")};
+				setAttr $distObject[0] $distX; 
+				setAttr $distObject[2] $distZ;
+		}
+	}
+else {
+	error "You must select a surface";
+}
+}

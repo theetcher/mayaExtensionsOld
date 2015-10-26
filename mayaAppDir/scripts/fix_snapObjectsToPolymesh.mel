@@ -1,0 +1,29 @@
+
+// select several objects, select mesh, execute script to snap all objects to mesh
+// closestPointOnMesh.mll required to run this script
+
+
+global proc fix_snapObjectsToPolymesh( )
+{
+
+   catch(`loadPlugin -qt "nearestPointOnMesh"`);
+	if(! `pluginInfo -q -l "nearestPointOnMesh"`) {
+		confirmDialog -message "Cannot load \"nearestPointOnMesh\" plugin." -title "Error" -ma "center" -button "OK" -icon "critical";
+		error("Cannot load \"nearestPointOnMesh\" plugin.");
+	}
+
+	
+	string $objects[] = `ls -sl -l`;
+	int $lastObjectIndex = (size($objects))-2;
+	string $snapObject[] = `listRelatives -s -f $objects[$lastObjectIndex+1]`;
+	float $CPOMinfo[];
+	float $objectPos[];
+	
+	for ($i = 0; $i <= $lastObjectIndex; $i++) {
+		$objectPos = `xform -q -ws -rp $objects[$i]`;
+		$CPOMinfo = `nearestPointOnMesh -ip $objectPos[0] $objectPos[1] $objectPos[2] -q -p $snapObject[0]`;
+		move -rpr -ws $CPOMinfo[0] $CPOMinfo[1] $CPOMinfo[2] $objects[$i];
+	}
+	
+
+}

@@ -1,0 +1,190 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: isplitByVertex v1.0
+''    Author: ISM
+''    Last Updated: February 5, 2003
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=polygon#2134
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+// isplitByVertex v. 1.0 By ISM
+// Split face between selected vertexes
+// Bug report: renderizm@icqmail.com 
+
+
+global proc isplitByVertex ()
+	{
+		string $listOfVtx[] = `filterExpand -sm 31 -ex 1`;
+		if (`size($listOfVtx)` == 0)
+			{
+				error "Wrong selection type";
+			}
+		string $argList1[];
+		string $argList2[];
+		string $splitCommand;
+		
+		// Extracting arguments from the first selected Vertex
+		// $argList1[0] will get shapename; $argList1[0] will get [ index of vertex]
+		tokenize $listOfVtx[0] "[" $argList1;
+		$argList1[0] = `substitute ".vtx" $argList1[0] " "`;
+		$argList1[1] = `substitute "]" $argList1[1] " "`;
+		strip $argList1[0];
+		strip $argList1[1];
+		int $index1 = `match "[0-9]+" $argList1[1]`;
+		
+		// Extracting arguments from the second selected Vertex
+		tokenize $listOfVtx[1] "[" $argList2;
+		$argList2[1] = `substitute "]" $argList2[1] " "`;
+		strip $argList2[1];
+		int $index2 = `match "[0-9]+" $argList2[1]`;
+
+		string $shapeName[] = `listRelatives -shapes -fullPath  $argList1[0]`;
+		select -r $shapeName[0];
+	
+		string $splitArg= `splitCoorditates $listOfVtx[0] $listOfVtx[1] $shapeName[0] $index1 $index2`;
+		$splitCommand = "polySplit -ch off -s 1 -ep " + $splitArg + " " + $shapeName[0] ;
+		eval $splitCommand;
+		select -r $listOfVtx;
+	}
+
+global proc string splitCoorditates ( string $vtx1, string $vtx2, string $shapeName, string $vtxIndex1, string $vtxIndex2)
+	{
+		int $totalEdges[] = `polyEvaluate -e $shapeName`;
+			
+	// List faces of $vtx1
+		select -r  $vtx1;
+		ConvertSelectionToFaces;
+		string $vtx1Faces[] = `filterExpand -sm 34 -ex 1 -fullPath 1`;
+		
+	// List faces of $vtx2
+		select -r  $vtx2;
+		ConvertSelectionToFaces;
+		string $vtx2Faces[] =  `filterExpand -sm 34 -ex 1 -fullPath 1`;
+		
+	// Find face to split (both vertexes belong to this face)
+		string $sharedFaces[];
+		int $index = 0;
+		for ($vtx1Face in $vtx1Faces)
+			{
+				for ($vtx2Face in $vtx2Faces)
+					{
+						if ($vtx1Face == $vtx2Face) 
+							{
+								$sharedFaces[$index] = $vtx2Face;
+								$index++;
+							}
+					}		
+			}
+
+		if (`size($sharedFaces)` == 0)
+			{
+				error "No shared faces for curent selection";
+			}	
+	// Get list of edges on sharedFaces
+		select -r $sharedFaces[0];
+		ConvertSelectionToEdges;
+		string $edgesOfSharedFaces[] = `filterExpand -sm 32 -ex 1 -fullPath 1`;
+		
+	// Edges neares to vtx1
+		select -r $vtx1;
+		ConvertSelectionToEdges;
+		$vtx1Edges = `filterExpand -sm 32 -ex 1 -fullPath 1`;
+		
+	// Edges neares to vtx2
+		select -r $vtx2;
+		ConvertSelectionToEdges;
+		$vtx2Edges = `filterExpand -sm 32 -ex 1 -fullPath 1`;
+	
+	// List all nearest edges for vtx1 and sharedFace. The same for vtx2.
+		string $vtx1EdgesGood[];
+		string $vtx2EdgesGood[];
+		$indexVtx1 = 0;
+		$indexVtx2 = 0;
+		for ( $edgesOfSharedFace in $edgesOfSharedFaces)
+			{
+				for ( $vtx1Edge in $vtx1Edges)
+					{
+						if ( $vtx1Edge == $edgesOfSharedFace )
+							{
+								$vtx1EdgesGood[$indexVtx1] = $vtx1Edge;
+								$indexVtx1++;
+							}
+					}
+				for ( $vtx2Edge in $vtx2Edges)
+					{
+						if ( $vtx2Edge == $edgesOfSharedFace )
+							{
+								$vtx2EdgesGood[$indexVtx2] = $vtx2Edge;
+								$indexVtx2++;
+							}
+					}				
+			}
+	// We will work with the first pair of good edges  - $vtx1EdgesGood[0] and $vtx2EdgesGood[0]
+	
+	// get definition of edges
+	string $splitEdge1Def[] = `polyInfo -ev $vtx1EdgesGood[0]`;
+	string $splitEdge2Def[] = `polyInfo -ev $vtx2EdgesGood[0]`;
+	
+	string $tokenz1[];
+	string $tokenz2[];
+	tokenize $splitEdge1Def[0] $tokenz1;
+	tokenize $splitEdge2Def[0] $tokenz2;
+
+	string $splitArg;	
+	string $edgeIndex1 = `extractIndex $vtx1EdgesGood[0] edge`;
+	string $edgeIndex2 = `extractIndex $vtx2EdgesGood[0] edge`;
+	
+	if ($tokenz1[2] == $vtxIndex1)
+		{
+			$splitArg = $edgeIndex1 + " 0 ";
+		}
+		else
+			{
+				$splitArg = $edgeIndex1 + " 1 ";
+			}
+	
+	if ($tokenz2[2] == $vtxIndex2)
+		{
+			$splitArg += "-ep " + $edgeIndex2 + " 0 ";
+		}
+		else
+			{
+				$splitArg += "-ep " +  $edgeIndex2 + " 1 ";
+			}
+	print "\n";
+	print ("splitArg: " + $splitArg + "\n");
+	return $splitArg;
+	}
+
+global proc string extractIndex (string $inputString, string $objType)
+{	
+// Extract index of edge or vertex from $inputString
+// objType can be : vtx, edge or face
+	string $separator;
+	if ($objType == "vtx")
+		{
+			$separator = ".vtx[";
+		}
+	if ($objType == "edge")
+		{
+			$separator = ".e[";
+		}
+	if ($objType == "face")
+		{
+			$separator = ".f[";
+		}
+	string $tokenized[];
+	tokenize $inputString "[" $tokenized;
+	$tokenized[0] = `substitute $separator $tokenized[0] " "`;
+	$tokenized[1] = `substitute "]" $tokenized[1] " "`;
+	strip $tokenized[0];
+	strip $tokenized[1];
+	print ("ExtractIndex result: --> " + $tokenized[1] + "\n");
+	return $tokenized[1];
+}

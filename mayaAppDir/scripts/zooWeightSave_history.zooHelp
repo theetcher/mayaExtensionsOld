@@ -1,0 +1,22 @@
+Created on the 25 March 2005
+zooWeightSave was brought to you by the fine folks @ macaroniKazoo.
+
+Hamish McKenzie ©2005...
+macaroniKazoo Productions ©2005...
+mel@mel.macaronikazoo.com
+
+
+v1.0.3
+------
+NEW: weights can now be restored on selected verts only
+
+
+v1.0.2
+------
+MEL: the blind data template has been altered to store all information in a single attribute - this usually gives a 100% speed increase over the original implementation
+FIX: now checks for the existance of joints when restoring weights.  If a joint specified in the blind data is not found, it is ignored, and the weight it had assigned to it is redistributed
+
+
+v1.0.0
+------
+NEW: first ever version

@@ -1,0 +1,136 @@
+// select object and locator
+// run script
+// vertex normals will be blown from direction of locator
+
+proc fix_bn_initOptionVars ()
+{
+	if (!`optionVar -exists "fix_bn_randomization"`)
+		optionVar -floatValue "fix_bn_randomization" 1;
+}
+
+global proc fix_bn_setOptionVars()
+{
+	optionVar -floatValue "fix_bn_randomization" `floatSliderGrp -q -v ui_bn_randomization`;
+}
+
+global proc do_fix_blowNormals() 
+{
+
+	string $selection[] = `ls -sl -l`; 
+	if (size($selection) < 2) error("First select vertices and than select locator.");
+	string $aimLoc = $selection[size($selection)-1];
+	stringArrayRemoveAtIndex((size($selection)-1), $selection);
+	string $hairVertices[] = `polyListComponentConversion -tv $selection`;
+
+	float $oldNormWeight = `optionVar -q "fix_bn_randomization"`;
+	
+	$hairVertices = `ls -l -fl $hairVertices`;
+	
+	vector $vtxNormal;
+	vector $vtxPos;
+	vector $aimLocPos;
+	float $vtxNormalOld[];
+	
+	undoInfo -state off;
+	for ($vtx in $hairVertices) {
+		$aimLocPos = `pointPosition -w $aimLoc`;
+		$vtxPos = `pointPosition -w $vtx`;
+		$vtxNormal = unit($aimLocPos - $vtxPos);
+		$vtxNormalOld = `polyNormalPerVertex -q  -xyz $vtx`;
+		polyNormalPerVertex -xyz 	(-$vtxNormal.x * (1 - $oldNormWeight) + $oldNormWeight * $vtxNormalOld[0])
+											(-$vtxNormal.y * (1 - $oldNormWeight) + $oldNormWeight * $vtxNormalOld[1])
+											(-$vtxNormal.z * (1 - $oldNormWeight) + $oldNormWeight * $vtxNormalOld[2])
+											$vtx;
+	undoInfo -state on;
+	
+	// dont know why, but it frees memory
+	undoInfo -state off;
+	undoInfo -state on;
+
+// vector rotate randomization		
+//		vector $tmpVec = `rot <<0, 1, 0>> (sphrand(1)) (rand(1))`;
+//		spaceLocator -a -p ($tmpVec.x) ($tmpVec.y) ($tmpVec.z);
+
+	}
+}
+
+global proc fix_blowNormals()
+{
+
+	fix_bn_initOptionVars ();
+	
+	if (`window -exists fixBlowNormalsWin` == 1)
+			deleteUI fixBlowNormalsWin;
+
+	int $winWidth = 450;
+	int $separatorWidth = $winWidth - 7;
+	
+	string $fixBlowNormalsWin = `window 
+		-t "Make Hair Normals"
+		-in "Make Hair Normals"
+		-s 0
+		-mnb 1
+		-mxb 0
+		fixBlowNormalsWin`;
+		
+	columnLayout -cat "both" 5 -adj 1;
+	
+		separator -style "none" -height 5;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 5;
+
+      frameLayout
+			-borderStyle "etchedOut"
+			-labelVisible false
+			-marginHeight 5
+			-marginWidth 5
+			-width $separatorWidth
+		;
+			
+			columnLayout;
+				text -l "1. Select mesh object or vertices which normals you wish to blow.";
+				text -l "2. Select locator which represent blow source.";
+				text -l "3. Press \"Blow Normals\".";
+			setParent ..;
+		
+		setParent ..;
+		
+		separator -style "none" -height 5;
+
+		floatSliderGrp
+			-field on
+			-label "Old Normal Weight"
+			-minValue 0
+			-maxValue 1
+			-fieldMinValue 0
+			-fieldMaxValue 1
+			-step 0.001
+			-value `optionVar -q "fix_bn_randomization"`
+			ui_bn_randomization
+		;
+
+		separator -style "none" -height 5;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 5;
+
+		rowColumnLayout  -numberOfColumns 2 
+			-columnWidth 1 221 
+			-columnWidth 2 221;
+
+			button -label "Blow Normals" 
+				-ann "Blow Normals" 
+				-command "fix_bn_setOptionVars(); deleteUI fixBlowNormalsWin; do_fix_blowNormals;";
+
+			button -label "Cancel" 
+				-ann "cancel this operation" 
+				-command "deleteUI fixBlowNormalsWin;";
+		
+		setParent ..;
+		
+	showWindow $fixBlowNormalsWin;
+
+	window -e -w $winWidth -h 170 $fixBlowNormalsWin; // width and height works only after window has been shown		
+
+}
+  
+ 

@@ -1,0 +1,118 @@
+/*
+MEL SCRIPT FILE
+---------------
+
+SCRIPT NAME: AErayDiffuseLightTemplate.mel
+VERSION: 1.0
+(C) 2001-2002 Light Engine 3d
+
+AUTHOR: Mark Davies
+lightengine3d@hotmail.com
+
+MODIFIED: 10.17.02
+
+DESCRIPTION: AE template for rayDiffuseLight node
+
+USAGE:
+    
+INPUTS:
+
+RETURN: none
+
+NOTES:
+*/
+
+
+global proc AErayDiffuseLightImpSampNew( string $attribute )
+{
+	setUITemplate -pst attributeEditorTemplate;
+		checkBoxGrp
+		-numberOfCheckBoxes 1
+		-label ""
+		-label1 "Importance Sampling"
+		-v1 0
+		impSampCBG;
+	setUITemplate -ppt;
+
+AErayDiffuseLightImpSampReplace( $attribute );
+}
+
+
+global proc AErayDiffuseLightImpSampReplace( string $attribute )
+{
+	connectControl -index 2 impSampCBG $attribute;
+}
+
+
+global proc AErayDiffuseLightTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+
+editorTemplate -beginScrollLayout;
+
+	// Light Properties
+	editorTemplate -beginLayout "Light Attributes" -collapse 0;
+		editorTemplate -addControl "lightMap";
+		editorTemplate -addControl "exposureBalance";
+		editorTemplate -addControl "dynamicRangeMax";
+		editorTemplate -addControl "projType";
+		editorTemplate -addControl "useBentNormals";
+	editorTemplate -endLayout;
+
+	// Shadows
+	editorTemplate -beginLayout "Shadows" -collapse 0;
+		editorTemplate -addControl "useRayTraceShadows";
+		editorTemplate -addControl "shadowSpread";
+		editorTemplate -addControl "shadowRays";
+		editorTemplate -addControl "shadowDensity";
+		editorTemplate -suppress "importanceSampling";
+		editorTemplate -callCustom "AErayDiffuseLightImpSampNew"
+					"AErayDiffuseLightImpSampReplace"
+					"importanceSampling";
+		editorTemplate -addControl "jitter";
+		editorTemplate -addControl "jitterScale";
+		editorTemplate -addControl "lockSamples";
+	editorTemplate -endLayout;
+
+	//hiding default locator attributes
+	editorTemplate -suppress "visibility";
+	editorTemplate -suppress "intermediateObject";
+	editorTemplate -suppress "template";
+	editorTemplate -suppress "ghosting";
+	editorTemplate -suppress "useObjectColor";
+	editorTemplate -suppress "objectColor";
+	editorTemplate -suppress "drawOverride";
+	editorTemplate -suppress "lodVisibility";
+	editorTemplate -suppress "motionBlur";
+	editorTemplate -suppress "visibleInReflections";
+	editorTemplate -suppress "visibleInRefractions";
+	editorTemplate -suppress "castsShadows";
+	editorTemplate -suppress "receiveShadows";
+	editorTemplate -suppress "maxVisibilitySamplesOverride";
+	editorTemplate -suppress "maxVisibilitySamples";
+	editorTemplate -suppress "geometryAntialiasingOverride";
+	editorTemplate -suppress "antialiasingLevel";
+	editorTemplate -suppress "shadingSamplesOverride";
+	editorTemplate -suppress "shadingSamples";
+	editorTemplate -suppress "maxShadingSamples";
+	editorTemplate -suppress "volumeSamplesOverride";
+	editorTemplate -suppress "volumeSamples";
+	editorTemplate -suppress "depthJitter";
+	editorTemplate -suppress "primaryVisibility";
+	editorTemplate -suppress "localPosition";
+	editorTemplate -suppress "renderInfo";
+	editorTemplate -suppress "instObjGroups";
+	editorTemplate -suppress "compInstObjGroups";
+	editorTemplate -suppress "ghostingControl";
+	editorTemplate -suppress "ghostCustomSteps";
+	editorTemplate -suppress "ghostFrames";
+	editorTemplate -suppress "ghostRangeStart";
+	editorTemplate -suppress "ghostRangeEnd";
+	editorTemplate -suppress "ghostDriver";
+	editorTemplate -suppress "ignoreSelfShadowing";
+
+	AEdependNodeTemplate $nodeName;
+
+editorTemplate -addExtraControls;
+editorTemplate -endScrollLayout;
+}

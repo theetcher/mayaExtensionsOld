@@ -1,0 +1,109 @@
+// Copyright (C) 1997-2002 Alias|Wavefront,
+// a division of Silicon Graphics Limited.
+//
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias|Wavefront.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias|Wavefront license agreement, without fee.
+//
+// ALIAS|WAVEFRONT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS|WAVEFRONT BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+//
+// Alias|Wavefront Script File
+// MODIFY THIS AT YOUR OWN RISK
+//
+// gridUVWin.mel
+// cpam july 2001
+//
+// modified: march 2002
+//			added optionVars 
+//
+// creates UI for gridUV.mel command
+
+global proc changePreset(){
+	int $presets[] = {0, 0, 1024, 512, 256, 128, 64, 32, 16};
+	int $selectedItem = `optionMenuGrp -q -sl mapSizePreset`;
+	intSliderGrp -e -v $presets[$selectedItem] ugrid;
+	intSliderGrp -e -v $presets[$selectedItem] vgrid;
+
+}
+
+global proc gridUVWin(){
+
+	string $gridUVWin = "gridUVWin";
+	if (`window -exists $gridUVWin`)
+		{deleteUI -wnd $gridUVWin;}
+	
+	if (!`optionVar -exists "gridUVValueU"`){
+		optionVar -intValue "gridUVValueU" 256;
+		optionVar -intValue "gridUVValueV" 256;
+		optionVar -intValue "gridUVValuePixel" 1;
+	}
+
+	window -width 400
+		-h 140
+		-title "Grid UVs"
+		$gridUVWin;
+	
+		columnLayout -adjustableColumn true;
+
+		optionMenuGrp -l "Map Size Presets" 
+			-cc "changePreset"
+			mapSizePreset;
+
+		menuItem -l " Custom/Non Square";
+		menuItem -l "1024 Map";
+		menuItem -l " 512 Map";
+		menuItem -l " 256 Map";
+		menuItem -l " 128 Map";
+		menuItem -l "  64 Map";
+		menuItem -l "  32 Map";
+		menuItem -l "  16 Map";
+
+		//optionMenuGrp -e -sl 4 mapSizePreset;
+		//setParent -m ..;
+
+		intSliderGrp 
+			-label "Grid U"
+			-min 1
+			-max 1024
+			-f 1
+			-fmn 1
+			-fmx 1024
+			-v `optionVar -query "gridUVValueU"`
+			-cc "optionMenuGrp -e -sl 1 mapSizePreset;"
+			ugrid;
+
+		intSliderGrp
+			-label "Grid V"
+			-min 1
+			-max 1024
+			-f 1
+			-fmn 1
+			-fmx 1024
+			-v `optionVar -query "gridUVValueV"`
+			-cc "optionMenuGrp -e -sl 1 mapSizePreset;"
+			vgrid;
+
+		radioButtonGrp -numberOfRadioButtons 2
+			-label "Move UVs to" -labelArray2 "Pixel Border" "Pixel Cemter"
+			-sl `optionVar -query "gridUVValuePixel"`
+			snap;
+
+		button -label "Grid UVs"
+			-c "optionVar -intValue gridUVValueU `intSliderGrp -q -v ugrid`;
+				optionVar -intValue gridUVValueV `intSliderGrp -q -v vgrid`;
+				optionVar -intValue gridUVValuePixel (`radioButtonGrp -q -sl snap` - 1);
+				gridUV `optionVar -query gridUVValueU`
+				`optionVar -query gridUVValueV`
+				`optionVar -query gridUVValuePixel`
+				";
+
+	showWindow $gridUVWin;
+	 
+}

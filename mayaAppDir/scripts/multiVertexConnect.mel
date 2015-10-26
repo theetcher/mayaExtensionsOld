@@ -1,0 +1,170 @@
+global proc multiVertexConnect ()
+{
+	global string $sources[];
+	global string $targets[];
+	
+	clear ($sources);
+	clear ($targets);
+	
+	string $cmd = "if ((size($sources) != 0) && (size($targets) != 0)) doMultiVertexConnect($sources, $targets)";
+	
+	if (`window -exists MVCWindow` == 1)
+		deleteUI MVCWindow;
+
+	string $MVCWin = `window 
+				-t "Multi Vertex Connect"
+				-in "Multi Vertex Connect"
+				-s 1
+				-mnb 1
+				-mxb 0
+				-h 50
+				-w 300
+				MVCWindow`;
+	formLayout MVCWin_UIFormLayout;
+
+	//--Create Controllers--//
+
+	button -w 120 -h 25 -c ("$sources = `ls -sl -l -fl`; if (size($sources) != 0) symbolButton -e -i \"MPSLoaded.bmp\" sourcesSBTN; select -cl;") -label "Load 1st Group" "loadSourcesBTN" ;
+	button -w 120 -h 25 -c ("$targets = `ls -sl -l -fl`; if (size($targets) != 0) symbolButton -e -i \"MPSLoaded.bmp\" targetsSBTN; select -cl;") -label "Load 2nd Group" "loadTargetsBTN" ;
+	button -w 200 -h 25 -c ("deleteUI " + $MVCWin) -label "Cancel" "cancelBTN" ;
+	button -w 200 -h 25 -c ($cmd + ";" + "clear ($sources);" + "clear ($targets);" + "symbolButton -e -i \"MPSNotLoaded.bmp\" sourcesSBTN;" + "symbolButton -e -i \"MPSNotLoaded.bmp\" targetsSBTN;") -label "Apply" "okBTN" ;
+	symbolButton -image "MPSNotLoaded.bmp" "sourcesSBTN" ;
+	symbolButton -image "MPSNotLoaded.bmp" "targetsSBTN" ;
+
+	//--Arrange Controllers--//
+
+	formLayout -e
+		-af "loadSourcesBTN" "left" 85
+		-af "loadSourcesBTN" "top" 8
+		-af "loadTargetsBTN" "left" 210
+		-af "loadTargetsBTN" "top" 8
+		-af "okBTN" "left" 5
+		-af "okBTN" "top" 45
+		-af "cancelBTN" "left" 210
+		-af "cancelBTN" "top" 45
+		-af "sourcesSBTN" "left" 44
+		-af "sourcesSBTN" "top" 5
+		-af "targetsSBTN" "left" 335
+		-af "targetsSBTN" "top" 5
+
+		MVCWin_UIFormLayout;
+
+	showWindow $MVCWin;
+}
+
+/////////////////////////////////
+
+global proc string getObjNameFromComponent(string $component) {
+	string $result[];
+	tokenize $component "." $result;
+	print (" - Object name: " + $result[0] + "\n");
+	return $result[0];
+}
+
+global proc int polyComponentId(string $component) {
+	int $id;
+	string $result[];
+	tokenize $component "[]" $result;
+	$id = $result[1];
+	print ("   ------  Component " + $component + "; ID = " + $id + "\n");
+	return $id;
+}
+
+global proc string[] vertexToFace(string $theVtx) {
+	string $buffer[];
+	string $listFace[] = `polyInfo -vf $theVtx`;
+	tokenize $theVtx "." $buffer;
+	string $ObjectName = $buffer[0];
+	int $nbFace = tokenize($listFace[0] ,$buffer);
+	$nbFace -= 2;
+	string $listFaceName[];
+
+	for ($i=2;$i<size($buffer);$i++)
+		$listFaceName[$i-2] = ($ObjectName + ".f["+$buffer[$i]+"]");
+
+	return $listFaceName;
+}
+
+global proc string[] faceToVertex(string $theFace) {
+	string $buffer[];
+	string $listVtx[] = `polyInfo -fv $theFace`;
+	tokenize $theFace "." $buffer;
+	string $ObjectName = $buffer[0];
+	int $nbVtx = tokenize($listVtx[0] ,$buffer);
+	$nbVtx -= 2;
+	string $listVtxName[];
+	for ($i=2;$i<size($buffer);$i++) {
+		$listVtxName[$i-2] = ($ObjectName + ".vtx["+$buffer[$i]+"]");
+	}
+	return $listVtxName;
+}
+
+global proc int[] getEdgePointParams(string $vertex) {
+	int $result[];
+
+	select $vertex;
+	PolySelectConvert 2;
+	string $edges[] = `ls -sl -l -fl`;
+	string $buffer[] = `polyInfo -ev $edges[0]`;
+	string $vrtInfo[];
+	tokenize $buffer[0] " :" $vrtInfo;
+	
+	print (" - polyInfo result: ");
+	for ($vrtInfoStr in $vrtInfo) {
+		print ($vrtInfoStr + " ");
+	}
+	
+	$result[0] = $vrtInfo[1];
+	if (polyComponentId($vertex) == $vrtInfo[2]) {
+		$result[1] = 0;
+	}
+	else {
+		$result[1] = 1;
+	}
+	select -cl;
+	
+	print (" - getEdgePointParams result: " + $result[0] + " " + $result[1] + "\n");
+	
+	return $result;
+}
+
+global proc connectVertices(string $obj, string $vert1, string $vert2) {
+	int $edgePoint1[] = getEdgePointParams($vert1);
+	int $edgePoint2[] = getEdgePointParams($vert2);
+	
+	print (" Trying to perform PolySplit: \n" );
+	print ("    polySplit -s 1 -sma 0 -ep " + $edgePoint1[0] + " " + $edgePoint1[1]  +  " -ep " + $edgePoint2[0]  + " " + $edgePoint2[1]  + " " + $obj + "\n");
+
+	polySplit
+		-s 1
+		-sma 0
+		-ep $edgePoint1[0] $edgePoint1[1]
+		-ep $edgePoint2[0] $edgePoint2[1]
+		$obj;
+	
+	delete -ch $obj;
+}
+
+global proc doMultiVertexConnect (string $sources[], string $targets[])
+{
+	for ( $vtx in $sources ) {
+		string $faces[] = vertexToFace($vtx);
+		string $vtxs[];
+		clear ($vtxs);
+		for ( $face in $faces ) {
+			string $pvtxs[] = faceToVertex($face);
+			$vtxs = stringArrayCatenate($vtxs, $pvtxs);
+			$vtxs = stringArrayRemoveDuplicates($vtxs);
+		}
+		
+		for ( $target in $targets ) {
+			for ( $svtx in $vtxs ) {
+				if ($target == $svtx) {
+					string $object = getObjNameFromComponent($vtx);
+					connectVertices($object, $vtx, $target);
+					break;
+				}
+			}
+		}
+	}
+}   

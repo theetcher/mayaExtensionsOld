@@ -1,0 +1,23 @@
+// $comp
+// 0 - Subd, 1 - Proxy
+// $sel
+// 0 - select from all objects
+// 1 - select from Active objects
+
+global proc fix_selSubdComp(int $comp)
+{
+string $allMeshes[];
+string $selection[] = `ls -sl`;
+if ($selection[0] != "") $allMeshes = `ls -sl -l -dag -lf -typ "mesh"`;
+	else $allMeshes = `ls -l -dag -ap -typ mesh`;
+select -cl;
+if ( size($allMeshes) >= 1 )
+	{
+	for ($mesh in $allMeshes)
+		{
+		if ( `objExists ($mesh+".isProxy")` ) 
+			if ($comp == `getAttr ($mesh+".isProxy")`) select -add $mesh;
+		}
+	}
+if (size (`selectedNodes`) >= 1) pickWalk -d up;
+}

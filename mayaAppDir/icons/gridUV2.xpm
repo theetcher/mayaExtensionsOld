@@ -1,0 +1,39 @@
+/* XPM */
+static char *gridUV[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #0c0407",
+". c #bc8c8a",
+"# c #b40a18",
+"a c #153596",
+"b c #c4c2c4",
+"c c #5a1928",
+"d c #645250",
+"e c #f90708",
+/* pixels */
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbaaaaaaaaaaaaaaaaaaabb",
+"bbbaaaaaaaaaaaaaaaaaaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaab...ebbaabbbbbbaabb",
+"bbbaa.eeeebbaabbbbbbaabb",
+"bbba#eeeeeeeeeeaaaaaaabb",
+"bbbaceeeee`````aaaaaaabb",
+"bbbaa.ac#edbaabbbbbbaabb",
+"bbbaabbbdc.baabbbbbbaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaabbbbbbbaabbbbbbaabb",
+"bbbaaaaaaaaaaaaaaaaaaabb",
+"bbbaaaaaaaaaaaaaaaaaaabb",
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbb"
+};

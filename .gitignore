@@ -1,0 +1,90 @@
+# =========================
+# Python
+# =========================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+
+# =========================
+# Operating System Files
+# =========================
+
+# Windows
+# =========================
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+
+# =========================
+# PyCharm
+# =========================
+
+.idea/
+
+# =========================
+# Project specific files
+# =========================
+
+.mayaSwatches/
+
+
+# =========================
+# Maya configs
+# =========================
+filePathEditorRegistryPrefs.mel
+mainWindowStates/
+MTKShelf.mel
+scriptEditorTemp/
+mayaLog
+projects/
+user.toolclips/
+synColor/
+presets/
+*.deleted
+menu_ChangePanelLayout.mel
+menu_ChangePanelType.mel
+menu_ChangeSelectionMask.mel
+menu_CommonModelingPanes.mel
+menu_ControlPaneVisibility.mel
+menuSetPrefs.mel
+pluginPrefs.mel
+synColorConfig.xml
+synColorConfig.xml.lock
+userPrefs.mel
+userRGBColors2.mel
+windowPrefs.mel
+renderNodeTypeFavorites

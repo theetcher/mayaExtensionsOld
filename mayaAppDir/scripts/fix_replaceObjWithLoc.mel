@@ -1,0 +1,70 @@
+
+
+global proc fix_replaceObjWithLoc()
+{
+
+	int $count;
+	string $objList[] = `ls -sl -l`;
+	string $objListShort[] = `ls -sl`;
+	string $newObj[];
+	string $locator;
+	int $objListSize = `size($objList)`;
+	string $tmp[];
+
+	if ($objListSize < 1){
+		error "nothing selected !\n";
+	} else {
+		// create locator
+		$locator = `createNode locator`;	// create locator
+		string $parent[] = `listRelatives -p $locator`;
+		$objList[$objListSize] = $parent[0];	// set locator as last object to list
+
+		int $sourceMode = 3;
+		int $destMode = 3;
+		float $rotPiv[3];
+
+		for ($count = 0; $count < $objListSize; $count++) {
+			$rotPiv = `xform -q -ws -rp $objList[$count]`;
+
+			string $dup[] = `duplicate $objList[$objListSize]`;
+			$newObj[$count] = $dup[0];
+
+			move -a -rpr $rotPiv[0] $rotPiv[1] $rotPiv[2] $newObj[$count];
+
+			float $oldRot[3] =`xform -q -a -ro $newObj[$count]`;
+			float $rot[3] = `xform -q -a -ro $objList[$count]`;
+
+			$oldRot[0] = $rot[0];
+			$oldRot[1] = $rot[1];
+			$oldRot[2] = $rot[2];
+
+			rotate -a $oldRot[0] $oldRot[1] $oldRot[2] $newObj[$count];
+
+			// get original parent
+			string $parent[] = `listRelatives -p -f $objList[$count]`;
+
+			// print name and delete original
+//			print ($objList[$count] + "\n");
+			delete $objList[$count];
+
+			// parent new geometry
+			if ($parent[0] != "")
+				parent $newObj[$count] $parent[0];
+		}
+		
+
+		// delete locator
+		delete $objList[$objListSize];
+
+		// select new geometry
+		select -clear;
+		for ($count = 0; $count < $objListSize; $count++) {
+			select -add $newObj[$count];
+			rename $newObj[$count] $objListShort[$count]; 
+		}
+	}
+
+
+
+}
+

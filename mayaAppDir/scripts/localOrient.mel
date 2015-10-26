@@ -1,0 +1,122 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: localOrient v0.2
+''    Author: campbell strong
+''    Last Updated: June 16, 2003
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=modeling#2375
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+/* 
+
+localOrient
+----------------
+reorient the true local axes (cf. rotational offset).
+
+
+Campbell Strong 09/02 4.0
+v0.2 (06/03, v4.5)
+campbellstrong@hotmail.com
+-----------------------------------------
+
+Usage:
+----------
+- just call it, localOrient.
+
+- ** to exit, change tool **
+
+- does multiple transforms at once.
+
+- you can setup constraints before exiting the tool,
+allowing for things like orienting along an axis (eg
+
+
+	***** warning ******
+	 *** fat caverat ***
+	 
+--> realise that this is changing the pnt positions,
+therefore if your pnt data is sensative, using this
+could be a problem. in such situtations, the 
+common approach would be to simply stack 
+transforms. ie, most history operations that work
+on pnt locations will end up w strange behaviour 
+after doing this. its an early modelling phase tool.
+	
+
+- doesnt work on subds directly, flip to poly prox
+to do it.
+
+- you might get a generic tweak warning.
+
+*/
+
+
+
+global proc localOrient()
+{
+	warning "To exit the localOrient tool, ensure that you do so by changing tool (eg, to move or rotate), otherwise expect strange behaviour";
+
+	string $tob[];
+	string $spak[];
+	$vlds = `ls -sl -dag -lf -ni -typ mesh -typ nurbsSurface`;
+	$trans = `listRelatives -p -f $vlds`;
+	print $trans;
+
+	if (size($vlds)){
+		RotateTool;
+	} else 
+		error " works on polys or nurbs";
+
+	for ($to in $vlds){
+		$lat = `lattice -dv 2 2 2 -oc 1 $to`; scale -r 1.5 1.5 1.5 $lat; 
+		setAttr ($lat[0]+".fg") 1;  hide $lat;
+		scriptJob -ro 1 -e "ToolChanged" ("reCast "+$to+"; MoveTool; manipMoveContext -e -mode 0 Move; select -r "+$to);
+	} 
+
+	select $trans;
+}
+
+
+
+global proc reCast(string $obj)
+{
+	float $locatn[]; string $ip;
+	float $loc[]; int $i; string $pnts[];
+
+	if (`nodeType $obj` == "mesh") {
+		select -r ($obj+".vtx[*]"); $ip = ".i";
+		$pnts = `ls -sl -fl`;
+	}
+
+	if (`nodeType $obj` == "nurbsSurface"){
+		select -r ($obj+".cv[*]"); $ip = ".cr";
+		$pnts = `ls -sl -fl`;
+	}
+
+	for ($pnt in $pnts){
+		$loc =  `pointPosition -w $pnt`;
+		$locatn[$i] = $loc[0];
+		$locatn[$i+1] = $loc[1];
+		$locatn[$i+2] = $loc[2];
+		$i+=3;
+	}
+
+	$ipo = `listConnections ($obj+$ip)`;
+	delete $ipo;
+	$ipo = `listConnections -sh 1 -type surfaceShape ($obj+$ip)`; 
+
+	if (size($ipo)) 
+		delete $ipo;
+
+	$i = 0;
+	for ($pnt in $pnts){
+		xform -ws -t $locatn[$i] $locatn[$i+1] $locatn[$i+2] $pnt;
+		$i+=3;
+	}
+}

@@ -1,0 +1,57 @@
+/* ptb_printpivot.mel
+
+This script may be freely distributed. Modify at your own risk.
+
+Author:		Dirk Bialluch (DirkBi@Software2000.de)
+
+Creation Date:	22.05.98
+Last Update:	24.05.99
+*/
+
+//
+// Main procedure
+//
+
+global proc ptb_printpivot ()
+{
+	string $objList[] = `ptb_filterTransforms`;
+	int $count = `size ($objList)`;
+	string $pivotMode;
+	float $piv[3];
+
+	string $coordMode;
+	if (`radioButtonGrp -q -select ptb13_coordMode` == 1)
+		$coordMode = "-ws";
+	else
+		$coordMode = "-os";
+
+	for ($count = 0; $count < size($objList); $count++)
+	{
+		int $mode = `optionMenu -q -select ptb13_mode`;
+		switch ($mode)
+		{
+			case 1:
+				$piv = `eval ("xform -q" + $coordMode + " -t " + $objList[$count])`;
+				$pivotMode = " (absolute)\n";
+				break;
+			case 2:
+				$piv = `eval ("xform -q" + $coordMode + " -sp " + $objList[$count])`;
+				$pivotMode = " (scale pivot)\n";
+				break;
+			case 3:
+				$piv = `eval ("xform -q" + $coordMode + " -rp " + $objList[$count])`;
+				$pivotMode = " (rotate pivot)\n";
+				break;
+			case 4:
+				if ($coordMode == "-ws")
+					$piv = `xform -q -ro $objList[$count]`;
+				else
+					$piv = `xform -q -ra $objList[$count]`;
+				$pivotMode = " (local axis)\n";
+				break;
+		}
+		print ($objList[$count] + "> X:" + $piv[0] + " Y:" + $piv[1] + " Z:" + $piv[2] + $pivotMode);
+	}
+}
+
+// end of script

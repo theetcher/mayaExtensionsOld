@@ -1,0 +1,13 @@
+global proc fix_selectHidden()
+{
+	string $allTransforms[] = `ls -l -tr`;
+	string $hiddenObjects[];
+	for ($tr in $allTransforms) {
+		if (!(`getAttr ($tr+".visibility")`)) $hiddenObjects[size($hiddenObjects)] = $tr;
+	}
+	select $hiddenObjects;
+}   
+
+
+
+

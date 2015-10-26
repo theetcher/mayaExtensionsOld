@@ -1,0 +1,89 @@
+//----------------------------------------------------------------------------------------------------------------
+// MODIFY THIS AT YOUR OWN RISK
+//
+// Creation Date:  12 April 2000
+// Author:         S. D. Serbos <serbos@alpha.fdu.edu>
+// 
+//
+//  Procedure Name:
+//
+//      sds_ezUV (version 1.1)   (Bug reports are welcome) 
+//
+//  Description:
+//
+//     	This script will create UV coordinates on complex poly models by extracting the UV coordinates
+//	from a surrounding nurbs surface utilizing CLOSEST POINT ON SURFACE.
+//
+//
+//  Instructions:
+//
+//	1) Create a poly model.
+//	2) Position a nurbs model around it.
+//	3) Shape it so that it is wrapped around it like a sock for best results.
+//	4) Select the Nurbs model and SHIFT select the vertices of the poly model.
+//	5) Execute the script.
+//	6) If you do not like the result modify the shape of the NURBS model and go back to step 3.
+//
+//
+//   Comments:
+//	I hope you find it helpful. It should shave a few hours off poly texture mapping from now on.
+//	Unlike my previous script (sds_projectUV) it does not use softbody collision to extract UV
+//	values from the nurbs surface. It is also significantly faster.
+//	
+//	Bug reports are welcome. 
+//	
+//	History:
+//
+//	12 April 2000
+//	The birthday of this script.
+//----------------------------------------------------------------------------------------------------------------
+
+
+
+global proc sds_ezUV()
+{
+
+/* for some reason if you are in a trasformation tool during some of the
+procedures that follow Maya would crash. So here you are. Always in select mode.*/
+
+	buildSelectMaskMM;
+	changeToolIcon;
+	if( `popupMenu -exists tempMM` ) { deleteUI tempMM; };
+	
+	
+//tearOffPanel "Texture View" "polyTexturePlacementPanel" true; //open texture view
+string $nurbSelection[] = `ls -sl  -typ transform`;
+string $nurb = $nurbSelection[0];
+string $expandedTotalPolyVtx[] = `filterExpand -sm 31 `;
+print $expandedTotalPolyVtx;
+
+createNode closestPointOnSurface -name position2UV;
+connectAttr ($nurb + ".worldSpace") position2UV.inputSurface;
+for ($eachVtx in $expandedTotalPolyVtx)
+	{
+        float $valuess[] =  `pointPosition -w $eachVtx`;
+        vector $isthisit = ("<<"+ $valuess[1] +"," + $valuess[2] +"," + $valuess[3] +">>");
+        setAttr "position2UV.inPositionX"  $valuess[0] ;
+        setAttr "position2UV.inPositionY"  $valuess[1] ;
+        setAttr "position2UV.inPositionZ"  $valuess[2] ;
+        refresh;
+        $grabU = `getAttr position2UV.u`;
+        print position2UV.u;
+        $grabV = `getAttr position2UV.v`;
+        print position2UV.v;
+	 string $vtx2map[];					
+	 $vtx2map =`polyListComponentConversion -tuv $eachVtx`;
+	 select -r $vtx2map;					
+	 string $therealUVs[]=`filterExpand -ex true -sm 35 $vtx2map`;
+	 constructionHistory -toggle false;
+	 for ($oneUV in $therealUVs)
+		{
+		 polyEditUV  -r false -u $grabU -v $grabV $oneUV;         
+        	flushUndo;
+        	}
+
+}
+delete "*position2UV*";
+select $nurb;
+select -tgl $expandedTotalPolyVtx;
+}

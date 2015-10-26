@@ -1,0 +1,77 @@
+//envPrint.mel
+//
+
+global proc findPolysShaded()
+{
+
+	PolySelectConvert 1;
+	string $selection[] = `ls -sl -l -fl`;
+	string $shadingGroup;
+	string $shape[];
+	
+	if ($selection[0] != "")
+		{
+
+	//	$selection = `ls -sl -l`;
+		select $selection[0];
+				
+
+
+
+		string $comps[] = `ls -flatten -selection -l`;
+
+			// find the shape node
+			string $shape[] = `listRelatives -parent -f $comps[0]`;
+			string $trans[] = `listRelatives -parent -f $shape[0]`;
+//			print $trans;
+
+			// find the shading engine
+			string $connections[] = `listConnections -source false -type 
+				"shadingEngine" $shape[0]`;
+
+			// there may be more than one shading group connected to the
+			// geometry so find the exact one
+			$connections = `stringArrayRemoveDuplicates $connections`;
+
+
+			for ($connection in $connections)
+				{
+				int $result = `sets -isMember $connection`;
+				if ($result == 1) {$shadingGroup = $connection;}
+				}
+
+			// if no shading group has been found, the components must not be
+			// mapped - this means the shape is mapped
+			if ($shadingGroup == "")
+				{
+				for ($connection in $connections)
+					{
+					int $result = `sets -isMember $connection $shape[0]`;
+					if ($result == 1) {$shadingGroup = $connection;}
+					}
+				}
+
+		select $shadingGroup;
+		
+		string $allMembers[] = `ls -sl -l`;
+//		print $allMembers;
+		
+		
+		string $targetMembers[];
+		int $tmp = 0;
+		string $searchString = "*"+$trans[0]+"*";
+//		string $searchString = "*"+$trans[0];
+//		print $searchString;
+//			print ("\n");
+//			print ("\n");
+		select -cl;
+		
+		for ($cnt in $allMembers)
+			{
+			if (1 == gmatch ($cnt, $searchString))
+				select -add $cnt;
+			}
+
+		}
+
+}

@@ -1,0 +1,146 @@
+//***** BPT_BEVEL SETUP *****
+
+// SEBASTIAN THIEL DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS|WAVEFRONT BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+
+
+
+//***********************************************
+//------------UI---------------------
+//***********************************************
+
+//-----------------------------------------------------------------------------
+global proc initialBPT_BevelWindow()
+//-----------------------------------------------------------------------------
+{
+		//DESCRIPTION:
+		
+		//-creates a window which show up if you first start BPT
+	
+	if(`window -ex firstStartWindow`)
+		deleteUI firstStartWindow;
+	
+	window -title "Bevel me, Baby ;)!" -w 300 -h 276 -s 0 "firstStartWindow";
+	
+	columnLayout;
+	
+	frameLayout -l "Yes, you can Bevel!" -labelAlign "center"
+    				-borderStyle "out" ;
+
+	columnLayout;
+	
+	string $content = "\nWhat did you hate most during your job? \n \n"; 
+	$content += "Perhaps that your 3DsMax colleagues made jokes about you \n";
+	$content += "and Maya because it could not Bevel?\n ";
+	$content += "\n";
+	$content += "Well, gather them around your screen and show your upgrade :).\n\n";
+	$content += "Now you will be able to use a working Bevel. \n \n";
+	$content += "The bevel version you have now has been extracted \n";
+	$content += "out of my ByronsPolyToolset. \n ";
+	$content += "It can do much more, so if you want to check it out \n";
+	$content += "just check my site at \n\n";
+	
+	$content += "www.gfx-scene.de/Byronimo/index.htm\n\n";
+	
+	$content += "Happy Beveling \n";
+	$content += "Sebastian Thiel\n\n";
+	$content += "PS: This message will show up only once.";
+	text -l $content -align "left";
+	
+	
+	showWindow;
+	
+	window -e -w 315 -h 315 firstStartWindow;
+}
+
+
+//***********************************************
+//------------UI - END---------------------
+//***********************************************
+
+
+//***********************************************
+//------------COMMAND PROCEDURES-----------------
+//***********************************************
+
+
+//-----------------------------------------------------------------------------
+global proc invokeBPT_Bevel()
+//-----------------------------------------------------------------------------
+{
+		//DESCRIPTION:
+		
+		//-executes a bevel command and postprocesses it to make sure normals are Okay
+		//(I hope I can find a way to determine the proper normals directly during the bevel)
+	
+
+	//gather selectionMaskData
+	int $isInCoMode = `selectMode -q -co`;
+	int $selMask[];
+	$selMask[0] = `selectType -q -smp`;
+	$selMask[1] = `selectType -q -sme`;
+	$selMask[2] = `selectType -q -smf`;
+	$selMask[3] = `selectType -q -smu`;
+	$selMask[4] = `selectType -q -pv`;
+	$selMask[5] = `selectType -q -pe`;
+	$selMask[6] = `selectType -q -pf`;
+	$selMask[7] = `selectType -q -puv`;
+
+	
+	string $origSelection[] = `ls -sl`;
+	
+	string $cmd = "BPT_ChamferCmd ";
+
+	if(`optionVar -q BPT_B_ce`)
+		$cmd += "-ce";
+		
+	eval($cmd);
+
+	
+	string $selected[] = `ls -sl`; //BPT Node at the end of the array
+
+	
+	string $out[1] = {$origSelection[0]};
+	
+	tokenize $out[0] "." $out;
+	
+	
+	
+	
+	
+	select $out[0];
+	
+	//apply conform normal
+	performPolyNormal 0 2 0;
+	
+	int $edgeCount[] = `polyEvaluate -e $out[0]`;
+	
+	polySoftEdge -a 180 -ch 1 ($out[0] + ".e[0:" + ($edgeCount[0]-1) + "]");
+
+	
+	select $selected[size($selected)-1];
+	hilite $out[0];
+	
+	selectMode -co;
+	
+	//disable normals (only necessary in Maya 4.5)
+	polyOptions -dn false -facet;
+	
+	//restore the selection mask (because it has been changed by polyNormal/polySoftEdge
+	if($isInCoMode)
+		selectType -smp $selMask[0] -sme $selMask[1] -smf $selMask[2] -smu $selMask[3] -pv $selMask[4] -pe $selMask[5] -pf $selMask[6] -puv $selMask[7];
+}
+
+
+
+//***********************************************
+//------------COMMAND END------------------------
+//***********************************************
+
+

@@ -1,0 +1,132 @@
+proc perform_UVPolyTransfer(string $sourceMesh )
+{
+	string $sourceMesh, $UVMesh;
+	string $tmp[];
+	string $UVMeshFaces[];
+	string $UVFace;
+	string $UVVertexes[];
+	string $UVVertex;
+	string $UVVertexUV[];
+	string $sourceMeshUVs[];
+	string $sourceMeshUV;
+	float $UVPos[];
+	float $pointPos[];
+	float $errorDist = 0.0001;
+	string $expressionStr = "float $pointPosExpr[];\n";
+	
+	$tmp = `duplicate $sourceMesh`;
+	$UVMesh = $tmp[0];
+
+	makeIdentity $UVMesh; 
+
+	polySplitVertex -ch 0 $UVMesh;
+
+	$tmp = `polyListComponentConversion -tf $UVMesh`;
+	$UVMeshFaces = `ls -fl $tmp`;
+
+	$tmp = `polyListComponentConversion -tuv $sourceMesh`;
+	$sourceMeshUVs = `ls -fl $tmp`;
+
+	/// position vertexes to UV positions
+
+$startTime = `timerX`;
+
+	for ($UVFace in $UVMeshFaces) {
+		
+//		watchStr($UVFace,"$UVFace");
+		
+		$tmp = `polyListComponentConversion -ff -tv $UVFace`;
+		$UVVertexes = `ls -fl $tmp`;
+		for ($UVVertex in $UVVertexes){
+			$UVVertexUV = `polyListComponentConversion -fv -tuv $UVVertex`;
+			$UVPos = `polyEditUV -q -u -v $UVVertexUV`;
+//			move -a $UVPos[0] 0 $UVPos[1] $UVVertex;
+			move -a $UVPos[0] 0 (-$UVPos[1]) $UVVertex;
+		}
+	}
+
+print ("Time for positioning vertexes = "+(`timerX -startTime $startTime`)+"\n");
+print ("----------\n");
+	
+	/// bind source UVs to target Vertices
+
+$startTime = `timerX`;
+
+	$tmp = `polyListComponentConversion -tv $UVMesh`;
+	$UVVertexes = `ls -fl $tmp`;
+
+	$expressionStr += "$tmpExpr = "+$sourceMesh+".tx;\n"; 	// dummy connection to expression. used to determine witch expression to delete.
+	$expressionStr += "$tmpExpr = "+$UVMesh+".tx;\n"; 	// dummy connection to expression. used to determine witch expression to delete.
+
+	for ($sourceMeshUV in $sourceMeshUVs){
+		$UVPos = `polyEditUV -q -u -v $sourceMeshUV`;
+
+		for ($UVVertex in $UVVertexes) {
+			$pointPos = `pointPosition -w $UVVertex`;
+
+			if ( ($pointPos[0] > ($UVPos[0]-$errorDist)) && ($pointPos[0] < ($UVPos[0]+$errorDist)) && (-$pointPos[2] > ($UVPos[1]-$errorDist)) && (-$pointPos[2] < ($UVPos[1]+$errorDist)) ){
+//			if ( ($pointPos[0] > ($UVPos[0]-$errorDist)) && ($pointPos[0] < ($UVPos[0]+$errorDist)) && ($pointPos[2] > ($UVPos[1]-$errorDist)) && ($pointPos[2] < ($UVPos[1]+$errorDist)) ){
+//			if ( ($pointPos[0] == $UVPos[0]) && ($pointPos[2] == $UVPos[1]) ){
+
+//				print ("found !!! -> "+$sourceMeshUV+" - "+$UVVertex+"\n");
+
+				$expressionStr += "$pointPosExpr = `pointPosition -w "+$UVVertex+"`;\n";
+				$expressionStr += "polyEditUV -relative false -u $pointPosExpr[0] -v (-$pointPosExpr[2]) "+$sourceMeshUV+";\n";
+				break;
+			}
+		}
+	}
+
+print ("Time for binding vertexes = "+(`timerX -startTime $startTime`)+"\n");
+print ("----------\n");
+
+	expression -s $expressionStr;
+	select $UVMesh;
+
+}
+
+global proc fix_UVPolyTransfer(string $operation)
+{
+
+cycleCheck -e off;
+
+	string $tmp[];
+	string $selectedObjectsShape[];
+	string $selectedObjects[];
+
+	$selectedObjects = `ls -sl -l -fl`;
+	
+	if ($selectedObjects[0] == "") error ("Nothing Selected !!!");
+		else {
+
+			$selectedObjects = `ls -sl -l -tr`; // find selected transforms
+
+			if ($selectedObjects[0] == ""){		// if there is no transforms then components selected
+				$selectedObjects = `ls -sl -l -o`;
+				$selectedObjects = `listRelatives -p $selectedObjects[0]`; // find transform for this components
+			}
+
+			$selectedObjectsShape = `listRelatives -s -typ "mesh" $selectedObjects[0]`; // is selected object a mesh ?
+			if ($selectedObjectsShape[0] == "") error ("There is no any mesh in selection list !!!");
+	}
+
+
+
+	switch ($operation) {
+		case "create":
+			perform_UVPolyTransfer($selectedObjects[0]);
+			break;
+		case "delete":
+			delete (`listConnections -s 0 -d 1 -t "expression" ($selectedObjects[0]+".tx")`);
+			delete $selectedObjects[0];
+			break;
+		case "update":
+			$tmp = `listConnections -s 0 -d 1 -t "expression" ($selectedObjects[0]+".tx")`;
+			expression -e $tmp[0];
+			break;
+	}
+
+cycleCheck -e on;
+
+}
+

@@ -1,0 +1,689 @@
+// Copyright (C) 1997-2002 Alias|Wavefront,
+// a division of Silicon Graphics Limited.
+//
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias|Wavefront.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias|Wavefront license agreement, without fee.
+//
+// ALIAS|WAVEFRONT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS|WAVEFRONT BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+//
+// Alias|Wavefront Script File
+// MODIFY THIS AT YOUR OWN RISK
+//
+// bonusGameMenu.mel
+// author: cpam
+//
+// last updated: Jan 2003
+//				added new menu items
+//				commented out obsolete menu items
+
+
+global proc bonusGameMenu(){
+
+	global string $gMainWindow;
+
+	string $os = `about -operatingSystem`;
+
+	setParent $gMainWindow;
+
+	menu -l "Bonus Game"
+		-p MayaWindow
+		-to 1
+		-aob true
+		-fi "bonusGame.xpm"
+		bonusGameMenu;
+
+	///////////////////////////////////
+	// GENERAL TOOLS//
+	///////////////////////////////////
+	menuItem -l "Copy Attribute Values"
+		-ann ("Copy highlighted attributes from the Channel Box - " +
+			"Select target first")
+		-echoCommand true
+		-c "copyAttr"
+		copyAttrItem;
+
+	menuItem -l "Search and Replace Object Names"
+		-ann "Search and replace object names for selected objects"
+		-echoCommand true
+		-c "searchReplaceWin"
+		searchReplaceWinItem;
+
+	/*
+	menuItem -l "Rename Selected Objects"
+		-ann "Rename all selected objects"
+		-echoCommand true
+		-c "renamer"
+		renamerWinItem;
+	*/
+
+	menuItem -l "Window Builder"
+		-ann "Build a window to control attributes selected in the Channel Box"
+		-echoCommand true
+		-c "bgAttrAccess"
+		windowBuilderItem;
+
+	menuItem -divider true;
+
+	////////////////////////////////////////
+	// SELECTION TOOLS //
+	////////////////////////////////////////
+	menuItem -l "Invert Component Selection"
+		-ann "Select the inversion of active components"
+		-echoCommand true
+		-c "invertCompSelection"
+		invertCompSelectionItem;
+
+	menuItem -l "Edge Path Selection Tool"
+	-ann "Select/Deselect contiguous edges"
+	-echoCommand true
+	-image "edgePathIcon.xpm"
+	-c "edgePath"
+	-dragDoubleClickCommand  "QT_edgePathOptWin \" \""
+	edgePathItem;
+
+		menuItem -optionBox true
+		-label "Edge Path Selection Option Box" 
+		-annotation "Select/Deselect contiguous edges Option Box"
+		-image "edgePathIcon.xpm"
+		-command "edgePath\;QT_edgePathOptWin \" \"" 
+		edgePathOptItem;
+
+	menuItem -l "Face Path Selection Tool"
+	-ann "Select/Deselect contiguous faces"
+	-echoCommand true
+	-image "facePathIcon.xpm"
+	-c "facePath"
+	-dragDoubleClickCommand "QT_facePathOptWin \" \""
+	facePathItem;
+
+		menuItem -optionBox true
+		-label "Face Path Selection Option Box" 
+		-annotation "Select/Deselect contiguous faces Option Box"
+		-image "facePathIcon.xpm"
+		-command "facePath\;QT_facePathOptWin \" \"" 
+		facePathOptItem;
+
+	//add select sub menu
+
+	//catch plugin load in case plugin is not found
+	catch (`loadPlugin "convertVerticesToEdgesCmd.mll"`);
+	catch (`loadPlugin "convertVerticesToFacesCmd.mll"`);
+	catch (`loadPlugin "convertEdgesToFacesCmd.mll"`);
+	catch (`loadPlugin "getProjectedFacesCmd.mll"`);
+	//only create menu items if plugin is loaded
+	if (`exists convertVerticesToEdges`  
+		|| `exists convertVerticesToFaces`
+		|| `exists convertEdgesToFaces`
+		|| `exists getProjectedFaces`){
+
+		menuItem -l "Select Components"
+			-parent bonusGameMenu
+			-tearOff 1
+			-subMenu true
+			bonusGameSelectMenu;
+
+		if (`exists convertVerticesToEdges`) {
+			menuItem -l "Select Edges Contained by Vertices"
+			-ann "Select Edges Contained by Currently Selected Vertices"
+			-echoCommand true
+			-c "convertVerticesToEdges"
+			edgesByVertsItem;
+		}
+		
+		if (`exists convertVerticesToFaces`) {
+			menuItem -l "Select Faces Contained by Vertices"
+			-ann "Select Faces Contained by Currently Selected Vertices"
+			-echoCommand true
+			-c "convertVerticesToFaces"
+			facesByVertsItem;
+		}
+
+		if (`exists convertEdgesToFaces`) {
+			menuItem -l "Select Faces Contained by Edges"
+			-ann "Select Faces Contained by Currently Selected Edges"
+			-echoCommand true
+			-c "convertEdgesToFaces"
+			facesByEdgesItem;
+		}
+
+		if ($os != "mac"){
+			if (`exists getProjectedFaces`) {
+				menuItem -l "Select Poly Projection Node Faces"
+					-ann ("Select Faces belonging to the projection nodes " +
+					"highlighted in the channel box")
+					-echoCommand true
+					-c "bgGetProjectedFaces"
+					projectedFacesItem;
+			}
+		}
+
+		setParent -m bonusGameMenu;
+	}
+	//end select sub menu
+
+	menuItem -l "Select Face Shader"
+		-ann ("Select the shader and open the Attribute Editor for the " +
+			"currently selected face")
+		-echoCommand true
+		-c "bgGetComponentShader"
+		bgComponentShaderItem;
+	
+	menuItem -l "Show/Hide Faces"
+		-p bonusGameMenu
+		-to 1
+		-subMenu true
+		showHideFacesMenu;
+
+		menuItem -l "Hide Faces"
+			-ann "Hide Faces: Hide the selected polygon faces."
+			-echoCommand true
+			-c "bgHideFaces"
+			hideFaces;
+
+		menuItem -l "Show Faces"
+			-ann "Show Faces: Show the selected polygon faces."
+			-echoCommand true
+			-c ("if (!`exists bgHideFaces`) source bgHideFaces;" +
+				"disableHideFaces")
+			showFaces;
+
+		menuItem -l "Refresh Face Display"
+			-ann "Refresh Face Display: Refresh the display of Hidden faces."
+			-echoCommand true
+			-c ("if (!`exists bgHideFaces`)	source bgHideFaces; "+
+				"refreshHideFaces")
+			refreshFaces;
+
+		setParent -m bonusGameMenu;
+
+	menuItem -divider true;
+
+	///////////////////////////////////
+	// MODELING TOOLS //
+	///////////////////////////////////
+	menuItem -l "Triangle Count HUD"
+	-ann "Adds triangle count to the Heads Up Display"
+	-echoCommand true
+	-c "toggleTriCountHUD"
+	triCountItem;
+
+	/*
+	menuItem -l "Component Center Snap"
+	-ann "Snap components to center of first selected component"
+	-echoCommand true
+	-c "compMidPointSnapTool"
+	compMidPointSnapItem;
+	*/
+
+	menuItem -l "Component Transform Manipulator"
+	-ann "Create a manipulator to translate or scale selected polygon components"
+	-echoCommand true
+	-c "bgComponentTransformManip"
+	compTranslateManipItem;
+
+	//menuItem -l "Create Curve from Edges"
+	//-ann "Create a degree 1 curve from selected contiguous edges"
+	//-echoCommand true
+	//-c "duplicateEdges"
+	//duplicateEdgesItem;
+
+	//menuItem -l "Create Curve on Poly Mesh"
+	menuItem -l "Create Curve from Edges..."
+	-ann "Create a curve on poly mesh from selected contiguous edges"
+	-echoCommand true
+	-c "bgCreateCurveFromEdges"
+	crvOnPolyItem;
+
+	menuItem -l "Face Path Split Tool"
+	-ann "Split contiguous faces"
+	-echoCommand true
+	-c "facePathSplit"
+	facePathSplitItem;
+
+		menuItem -optionBox true
+		-label "Face Path Split Option Box" 
+		-annotation "Split contiguous faces Option Box"
+		-image "facePathSplitIcon.xpm"
+		-command "facePathSplit\;QT_facePathSplitOptWin \" \"" 
+		facePathSplitOptItem;
+
+	if ($os != "mac"){
+		catch (`loadPlugin "drawSplitTool.mll"`);
+		if (`pluginInfo -q -l "drawSplitTool"`){
+			menuItem -l "Draw Split Tool"
+				-ann "Split polygonal geometry by drawing on the mesh"
+				-echoCommand true
+				-image "drawSplitIcon.xpm"
+				-c "drawSplitTool"
+				-dragDoubleClickCommand "drawSplitTool\;toolPropertyWindow"
+				drawSplitItem;
+			
+			menuItem -optionBox true
+				-label "Draw Split Option Box" 
+				-annotation "Draw Split Option Box"
+				-image "drawSplitIcon.xpm"
+				-command "drawSplitTool\;toolPropertyWindow" 
+				drawSplitOptItem;
+		}
+		
+		catch (`loadPlugin "drawReduceTool.mll"`);
+		if (`pluginInfo -q -l "drawReduceTool"`){
+			menuItem -l "Draw Reduce Tool"
+				-ann "Reduce polygonal geometry by drawing on the mesh"
+				-echoCommand true
+				-image "drawReduceIcon.xpm"
+				-c "drawReduceTool"
+				-dragDoubleClickCommand "drawReduceTool\;toolPropertyWindow"
+				drawReduceItem;
+			
+			menuItem -optionBox true
+				-label "Draw Reduce Option Box" 
+				-annotation "Select/Deselect contiguous faces Option Box"
+				-image "drawReduceIcon.xpm"
+				-command "drawReduceTool\;toolPropertyWindow" 
+				drawReduceOptItem;
+		}
+	}
+
+	if (!`optionVar -exists "chamferVertexOffset"`)
+	{
+		optionVar -fv "chamferVertexOffset" 0.3;
+	}
+
+	menuItem -l "Chamfer Vertex"
+		-ann "Chamfer selected poly vertex"
+		-echoCommand true
+		-c ("vertexMod 0 1 " + 
+			"`optionVar -q chamferVertexExpression`" +
+			"`optionVar -q chamferVertexOffset`")
+		chamferVertexItem;
+
+		menuItem -optionBox true
+			-label "Chamfer Vertex Option Box" 
+			-annotation "Chamfer selected poly vertex Option Box"
+			-command "bgChamferVertexWin" 
+			chamferVertexOptItem;
+
+	if (!`optionVar -exists "extrudeVertexOffset"`)
+	{
+		optionVar -iv "extrudeVertexMode" 1;
+		optionVar -fv "extrudeVertexOffset" 0.3;
+	}
+
+	menuItem -l "Extrude Vertex"
+		-ann "Extrude selected poly vertex"
+		-echoCommand true
+		-c ("vertexMod `optionVar -q extrudeVertexMode`" +
+			" 1 `optionVar -q extrudeVertexExpression` " +
+			"`optionVar -q extrudeVertexOffset`")
+		extrudeVertexItem;
+
+			menuItem -optionBox true
+				-label "Extrude Vertex Option Box" 
+				-annotation "Extrude selected poly vertex Option Box"
+				-command "extrudeVertexWin" 
+				extrudeVertexOptItem;
+
+	//add utility sub menu
+
+	//catch plugin load in case plugin is not found
+	catch (`loadPlugin "closestPointOnCurve.mll"`);
+	catch (`loadPlugin "closestPointOnMesh.mll"`);
+	catch (`loadPlugin "pointOnMeshInfo.mll"`);
+	//only create menu items if plugin is loaded
+	if (`exists closestPointOnCurve`  
+		|| `exists closestPointOnMesh`
+		|| `exists pointOnMesh`){
+
+		menuItem -l "Geometry Utilities"
+			-p bonusGameMenu
+			-to 1
+			-subMenu true
+			bonusGameUtilityMenu;
+
+		if (`exists closestPointOnCurve`) {
+			menuItem -l "Create Closest Point on Curve Node"
+			-ann ("Create a node to return information about the closest " +
+				"point on a selected curve")
+			-echoCommand true
+			-c "closestPointOnCurve"
+			closestPointOnCurveItem;
+		}
+		
+		if (`exists closestPointOnMesh`) {
+			menuItem -l "Create Closest Point on Mesh Node"
+			-ann "Create a node to return information about the closest point on a selected mesh"
+			-echoCommand true
+			-c "closestPointOnMesh"
+			closestPointOnMeshItem;
+		}
+
+		if (`exists pointOnMesh`) {
+			menuItem -l "Create Point on Mesh Info Node"
+			-ann "Create a node to return mesh info for the selected mesh."
+			-echoCommand true
+			-c "pointOnMesh"
+			pointOnMeshInfoItem;
+		}
+
+		setParent -m bonusGameMenu;
+	}
+	//end utility sub menu
+
+	menuItem -l "Adjust Vertex Normals..."
+		-ann "Adjust vertex normals interactively"
+		-echoCommand true
+		-c "bgAdjustVertexNormalsWin"
+		bgAdjustVertexNormalsItem;
+
+	menuItem -l "Geometry Transmogrifier..."
+		-ann "Adjust selection and transform proportionally"
+		-echoCommand true
+		-c "bgTransmogrifierWin"
+		bgTransmogrifierWinItem;
+
+	menuItem -l "Connect Border Edges"
+		-ann "Connect two selected polygon edge border regions"
+		-echoCommand true
+		-c "performPolyConnectBorders 0"
+		connectBordersItem;
+
+			menuItem -optionBox true
+				-label "Connect Border Edges Option Box" 
+				-annotation "Connect Border Edges Option Box"
+				-command "performPolyConnectBorders 1"
+				connectBordersOptItem;
+
+	menuItem -divider true;
+
+	//////////////////////
+	// UV TOOLS//
+	//////////////////////
+	/*
+	menuItem -l "Snap UVs"
+	-ann "Snap all selected UVs to first selected UV"
+	-echoCommand true
+	-c "UVPointSnapTool"
+	snapUVsItem;
+	*/
+
+	menuItem -l "Copy UVs between UV Sets..."
+		-ann ("Copy UVs of selected faces from current " +
+			"UV Set to user specified UV Set")
+		-echoCommand true
+		-c "bgUVCompCopy"
+		copyBetweenSetsItem;
+
+	menuItem -l "Automatic Wrap Map..."
+		-ann "Create and unwrap UVs for selected faces"
+		-echoCommand true
+		-c "bgAutomaticTrackMapWin"
+		bgAutomaticTrackMapItem;
+
+	menuItem -l "Adjust UVs"
+		-p bonusGameMenu
+		-to 1
+		-subMenu true
+		adjustUVMenu;
+
+		/*
+		menuItem -l "Align UVs..."
+			-ann "Align UVs horizontally or vertically"
+			-echoCommand true
+			-c "alignUVWin"
+			alignUVsItem;
+
+		menuItem -l "Grid UVs..."
+			-ann "Snap UVs to a user defined grid"
+			-echoCommand true
+			-c "gridUVWin"
+			gridUVsItem;
+
+		menuItem -l "Grab/Paste UVs..."
+			-ann "Grab and Paste UV coordinates"
+			-echoCommand true
+			-c "grabPasteUVsWin"
+			grabPasteUVsItem;
+		*/
+
+		menuItem -l "Cycle UVs"
+			-ann "Cycle UV positions around selected face"
+			-echoCommand true
+			-c "polyRotateUVsByVertex"
+			cycleUVsItem;
+
+		menuItem -l "Rotate UVs around Vertex..."
+			-ann "Rotate selected UVs around selected vertex"
+			-echoCommand true
+			-c "polyRotateUVsAboutVertexWin"
+			rotateUVsVertItem;
+	
+		menuItem -l "UV Precision..."
+			-ann "Set the number of decimal places for selected UVs"
+			-echoCommand true
+			-c "bgTruncateUVWin"
+			bgTruncateUVItem;
+
+		menuItem -l "Clamp UVs..."
+			-ann "Clamp the active UVs to the specified bounding box"
+			-echoCommand true
+			-c "bgClampUVWin"
+			bgClampUVItem;
+
+		setParent -m bonusGameMenu;
+
+	catch (`loadPlugin "polyNurbsProjection.mll"`);
+	if (`pluginInfo -q -l "polyNurbsProjection"`){
+		menuItem -l "Poly NURBS Projection"
+		-ann ("Select destination poly mesh followed by source NURBS " + 
+			"surface to transfer UVs and texture from.")
+		-echoCommand true
+		-c "polyNurbsProjection"
+		polyNurbsProjectionItem;
+		}
+
+	menuItem -divider true;
+
+	//////////////////////////////////
+	// TEXTURE TOOLS//
+	//////////////////////////////////
+
+	menuItem -l "Make Texture Layered"
+		-ann ("Select textures connected to shaders to make into " +
+			"layered textures")
+		-echoCommand true
+		-c "makeSelectedLayered"
+		makeSelectedLayeredItem;
+
+	menuItem -l "Layer Textures"
+		-ann ("Select texture connected to layered texture followed " +
+			"by texture to layer")
+		-echoCommand true
+		-c "layerTextures"
+		layerTexturesItem;
+
+	menuItem -l "Generate Light Maps"
+		-ann ("Generate light maps, layered textures and new UV sets " +
+			"for scene geometry")
+		-echoCommand true
+		-c "bgPerformGenerateLightMaps 0"
+		generateLightMapsItem;
+
+			menuItem -optionBox true
+				-label "Generate Light Maps Option Box" 
+				-annotation "Generate Light Maps Option Box"
+				-command "bgPerformGenerateLightMaps 1"
+				generateLightMapsOptItem;
+
+	menuItem -l "Isometric Render"
+		-p bonusGameMenu
+		-to 1
+		-subMenu true
+		isometricRenderMenu;
+
+		menuItem -l "Render Current View"
+			-ann "Render the current view isometrically."
+			-echoCommand true
+			-c "bgIsometricRender render"
+			isometricRender;
+
+		menuItem -l "Preview"
+			-ann "Preview the isometric render in the viewports."
+			-echoCommand true
+			-c "bgIsometricRender preview"
+			isometricPreview;
+
+		menuItem -l "Reset"
+			-ann "Reset the viewports from isometric display."
+			-echoCommand true
+			-c "bgIsometricRender reset"
+			isometricReset;
+
+		setParent -m bonusGameMenu;
+
+	//catch (`loadPlugin "swColorPerVertex.mll"`);
+	catch (`loadPlugin "cvColorShader.mll"`);
+	if (`pluginInfo -q -l "cvColorShader"`){
+		menuItem -l "Create CPV Render Node"
+		-ann "Create a node to software render color per vertex"
+		-echoCommand true
+		-image "render_swColorPerVertex.xpm"
+		-c "createNode cvColorShader -name swCPV"
+		swCPVItem;
+	}
+
+	menuItem -l "Vertex Color Display..."
+		-ann "Vertex Color: Toggle vertex color display modes in all panels"
+		-echoCommand true
+		-c "bgVertexColorDisplayUI"
+		vertexColorItem;
+
+	catch (`loadPlugin "polyVariance.mll"`);
+	if (`pluginInfo -q -l "polyVariance"`){
+		menuItem -l "Adaptive Prelight"
+		-ann "Subdivide polygonal geometry by vertex lighting on the mesh"
+		-echoCommand true
+		-c "bgPerformPolyAdaptivePrelight 0"
+		adaptivePrelightItem;
+
+			menuItem -optionBox true
+			-label "Adaptive Prelight Option Box" 
+			-annotation "Adaptive Prelight Option Box"
+			-command "bgPerformPolyAdaptivePrelight 1" 
+			adaptivePrelightOptItem;
+	}
+
+	if ($os != "mac"){
+		catch (`loadPlugin "polyAttributeMap.mll"`);
+		if (`pluginInfo -q -l "polyAttributeMap"`){
+			menuItem -l "Poly Attribute Map"
+				-ann "Write Polygon attributes to a texture map"
+				-echoCommand true
+				-c "bgPerformPolyAttributeMap 0"
+				polyAttributeMapItem;
+			
+			menuItem -optionBox true
+				-label "Poly Attribute Map Option Box" 
+				-annotation "Poly Attribute Map Option Box"
+				-command "bgPerformPolyAttributeMap 1" 
+				polyAttributeMapOptItem;
+		}
+	}
+
+	menuItem -divider true;
+
+	///////////////////////////////
+	// ANIMATION TOOLS//
+	///////////////////////////////
+	menuItem -l "Current Frame Display"
+		-ann "Create a particle object to display the current frame"
+		-echoCommand true
+		-c "bgCurrentFrameDisplay"
+		bgCurrentFrameDisplayItem;
+
+	menuItem -l "Blend Channels"
+		-p bonusGameMenu
+		-to 1
+		-subMenu true
+		blendChannelsMenu;
+
+		menuItem -l "Create Blend"
+			-ann ("Blend channels of selected objects. Select the " +
+				"master followed by the slave and highlight the " +
+				"channels to blend in the channel box.")
+			-echoCommand true
+			-c "takBlender"
+			createBlend;
+
+		menuItem -l "Delete Blend"
+			-ann ("Delete blend channels of selected objects. Highlight " +
+				"the channels to delete in the channel box.")
+			-echoCommand true
+			-c ("if (!`exists deleteTakBlend`) source takBlender; "+
+				"deleteTakBlend")
+			deleteBlend;
+
+		menuItem -l "Bake Blend"
+			-ann ("Bake blend channels of selected objects. Highlight " +
+				"the channels to bake in the channel box.")
+			-echoCommand true
+			-c ("if (!`exists takBlendBake`) source takBlender; "+
+				"takBlendBake")
+			bakeBlend;
+
+		setParent -m bonusGameMenu;
+
+	menuItem -l "Rename New Joints"
+		-ann ("Window to control joint names as joints are created - " +
+			"Can also be applied to other objects")
+		-echoCommand true
+		-c "renameNewJointsWin"
+		renameNewJointsWinItem;
+
+	menuItem -l "Prune Influence Objects..."
+		-ann ("Select skinned geometry to prune a user specified number " +
+			"of influence objects from")
+		-echoCommand true
+		-c "pruneNumInfluenceWin"
+		pruneNumInfluenceWinItem;
+
+	menuItem -l "Remove Influence Objects..."
+		-ann "Select skinned geometry to remove influence objects from"
+		-echoCommand true
+		-c "removeInfluenceWin"
+		removeInfluenceWinItem;
+
+	menuItem -l "Reorient Animated Character"
+		-ann "Select root joint of FK animated character"
+		-echoCommand true
+		-c "reorientCharacterWin"
+		reorientCharacterWinItem;
+
+	menuItem -l "Bake IK to Clip"
+		-ann ("Bake the animation of the selected IK handle into a clip " +
+			"for the active character")
+		-echoCommand true
+		-c "bgBakeIKToClip 1"
+		bakeIKToClipItem;
+
+	menuItem -l "Store Pose"
+		-ann "Create a shelf button for the selected node(s) current positions"
+		-echoCommand true
+		-c "bgStorePose"
+		storePoseItem;
+
+	menuItem -l "Setup Rolling Foot"
+		-ann "Create a rolling foot control for selected hip joint (foot should point in +Z)"
+		-echoCommand true
+		-c "bgAutoFoot"
+		footRollItem;
+
+}

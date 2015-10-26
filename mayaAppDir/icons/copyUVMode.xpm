@@ -1,0 +1,39 @@
+/* XPM */
+static char *copyUVMode[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #153595",
+". c #acaaac",
+"# c #8c8a8c",
+"a c #4c5a94",
+"b c #1c3a9c",
+"c c #fcfb34",
+"d c #c4c2c4",
+"e c #cccacc",
+/* pixels */
+"ddddddddededdddddddddddd",
+"dddddddddddddddddddddddd",
+"dd``````````dddddddd.#dd",
+"dd``````````ddddddd.#.dd",
+"dd``dddddd``dddddd.#.ddd",
+"dd``dddddd``ddddd.#.dddd",
+"dd``dddddd`bdddd.#..dddd",
+"dd``.dd.dd``ddd.#.dddddd",
+"dd``dddddd`bdd.#..dddddd",
+"dd``dddddd``d.#.dddddddd",
+"dd``````````.#.ddddddddd",
+"dd`````````a#.dddddddddd",
+"dddddddddd.#cc``````cc.d",
+"ddddddddd.#.cc``````ccdd",
+"dddddd.d.#.d``dddddd``dd",
+"dddd.dd.#.dd``dddd.d``dd",
+"dddddd.#.dd.``d.dddd`bdd",
+"ddddd.#.dddd``dddddd`bdd",
+"dddd.#.ddddd``dddddd`bdd",
+"ddd.#.dddddd``dddddd`bdd",
+"dd.#..ddd.ddcc``````ccdd",
+"dd#.ddddddddcc``````ccdd",
+"ddd.dddddddddddddddddddd",
+"dddddddddddddd.ddddd.ddd"
+};

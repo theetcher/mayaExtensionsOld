@@ -1,0 +1,40 @@
+/* XPM */
+static char *splitUV[] = {
+/* width height num_colors chars_per_pixel */
+"    25    25        8            1",
+/* colors */
+"` c #183797",
+". c #b59293",
+"# c #f70607",
+"a c #c6c4be",
+"b c #706b6d",
+"c c #b76264",
+"d c #693e3f",
+"e c #c2b8bd",
+/* pixels */
+"aaeaaeaaeaaeaaeaaeaaeaaea",
+"aeaeaaeaae``a``aeaaeaeaae",
+"ea##.eaeaa``a``aaeaa.##ea",
+"aa####aaea``a``eaae####ae",
+"ead##eeea```a```aea.###ea",
+"aed#c#eea``eae``aae#.#baa",
+"aea`.b#ae``eaa``ea#cb.eaa",
+"aaeaa.daa``aea``eabbeeaea",
+"eaaeaaaaa``eae``aeeaeaaae",
+"aeaa`````aaaaaaa`````eaea",
+"a````````aaaaaaa````````a",
+"a````aeeaaaaaaaaaaae````a",
+"eaeaeaaaaaaaaaaaaaaaaaaea",
+"a````aeaaaaaaaaaaaea````a",
+"a````````aaaaaaa````````e",
+"aeaa`````aaaaaaa`````eaaa",
+"aaeaeaeea``aaa``aaaeaaeae",
+"eaaaeaaaa``aaa``aaaaeaaea",
+"aeaeae#aa``aaa``aa#.aaeaa",
+"aae#e#cea``aae``aab#e#aea",
+"ea.##cbaa```a```aabd##.ea",
+"aa####aaae``e``aeaa####ae",
+"ea##d.aeaa``a``aaea.c##ea",
+"aebbeaeaae``e``eaaaabdbea",
+"aaaaaeaaeaaaaaeaeaeaaaaae"
+};

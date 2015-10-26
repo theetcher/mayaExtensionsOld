@@ -1,0 +1,30 @@
+global proc fix_reassignShadingGroups ()
+
+{
+
+string $selectedObjects[] = `ls -sl -l`;
+string $materialList[];
+
+	for ($selectedObject in $selectedObjects){
+
+		clear($materialList);
+
+		$numFaces = `polyEvaluate -f $selectedObject`;
+
+		for ($i = 0; $i < $numFaces[0]; $i ++){
+			$setArray = `listSets -type 1 -ets -o ($selectedObject + ".f[" + $i + "]")`;
+			print ($setArray[0] + "\n");
+			$materialList[$i] = $setArray[0];
+		}
+
+		sets -e -forceElement initialShadingGroup $selectedObject;
+
+		for ($i = 0; $i < $numFaces[0]; $i ++)	{
+			select -r ($selectedObject + ".f[" + $i + "]");
+			sets -e -forceElement $materialList[$i];
+		}
+		
+	}
+select $selectedObjects;	
+
+}

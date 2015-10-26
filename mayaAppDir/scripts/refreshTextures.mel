@@ -1,0 +1,24 @@
+// refresh textures v.1.1
+// script by torfi frans olafsson
+// http://this.is/torfi
+
+// An extremely simple script that lists all file textures in a scene and reloads them.
+// Useful for game artists who can't stop playing with their texture maps.
+
+global proc refreshTextures ()
+{
+string $texture_files [] = `ls -tex`;
+for ($i=0; $i<size($texture_files); $i++)
+	{
+	print ( $texture_files[$i] + "\n" );
+	if (`gmatch $texture_files[$i] "file*"`)
+		{
+		string $attr = $texture_files[$i] + ".fileTextureName";
+		string $name=`getAttr $attr`; 
+		print ( $attr + "\n" );
+//	 	AEfileTextureReloadCmd($name);
+		setAttr $attr -type "string" $name;
+		}
+
+	}
+}

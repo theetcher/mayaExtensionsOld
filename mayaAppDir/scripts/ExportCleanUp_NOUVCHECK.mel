@@ -1,0 +1,379 @@
+
+// Cleanup actions in Maya 4 (before saving in export scene) for future conversion into Softimage //
+
+global proc ExportCleanUp_NOUVCHECK( )
+{
+
+	string $decision = confirmDialog ("-title","Confirmation",
+			"-message","This will start ExportCleanUp",
+			"-button","OK",
+			"-button","Cancel");
+			
+	if ($decision == "dismiss" || $decision == "Cancel") error "Operation was cancelled";
+
+	string $meshList[];
+	$meshList = `ls -l -type mesh`;
+	
+	if ($meshList[0] == "")
+		{
+		confirmDialog ("-title","Error !!!",
+					"-message","No polygon objects in Scene.",
+					"-button","OK");
+		error "No polygon objects in Scene.";
+		}
+
+	print ("\n\n\n\n--- Export Clean Up Started ---\n\n");
+	
+	string $cmd;
+	string $tmpArr[];
+	showHidden -all;
+
+// Deleting construction history
+
+	progressWindow
+	-title "Working"
+	-status "Deleting construction history"
+	-progress 0
+	-isInterruptable 0;
+
+	/////////////////////
+
+	delete -all -constructionHistory;
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+	string $meshList[];
+	$meshList = `ls -l -type mesh`;	
+
+
+// Checking UV Range
+
+/*
+	float $amount = 0;
+	float $MaxAmount = size ($meshList);
+	progressWindow
+	-title "Working"
+	-status "Checking UV Range"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+	float $UVBBox[];
+
+	for ($tmp in $meshList)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		select $tmp;
+		PolySelectConvert 1; // conversion to poly prevents "ghost UVs" detection
+		PolySelectConvert 4;
+		$UVBBox = eval("polyEvaluate -bc2");
+		if ( $UVBBox[0] < -0.001 || $UVBBox[1] > 1.001  || $UVBBox[2] < -0.001 || $UVBBox[3] > 1.001)
+			{
+			confirmDialog -title "Error !!!" -message "UV Out Of Range."
+			-button "OK" -defaultButton "OK";
+			progressWindow -endProgress;
+//			waitCursor -state off;
+			error "UV Out Of Range.";
+			};
+		
+		}
+		
+	/////////////////////
+
+	progressWindow -endProgress;
+*/
+/*
+// Checking nonmanifold geometry
+
+	float $amount = 0;
+	float $MaxAmount = size ($meshList);
+	progressWindow
+	-title "Working"
+	-status "Checking nonmanifold geometry"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+	string $NMV[];
+	string $NME[];
+	for ($tmp in $meshList)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		$NMV = polyInfo ("-nmv", $tmp);
+		$NME = polyInfo ("-nme", $tmp);
+		if ( $NMV[0] != "" || $NME[0] != "")
+			{
+			select $NMV;
+			select -add $NME;  
+			confirmDialog -title "Error !!!" -message "Nonmanifold geometry detected."
+			-button "OK" -defaultButton "OK";
+			progressWindow -endProgress;
+//			waitCursor -state off;
+			error "Nonmanifold geometry detected.";
+			}
+
+		};
+		
+	/////////////////////
+
+	progressWindow -endProgress;
+*/	    	
+
+// Checking lamina faces
+
+	float $amount = 0;
+	float $MaxAmount = size ($meshList);
+	progressWindow
+	-title "Working"
+	-status "Checking lamina geometry"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+	string $meshList[];
+	string $Lamina[];
+	for ($tmp in $meshList)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		$Lamina = polyInfo ("-lf", $tmp);
+		if ( $Lamina[0] != "")
+			{
+			select $Lamina;
+			confirmDialog -title "Error !!!" -message "Lamina faces detected."
+			-button "OK" -defaultButton "OK";
+			progressWindow -endProgress;
+//			waitCursor -state off;
+			error "Lamina faces detected.";
+			}
+
+		};
+
+	/////////////////////
+
+	progressWindow -endProgress;
+	    	
+// Breaking connection to Ambient
+	
+	string $MatList[];
+	string $MatType[];
+	string $Inputs[];
+	$MatList = `ls -l -mat`;
+
+	float $amount = 0;
+	float $MaxAmount = size ($MatList);
+	progressWindow
+	-title "Working"
+	-status "Breaking connection to Ambient"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+
+	/////////////////////
+
+	for ($tmp in $MatList)
+		{
+		$MatType = `ls -st $tmp`;
+		if ($MatType[1] == "lambert" || $MatType[1] == "phong" || $MatType[1] == "blinn" || $MatType[1] == "phongE")
+			{
+			$Inputs = eval("listConnections -p 0 -t file "+$tmp+".ambc");
+			if ($Inputs[0] != "") catch(`eval("disconnectAttr "+$Inputs[0]+".outColor "+$tmp+".ambc")`);
+			}
+
+		};
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+
+// Setting Refl, Spec, Amb, Inc -> 0
+	
+	string $MatList[];
+	string $MatType[];
+	$MatList = `ls -l -mat`;
+
+	float $amount = 0;
+	float $MaxAmount = size ($MatList);
+	progressWindow
+	-title "Working"
+	-status "Setting Refl, Spec, Amb, Inc -> 0"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+
+	/////////////////////
+
+	for ($tmp in $MatList)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		$MatType = `ls -st $tmp`;
+		if ($MatType[1] == "phong" || $MatType[1] == "blinn" || $MatType[1] == "phongE")
+			{
+			eval("setAttr "+$tmp+".rfl 0");
+			eval("setAttr "+$tmp+".sc 0 0 0");
+			}
+		if ($MatType[1] == "lambert" || $MatType[1] == "phong" || $MatType[1] == "blinn" || $MatType[1] == "phongE")
+			{
+			eval("setAttr "+$tmp+".ambc 0 0 0");
+			eval("setAttr "+$tmp+".ic 0 0 0");
+			}
+		};
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+
+// correcting Texture nodes
+	
+	string $MatList[];
+	string $MatType[];
+	$fileAllTextures = `ls -typ file`;
+
+	float $amount = 0;
+	float $MaxAmount = size ($fileAllTextures);
+	progressWindow
+	-title "Working"
+	-status "correcting Texture nodes"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+
+	/////////////////////
+
+	for ($tmp in $fileAllTextures){
+		setAttr ($tmp+".alphaGain") 1;
+		setAttr ($tmp+".alphaOffset") 0;
+	};
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+	
+// Correcting Placements
+	
+	string $PlaceList[];
+	$PlaceList = `ls -l -et place2dTexture`;
+	float $Repeat;
+	
+	if ($PlaceList[0] != "")
+		{
+		float $amount = 0;
+		float $MaxAmount = size ($PlaceList);
+		progressWindow
+		-title "Working"
+		-status "Correcting Placements"
+		-isInterruptable 0
+		-min 0
+		-max $MaxAmount;
+
+
+		/////////////////////
+
+		for ($tmp in $PlaceList)
+			{
+			$amount = $amount + 1;
+			progressWindow -edit -progress $amount;
+			
+			eval("setAttr "+$tmp+".wu 1");
+			eval("setAttr "+$tmp+".wv 1");
+			eval("setAttr "+$tmp+".ofu 0");
+			eval("setAttr "+$tmp+".ofv 0");
+			
+			$Repeat = eval("getAttr "+$tmp+".reu");
+			eval("setAttr "+$tmp+".reu "+trunc($Repeat));
+			$Repeat = eval("getAttr "+$tmp+".rev");
+			eval("setAttr "+$tmp+".rev "+trunc($Repeat));
+			
+			};
+
+		/////////////////////
+
+		progressWindow -endProgress;
+		}
+	
+// Freezing Scaling and Erasing Oposite Flag
+	
+	progressWindow
+	-title "Working"
+	-status "Freezing Scaling"
+	-isInterruptable 0;
+
+	/////////////////////
+
+	select -all;
+	$tmpArr = `ls -tr -sl`;
+//	$tmpArr = `ls -tr Scene`;
+	if ($tmpArr[0] == "")
+		confirmDialog -title "Warning !!!" -message "You do not have any nodes."
+		-button "OK" -defaultButton "OK";
+		else
+		{
+		if ( catch(`makeIdentity -a 1 -t 0 -r 0 -s 1 $tmpArr`) ) 
+			{
+			confirmDialog -title "Error !!!" -message "Can't Freeze Scaling."
+			-button "OK" -defaultButton "OK";
+			progressWindow -endProgress;
+			error "Can't Freeze Scaling.";
+			};
+		};
+
+	/////////////////////
+
+	progressWindow -endProgress;
+	
+	source fix_oppositeEraser;
+	fix_oppositeEraser;
+	
+
+/////////////////////////////
+
+
+
+// Deleting construction history
+
+	progressWindow
+	-title "Working"
+	-status "Deleting construction history"
+	-isInterruptable 0;
+
+	/////////////////////
+
+	delete -all -constructionHistory;
+
+	/////////////////////
+
+	progressWindow -endProgress;
+//	waitCursor -state off;
+
+	// deleting animation script nodes. ones i found millions of them in scene wich was assemblied from Softimage objects
+	delete (`ls -type "script" "*animationScriptNode*"`);
+
+	cleanUpScene 1;
+	
+	source deleteEmptyShapes; // one useful script
+	deleteEmptyShapes;
+	
+	confirmDialog -title "Information" -message "Export CleanUp successfully finished"
+	-button "OK" -defaultButton "OK";
+
+	print ("\n\n--- Export Clean Up Finished ---\n\n\n\n");
+}

@@ -1,0 +1,333 @@
+         //----------------------------------------------------//
+         // Polygonal Randomization Script  by Jim Gaczkowski  //
+         //----------------------------------------------------//
+
+
+         //-----------------Statistics-------------------------//
+         //  This is VERSION 2.5                              //
+         //  Finished on January 24th, 2002                    //
+         //----------------------------------------------------//
+
+//-------------------------UPDATES-------------------------------------------//
+//Update: 1/29  version 1.1--added setup .mel and custom icon                //
+//Update: 2/1   version 1.2--added ability to disable x, y, and z directions //
+//Update: 2/5   version 2.0--added ablility to randomly select points        //
+//Update: 2/6   version 2.4--added ability to randomize edges and faces      //
+//Update: 2/6   version 2.5-bug fix--vertices could not be randomly selected//
+//---------------------------------------------------------------------------//
+
+
+//                INSTRUCTIONS                                                            //
+// ---------------------------------------------------------------------------------------//
+//   1. Follow ReadMe to install.                                                         //
+//   2. Enter 'Min' and 'Max' values for the randomn translation of vertices.             //
+//   3. Uncheck x, y, and/or z to disable random translation in that direction.           //
+//   4. Enter 'Min' amd 'Max' values for the randomn selection of vertices.               //
+//   5. Choose to randomize vertices, faces, or edges.                                    // 
+//   6. Click 'Randomize Now!', click 'Undo' as necessary.                                //
+//                                                         ONLY WORKS ON POLYS!!!         //
+//----------------------------------------------------------------------------------------//
+
+
+global proc polyRandomizer()
+{
+
+   makeWin();
+
+
+}
+
+
+ global proc makeWin()
+  {      
+    //Create a window
+	string $win = "MyWindow";
+	if (`window -exists $win`) deleteUI -window $win;       
+       		 window -title "        polyRandomizer V2.0"
+       		 -minimizeButton true -maximizeButton false -rtf true -s true
+       		  -wh 190 90 $win;
+
+		columnLayout;
+
+		floatFieldGrp 
+    		   -numberOfFields 1 
+   		   -label "Translate Min" 
+   		   -value1 0.0 inputMin; 
+	
+		floatFieldGrp 
+    		   -numberOfFields 1 
+    		   -label "Translate Max" 
+    		   -value1 0.0 inputMax;
+
+   //Allow x, y, z directions to be disabled
+        checkBoxGrp
+              -numberOfCheckBoxes 1
+              -columnAttach 1 left 142
+              -label1 "X"
+              -value1 1
+              -columnWidth1 30 toggleX; 
+
+        checkBoxGrp
+              -numberOfCheckBoxes 1
+              -label "Uncheck to Disable"
+              -label1 "Y"
+              -value1 1
+              -columnWidth1 30 toggleY; 
+
+        checkBoxGrp
+              -numberOfCheckBoxes 1
+              -columnAttach 1 left 142
+              -label1 "Z"
+              -value1 1
+              -columnWidth1 30 toggleZ;
+
+         intFieldGrp 
+    		   -numberOfFields 1 
+   		   -label "Random Selection Min" 
+   		   -value1 1 inputRandMin; 
+	
+         intFieldGrp 
+    		   -numberOfFields 1 
+    		   -label "Random Selection Max" 
+    		   -value1 1 inputRandMax;
+
+   //Allow user to randomize vertices, faces, or edges
+        checkBoxGrp
+              -numberOfCheckBoxes 1
+              -columnAttach 1 left 125
+              //without a label, Maya improperly displays label1
+              //adding "" to the label fixes this issue
+              -label ""
+              -label1 "Vertices"
+              -value1 1
+              -columnWidth1 30 toggleVertices; 
+
+        checkBoxGrp
+              -numberOfCheckBoxes 1
+              -label "Check to Enable"
+              -label1 "Faces"
+              -value1 0
+              -columnWidth1 30 toggleFaces; 
+
+        checkBoxGrp
+              -numberOfCheckBoxes 1
+              -columnAttach 1 left 125
+              -label ""
+              -label1 "Edges"
+              -value1 0
+              -columnWidth1 30 toggleEdges;
+                          	
+	showWindow $win; 
+ 
+        button -label "Randomize Now!" -w 129 -c "go()";
+        button -label "Undo" -w 129 -c undo;
+ }
+
+
+ global proc go()
+ {
+	//check the status of x, y, and z toggles
+         int $xValue = `checkBoxGrp -query -value1 toggleX`;
+         int $yValue = `checkBoxGrp -query -value1 toggleY`;
+         int $zValue = `checkBoxGrp -query -value1 toggleZ`;
+
+     //Place user data into a variable
+        float $userInputMin = `floatFieldGrp -query -value1 inputMin`;
+        float $userInputMax = `floatFieldGrp -query -value1 inputMax`;
+        float $min = $userInputMin;
+        float $max = $userInputMax;
+
+ 	//pass the selection into a variable
+        string $obj[] = `ls -sl`;
+
+      //Check is the user wants to randomize vertices, faces, and/or edges
+         int $verticeCheck = `checkBoxGrp -query -value1 toggleVertices`;
+         int $faceCheck = `checkBoxGrp -query -value1 toggleFaces`;
+         int $edgeCheck = `checkBoxGrp -query -value1 toggleEdges`; 
+ 
+      if ($verticeCheck == 1)
+         {
+          
+          
+       
+ 
+      //set the number of vertex
+        int $polyStatCount[] = `polyEvaluate -v`;
+
+        int $n= $polyStatCount[0]; 
+     
+      //Get the values of vertex randomness from user interface
+        int $userRandMin = `intFieldGrp -query -value1 inputRandMin`;
+        int $userRandMax = `intFieldGrp -query -value1 inputRandMax`;
+ 
+      //Prevent values from being zero or less
+        if ($userRandMin < 1)
+             {
+              $userRandMin = 1;
+             }
+        if ($userRandMax < 1)
+             {
+              $userRandMax = 1;
+             }
+      
+      
+	for($i = 0;$i<$n;$i) 
+          { 
+		//create three random values of the loop
+		    float $random=`rand $min $max`; 
+                float $randomTwo=`rand $min $max`;
+                float $randomThree=`rand $min $max`;
+              int $randVert = `rand $userRandMin $userRandMax`; 
+              $i = ($i+ $randVert); 
+
+            //check if x, y, or z directions were chosen to be disabled
+                if ($xValue == 0)
+                   {
+                    $random = 0;
+                   }
+
+                if ($yValue == 0)
+                   {
+                    $randomTwo = 0;
+                   }
+
+                if ($zValue == 0)
+                   {
+                    $randomThree = 0;
+                   }                
+        	
+                string $yourObj = ($obj[0] + ".vtx[" + $i + "]");
+                   
+                select -r $yourObj;
+		    //move -r -os -wd $random $random $random;
+                move -r -os -wd $random $randomTwo $randomThree;
+                select -r $obj;
+                 
+          }
+        }
+
+      if ($faceCheck == 1)
+         {
+          
+          
+       
+ 
+      //set the number of faces
+        int $polyStatCount[] = `polyEvaluate -f`;
+
+        int $n= $polyStatCount[0]; 
+     
+      //Get the values of vertex randomness from user interface
+        int $userRandMin = `intFieldGrp -query -value1 inputRandMin`;
+        int $userRandMax = `intFieldGrp -query -value1 inputRandMax`;
+ 
+      //Prevent values from being zero or less
+        if ($userRandMin < 1)
+             {
+              $userRandMin = 1;
+             }
+        if ($userRandMax < 1)
+             {
+              $userRandMax = 1;
+             }
+      
+      
+	for($i = 1;$i<$n;$i) 
+          { 
+		//create three random values of the loop
+		    float $random=`rand $min $max`; 
+                float $randomTwo=`rand $min $max`;
+                float $randomThree=`rand $min $max`;
+              int $randVert = `rand $userRandMin $userRandMax`;
+              $i = $i+ $randVert; 
+
+            //check if x, y, or z directions were chosen to be disabled
+                if ($xValue == 0)
+                   {
+                    $random = 0;
+                   }
+
+                if ($yValue == 0)
+                   {
+                    $randomTwo = 0;
+                   }
+
+                if ($zValue == 0)
+                   {
+                    $randomThree = 0;
+                   }                
+        	
+                string $yourObj = ($obj[0] + ".f[" + $i + "]");
+                   
+                select -r $yourObj;
+		    //move -r -os -wd $random $random $random;
+                move -r -os -wd $random $randomTwo $randomThree;
+                select -r $obj;
+                 
+          }
+        }
+     if ($edgeCheck == 1)
+         {
+          
+          
+       
+ 
+      //set the number of edges
+        int $polyStatCount[] = `polyEvaluate -e`;
+
+        int $n= $polyStatCount[0]; 
+     
+      //Get the values of vertex randomness from user interface
+        int $userRandMin = `intFieldGrp -query -value1 inputRandMin`;
+        int $userRandMax = `intFieldGrp -query -value1 inputRandMax`;
+ 
+      //Prevent values from being zero or less
+        if ($userRandMin < 1)
+             {
+              $userRandMin = 1;
+             }
+        if ($userRandMax < 1)
+             {
+              $userRandMax = 1;
+             }
+      
+      
+	for($i = 1;$i<$n;$i) 
+          { 
+		//create three random values of the loop
+		    float $random=`rand $min $max`; 
+                float $randomTwo=`rand $min $max`;
+                float $randomThree=`rand $min $max`;
+              int $randVert = `rand $userRandMin $userRandMax`;
+              $i = $i+ $randVert; 
+
+            //check if x, y, or z directions were chosen to be disabled
+                if ($xValue == 0)
+                   {
+                    $random = 0;
+                   }
+
+                if ($yValue == 0)
+                   {
+                    $randomTwo = 0;
+                   }
+
+                if ($zValue == 0)
+                   {
+                    $randomThree = 0;
+                   }                
+        	
+                string $yourObj = ($obj[0] + ".e[" + $i + "]");
+                   
+                select -r $yourObj;
+		    //move -r -os -wd $random $random $random;
+                move -r -os -wd $random $randomTwo $randomThree;
+                select -r $obj;
+                 
+          }
+        }
+
+ }
+
+
+ 

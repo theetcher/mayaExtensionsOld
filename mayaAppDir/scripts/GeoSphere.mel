@@ -1,0 +1,619 @@
+//GeoSphere 0.2
+//==========================================================================================================
+//		| written by:		 |
+//		| T. Elser		 |
+//		| e-mail comments to:|
+//		| t.elser@web.de	 |		
+//		---------------------
+//		| Date of release:	|
+//		|04/30/2002		|
+//		---------------------
+//
+//based on Source Code of Geodome by Rick Bono
+//Website of Rick Bono: http://www.cris.com/~rjbono/html/domes.html
+//
+//USE THIS SCRIPT ON YOUR OWN RISK
+//The programmer is not responsible for any problems that result from the use of this script
+//==============================================================================================================================
+//	PURPOSE:
+//	Calculation of a polygonal primitive similar to 3DS Max GeoSphere for improved polygonal modelling
+//	especially on low-poly levels as a Geosphere has much less polys than a standard Maya Sphere primitive
+//==============================================================================================================================
+//	This is the first script I ever wrote so don´t blame me for inefficient code.
+//	This script calculates a Class I polygonal Geosphere based on an Octahedron primitive.
+//==============================================================================================================================
+//	USAGE:
+//	1. 	save the GeoSphere.mel and createGeoSphereWindow.mel to your scripts directory.
+//	1.a	put the .bmp files in user-maya-4.0-prefs-icons
+//	1.b 	no need to source the script
+//	2. 	start Maya. In the command line type createGeoSphereWindow and middlemouse drag to a shelf you like.
+//	3.	you can assign the shelf button the icon EFBgMaya.bmp which I have included 4 your convenience.
+//	4.	Start by pressing the newly created button
+//	5.	drop me a note about what you think about it..	
+//==============================================================================================================================
+//	KNOWN ISSUES:
+//	1.	I think that you can´t create GeoSpheres using very high segment counts as I use a string to create
+//		the faces. If there are limitations to string length (which I don´t know) and the creation string
+//		for the polys is too long Maya may hang in nirvana.
+//	2.	Texture border edges may prevent you from turning edges as you wish.
+//		I tried to avoid this by applying a spherical mapping to the sphere but this doesn´t work very well
+//		on the middle section of the sphere. You may have to sew texture edges.
+//		any hints on how to prevent this appreciated.
+//	3.	The newly implemented Tetrasphere seems a bit buggy. Not sure what the problem is. Maybe in next release..
+//	4.	The code is a bit messy and needs cleaning up. But I am tired right now..
+//==============================================================================================================================
+//	FUTURE IMPROVEMENTS:
+//	Creating GeoSpheres using Tetrahedri and Icosahedri as base primitives	-> finished 04-30-02		v0.2b
+//	Creating Buckyballs based on Icosahedri
+//	Creating Class II Geospheres
+//	Implementing a User Interface for convenient use				-> finished 04-30-02		v0.2b
+//	fixed a minor bug not selecting the created primitive				-> finished 04-30-02		v0.2b
+//==============================================================================================================================
+
+//---------------------------------------- Karthesische Koordinaten berechnen ---------------------------------------------------------
+
+proc float CoordCalcX (float $phi, float $theta, float $radius)
+	{
+	float $x;
+	float $r = sin (deg_to_rad ($theta))*$radius;
+	$x = cos (deg_to_rad($phi))*$r;
+	//if ((0.0+$x) < 0.001)
+	//	{
+	//	$x = 0.0;
+	//	}
+	return $x;
+	}
+
+proc float CoordCalcY (float $theta, float $radius)
+	{
+	float $y;
+	$y = cos (deg_to_rad($theta))*$radius;
+	//if ((0.0+$y) < 0.001)
+	//	{
+	//	$y = 0.0;
+	//	}
+	return $y;
+	}
+
+proc float CoordCalcZ (float $phi, float $theta, float $radius)
+	{
+	float $z;
+	float $r = sin (deg_to_rad ($theta))*$radius;
+	$z = sin (deg_to_rad($phi))*$r;
+	//if ((0.0+$z)< 0.001)
+	//	{
+	//	$z = 0.0;
+	//	}
+	return $z;
+	}
+
+//------------------------- Anzahl Punkte im GeoDreieck berechnen --------------------------------------------------------------
+proc int AnzahlPunkte (int $Freq)
+	{
+	print ("1. Proc AnzahlPunkte: Anzahl Punkte bei gegebener Frequenz berechnen: \n");
+	
+	int $i=$Freq+1;
+	int $AnzPt=0;
+	while ($i>0)
+		{
+		$AnzPt=$AnzPt+$i;
+		$i=$i-1;
+		}
+	print ("Ergebnis Schritt 1: Anzahl Punkte: ");
+	int $anzprinter = $AnzPt - 1;
+	print ($AnzPt + "  (Punkt 0 bis " +$anzprinter + ")\n");
+	print ("\n");
+	return $AnzPt;
+	}
+
+//-------------------------- Alle Faces des ersten GeoDreiecks kombinieren ------------------------------------------------------
+proc UniteFacesFirstTri (int $Seg, string $achtelname, string $facename)
+	{
+	string $unitecommand = "polyUnite -ch off -n ";
+	int $lastface = $Seg*$Seg-1;				//bei $Seg = 3 -> 8
+	string $nextface = $facename;				//"GeoFace"
+	
+	$unitecommand = $unitecommand + $achtelname;		//Initialisierung Unitecommand mit Parameter Name
+	$unitecommand = $unitecommand + " ";			//
+	
+	while ($lastface >=0)
+		{
+		$nextface = $facename + $lastface;			//"Geoface8"
+		$unitecommand = $unitecommand + $nextface;	
+		$unitecommand = $unitecommand + " ";		//"polyUnite -n $achtelname Geoface8 "
+		$lastface -= 1;
+		}
+	print ($unitecommand);
+	eval ($unitecommand);
+	}
+
+//--------------------------- Alle Punkte des ersten GeoDreiecks verschmelzen -------------------------------------------------
+proc MergeVertsFirstTri (int $segmente, string $achtelname)
+	{
+	string $mergecommand = "polyMergeVertex -d 0.01 -ch off " + $achtelname + ".vtx[0:";
+	int $anzpunkte = $segmente*$segmente*3-1;
+	$mergecommand = $mergecommand + $anzpunkte + "]";
+	print ($mergecommand);
+	eval ($mergecommand);
+	}
+
+//--------------------------- Das erste GeoDreieck vervielfachen und an die richtige Stelle rotieren ----------------------------
+proc MultiplyAchtel (string $achtelname)
+	{
+	string $nextname;
+	int $achtelnummer = 1;
+	float $angle = 90.0;
+	
+	print ("duplizieren... \n");
+	$nextname = $achtelname + $achtelnummer;		//"Geoachtel1"
+	while ($achtelnummer < 8)
+		{
+		duplicate -n $nextname $achtelname;
+		$achtelnummer += 1;
+		$nextname = $achtelname + $achtelnummer;		//"Geoachtel2"
+		}
+	print ("rotieren... \n");
+	$achtelnummer = 1;						//Achtelnummer auf 1 zurücksetzen
+	while ($achtelnummer < 4)					//erste drei Achtel rotieren um Y
+		{
+		$nextname = $achtelname + $achtelnummer;		//Geoachtel1
+		rotate 0 $angle 0 $nextname;		//Rotation um 90,180,270
+		$achtelnummer +=1;
+		$angle += 90.0;
+		}
+	while ($achtelnummer < 8)
+		{
+		$nextname =$achtelname + $achtelnummer;
+		rotate 90 $angle 0 $nextname;		//Rotation um 270, 180, 90
+		$achtelnummer +=1;
+		$angle -= 90.0;
+		}
+	}
+
+//---------------------- Alle Teilshells der GeoSphere kombinieren --------------------------------------------------
+proc string UniteAchtel (string $achtelname, int $primitive)
+	{
+	string $geoname[];
+	int $i = 1;
+	string $resultname;
+	int $proxyfaces;
+
+	if ($primitive == 1)
+		{
+		$resultname = "TetraSphere";
+		$proxyfaces = 4;
+		}
+	if ($primitive == 2)
+		{
+		$resultname = "OctaSphere";
+		$proxyfaces = 8;
+		}
+	if ($primitive == 3)
+		{
+		$resultname = "IcosaSphere";
+		$proxyfaces = 20;
+		}
+
+	string $unitecommand = "polyUnite -ch off -n " + $resultname + " " + $achtelname +" ";
+	while ($i < $proxyfaces)
+		{
+		$unitecommand = $unitecommand + $achtelname + $i +" ";
+		$i+=1;
+		//print ($unitecommand);
+		}
+	print ($unitecommand);
+	$geoname = eval ($unitecommand);
+	return $geoname[0];
+	}
+	
+//--------------------Alle Border-Vertices der kombinierten Teilshells verschmelzen -----------------------------------------------------
+proc MergeSphereVerts (int $anzpunkte, int $primitive, string $geoname, float $tolerance)
+	{
+
+	int $proxyfaces;
+	if ($primitive == 1)
+		{
+		$proxyfaces = 4;
+		}
+	if ($primitive == 2)
+		{
+		$proxyfaces = 8;
+		}
+	if ($primitive == 3)
+		{
+		$proxyfaces = 20;
+		}
+	
+	int $punktmenge = $anzpunkte*$proxyfaces-1;
+	string $mergecommand = "polyMergeVertex -d " + $tolerance +" -ch off " + $geoname + ".vtx[0:" + $punktmenge + "]";
+	print ("\n");
+	print ($mergecommand);
+	eval ($mergecommand);
+	}
+
+//-------------------------------------Berechnung der Meta-Koordinaten für die GeoSphere (Basis für Winkelberechnung--------------------------
+proc float[] calculateXprime (int $segmente, int $anzpunkte, int $primitive)
+	{
+	$anzprinter = $anzpunkte - 1;
+	print ("2. Proc calculateXprime: Primärkoordinaten X berechnen für alle Punkte (0 bis " + $anzprinter + ")\n");
+	
+	int $index=0;
+	int $reihen = $segmente;
+	int $i, $j;
+	float $xprime[];
+	for ($i = $reihen; $i >= 0; $i--)
+		{
+		for ($j = 0; $j <= $i; $j++)
+			{
+			if ($primitive == 1)								//Meta-X für Tetraeder
+				{
+				$xprime[$index] = $j * sqrt (3.0);
+				}
+			if ($primitive == 2)								//Meta-X für Oktaeder
+				{
+				$xprime[$index] = $j;
+				}
+			if ($primitive == 3)								//Meta-X für Icosaeder
+				{
+				$xprime[$index] = $j * sin (deg_to_rad (72));
+				}
+			$index += 1;
+			}
+		}
+	return $xprime;
+	}
+
+proc float[] calculateYprime (int $segmente, int $anzpunkte, int $primitive)
+	{
+	$anzprinter = $anzpunkte - 1;
+	print ("3. Proc calculateYprime: Primärkoordinaten Y berechnen für alle Punkte (0 bis " + $anzprinter + ")\n");
+	int $index=0;
+	int $reihen = $segmente;
+	int $i, $j;
+	float $yprime[];
+	for ($i = $reihen; $i >= 0; $i--)
+		{
+		for ($j = 0; $j <= $i; $j++)
+			{
+			if ($primitive == 1)								//Meta-Y für Tetraeder
+				{
+				$yprime[$index] = ($i - $j) * 2 - $j;
+				}
+			if ($primitive == 2)								//Meta-Y für Oktaeder
+				{
+				$yprime[$index] = $i-$j;
+				}
+			if ($primitive == 3)								//Meta-Y für Icosaeder
+				{
+				$yprime[$index] = ($i - $j) + $j * cos ( deg_to_rad (72.0));
+				}
+			
+			$index += 1;
+			}
+		}
+	return $yprime;
+	}
+
+proc float[] calculateZprime (int $segmente, int $anzpunkte, int $primitive)
+	{
+	$anzprinter = $anzpunkte - 1;
+	print ("4. Proc calculateZprime: Primärkoordinaten Z berechnen für alle Punkte (0 bis " + $anzprinter + ")\n");
+	int $index=0;
+	int $reihen = $segmente;
+	int $i, $j;
+	float $zprime[];
+	for ($i = $reihen; $i >= 0; $i--)
+		{
+		for ($j = 0; $j <= $i; $j++)
+			{
+			if ($primitive == 1)								//Meta-Z für Tetraeder
+				{
+				$zprime[$index] = (3 * ($segmente - $i) - $j - ($i-$j))/sqrt(2.0);
+				}
+			if ($primitive == 2)								//Meta-Z für Oktaeder
+				{
+				$zprime[$index] = $segmente - $i;
+				}
+			if ($primitive == 3)								//Meta-Z für Icosaeder
+				{
+				$zprime[$index] = $segmente / 2.0 + ($segmente - $i)/ (2 * cos ( deg_to_rad (36.0) ) );
+				}
+			$index += 1;
+			}
+		}
+	return $zprime;
+	}
+
+//----------------------------------Berechnung der Winkel Phi und Theta --------------------------------------------------------------
+proc float calculatePhi (float $x, float $y)
+	{
+	float $phi;
+	
+	if ($x == 0.0 && $y == 0.0)
+		{
+		$phi = 0.0;
+		//print ("phi auf 0 gesetzt, da X und Y = 0\n");
+		}
+	else if ($y == 0.0)
+		{
+		$phi = 90.0;
+		//print ("phi auf 90 gesetzt, da Y = 0\n");
+		}
+	else
+		{
+		$phi = atand ($x / $y);
+		if ($phi<0)
+			{
+			$phi += 180;
+			}
+		//print ("phi berechnet!!\n");
+		}
+	return $phi;
+	}
+
+proc float calculateTheta (float $x, float $y, float $z)
+	{
+	float $theta;
+		
+	if ($z == 0)
+		{
+		$theta = 90.0;
+		//print ("theta auf 90 gesetzt, da Z = 0\n");
+		}
+	else
+		{
+		$theta = atand (  ( sqrt ( ($x*$x) + ($y*$y) ) / $z )  );
+		if ($theta < 0)
+			{
+			$theta += 180.0;
+			}
+		//print ("theta berechnet!!\n");
+		}
+	return $theta;
+
+	}
+
+proc MultiplyTetraTri (string $achtelname)
+	{
+	string $nextname;
+	int $achtelnummer = 1;
+	//rotate 0 36.0 0 $achtelname;
+	
+	$nextname = $achtelname + $achtelnummer;		//"Geoachtel1"
+	while ($achtelnummer < 4)
+		{
+		duplicate -n $nextname $achtelname;
+		$achtelnummer += 1;
+		$nextname = $achtelname + $achtelnummer;		//"Geoachtel2"
+		}
+
+	}
+
+proc RotateTetraTri (string $achtelname)
+	{
+	for ($i=1; $i<=2; $i++)
+		{
+		rotate -r 0 ($i*120.0) 0 ($achtelname + $i);
+		}
+	$i = 3;
+	rotate -r 0 60.0 0 ($achtelname +$i);
+	group -n "TetraGroup" ($achtelname +$i);
+	rotate -r -p 0.0 0.0 0.0 0 0 -110.0;
+	ungroup "TetraGroup";
+	}
+
+proc MultiplyIcosaTri (string $achtelname)
+	{
+	string $nextname;
+	int $achtelnummer = 1;
+	rotate 0 36.0 0 $achtelname;
+	
+	$nextname = $achtelname + $achtelnummer;		//"Geoachtel1"
+	while ($achtelnummer < 20)
+		{
+		duplicate -n $nextname $achtelname;
+		$achtelnummer += 1;
+		$nextname = $achtelname + $achtelnummer;		//"Geoachtel2"
+		}
+
+	}
+
+proc RotateIcosaTri (string $achtelname)
+	{
+	
+	string $nextname;
+	string $mirrorname;
+	int $i;
+	float $j;
+		
+	$i = 10;
+	select -r ($achtelname + $i);
+	for ($i=10; $i<=19; $i++)
+		{
+		rotate -r 0 0 180.0 ($achtelname + $i);
+		}
+	$j = 0;
+	for ($i=5; $i<=9; $i++)
+		{
+		rotate -r 0 0 -63.43494882 ($achtelname + $i);
+		group -n ("icogroup"+$i) ($achtelname + $i);
+		rotate -r -p 0.0 0.0 0.0 0 (72.0*$j+36.0) 0 ("icogroup"+$i);
+		$j += 1.0;
+		}
+	$j = 0;
+	for ($i=15; $i<=19; $i++)
+		{
+		rotate -r 0 0 (-63.43494882) ($achtelname + $i);
+		group -n ("icogroup"+$i) ($achtelname + $i);
+		rotate -r -p 0.0 0.0 0.0 0 (72.0*$j+36.0) 0 ("icogroup"+$i);
+		$j += 1.0;
+		}
+	for ($i=1; $i<=4; $i++)
+		{
+		rotate -r 0 (72.0*$i) 0 ($achtelname + $i);
+		}
+	for ($i=11; $i<=14; $i++)
+		{
+		rotate -r 0 (72.0*$i) 0 ($achtelname + $i);
+		}
+	for ($i=5; $i<=9; $i++)
+		{
+		ungroup ("icogroup"+$i);
+		}
+	for ($i=15; $i<=19; $i++)
+		{
+		ungroup ("icogroup"+$i);
+		}
+	}
+
+//=================================================================================================================================
+//=============================================-----> HAUPTPROGRAMM<-----==========================================================
+//=================================================================================================================================
+global proc GeoSphere (int $segmente, float $radius, int $primitive)
+	{
+	print ("0. Hauptprogramm starten...\n\n");
+	//------ Variablendeklaration ------------------------------------------------------------------------------------
+		
+	float $punktx[];					//Variablen für die Punktkoordinaten
+	float $punkty[];
+	float $punktz[];
+	float $phi[];						//Jeder Punkt wird durch zwei Winkel und den Radius definiert
+	float $theta[];
+	int $anzpunkte  = AnzahlPunkte($segmente); 	//Wie viele Punkte müssen berechnet werden?;
+	string $achtelname = "Geoachtel";
+	string $facename = "GeoFace";
+	string $facetname;
+	int $i;
+	string $geoname;
+		
+	//------ Winkelarrays löschen --------------------------------------------------------------------------------------
+	
+	clear ($phi);
+	clear ($theta);
+	
+	//------ Berechnung der Primärkoordinaten für die Berechnung von Phi und Theta --------------------------------------
+	
+	float $xprime[] = calculateXprime ($segmente, $anzpunkte, $primitive);
+	float $yprime[] = calculateYprime ($segmente, $anzpunkte, $primitive);
+	float $zprime[] = calculateZprime ($segmente, $anzpunkte, $primitive);
+	
+	print ("Ergebnis Schritte 2-4:\n");
+	
+	for ($i = 0; $i <= $anzpunkte-1; $i++)
+		{
+		print ("Prime Punkt " + $i + ": X: " + $xprime[$i] + "  | Y: " + $yprime[$i] + "  | Z: " + $zprime[$i] + "\n");    
+		}
+	
+	//------ Berechnung von Phi und Theta -------------------------------------------------------------------------------
+	
+	print ("5. Berechnung von Phi und Theta unter Verwendung von proc calculatePhi und calculateTheta...\n\n");
+	for ($i=0; $i<$anzpunkte; $i++)
+		{
+		$phi[$i] = calculatePhi ($xprime[$i], $yprime[$i]);
+		$theta[$i] = calculateTheta ($xprime[$i], $yprime[$i], $zprime[$i]);
+		
+		print ("phi[" + $i +"] = " + $phi[$i] + "   | theta[" + $i + "] = " + $theta[$i] + "\n");
+		}
+
+	//------ Berechnung von X, Y und Z im kartesischen Koordinatensystem ------------------------------------------------
+	
+	print ("6. Berechnung von X, Y und Z im kartesischen Koordinatensystem mit Hilfe der Prozeduren CoordCalcX, CoordCalcY, CoordCalcZ\n\n");
+	for ($i = 0; $i <= $anzpunkte-1; $i++)
+		{
+		$punktx[$i] = CoordCalcX ($phi[$i], $theta[$i], $radius);
+		$punkty[$i] = CoordCalcY ($theta[$i], $radius);
+		$punktz[$i] = CoordCalcZ ($phi[$i], $theta[$i], $radius);
+		print ("X: " + $punktx[$i] + "    | Y: " + $punkty[$i] + "     | Z: " + $punktz[$i] + "\n");
+		}
+	
+	//------ Faces des ersten Dreiecks erstellen ------------------------------------------------------------------------
+
+	print ("7. Faces des Dreiecks im ersten Quadranten erstellen...\n");
+	int $f = $segmente;
+	int $p = 0;
+	int $q = 1;
+	int $lp= $f - 1;
+	int $facecount = 0;
+	string $facetname;
+	
+	while ($f > 0)
+		{
+		print ("Reihe Unten:\n");
+		while ($p < $lp+1)
+			{
+			$facetname = $facename + $facecount;
+			polyCreateFacet -n $facetname -p $punktx[$p+1] $punkty[$p+1] $punktz[$p+1] -p $punktx[$p] $punkty[$p] $punktz[$p] -p $punktx[$p+$f+1] $punkty[$p+$f+1] $punktz[$p+$f+1];
+			$p += 1;
+			$facecount +=1;
+			}
+		$p += 1;
+		if ($f > 1)
+			{
+			print ("Reihe Oben:\n");
+			while ($q < $lp + 1)
+				{
+				$facetname = $facename + $facecount;
+				polyCreateFacet -n $facetname -p $punktx[$q] $punkty[$q] $punktz[$q] -p $punktx[$q+$f] $punkty[$q+$f] $punktz[$q+$f] -p $punktx[$q+$f+1] $punkty[$q+$f+1] $punktz[$q+$f+1];
+				$q += 1;
+				$facecount +=1;
+				}
+			$q += 2;
+			}
+		$lp = $lp + $f;
+		$f = $f - 1;
+		}
+	//--------- Faces des ersten Kugeldreiecks vereinigen------------------------------------------------------
+	
+	if ($segmente > 1)
+		{
+		UniteFacesFirstTri ($segmente, $achtelname, $facename);
+		MergeVertsFirstTri ($segmente, $achtelname);
+		}
+	else
+		{
+		$facecount = 0;
+		$facetname = $facename + $facecount;
+		select $facetname;
+		rename $facetname $achtelname;
+		}
+	//--------- Faces vervielfachen und drehen, danach Vertices verschmelzen ----------------------------------
+	
+	if ($primitive == 1)
+		{
+		MultiplyTetraTri ($achtelname);
+		RotateTetraTri ($achtelname);
+		$geoname = UniteAchtel ($achtelname, $primitive);
+		MergeSphereVerts ($anzpunkte, $primitive, $geoname, 0.1);
+		$i = $segmente*$segmente*4-1;
+		select -r $geoname.f[0:$i];
+		polySphericalProjection -ch off -n $geoname;
+		
+		}
+	
+	if ($primitive == 2)
+		{
+		MultiplyAchtel ($achtelname);
+		$geoname = UniteAchtel ($achtelname, $primitive);
+		MergeSphereVerts ($anzpunkte, $primitive, $geoname, 0.01);
+		$i = $segmente*$segmente*8-1;
+		select -r $geoname.f[0:$i];
+		polySphericalProjection -ch off -n $geoname;
+		}
+	if ($primitive == 3)
+		{
+		MultiplyIcosaTri ($achtelname);
+		RotateIcosaTri ($achtelname);
+		$geoname = UniteAchtel ($achtelname, $primitive);
+		MergeSphereVerts ($anzpunkte, $primitive, $geoname, 0.01);
+		$i = $segmente*$segmente*20-1;
+		select -r $geoname.f[0:$i];
+		polySphericalProjection -ch off -n $geoname;
+
+		}
+	select -r $geoname.f[0:$i];
+	//print ("\nTriangulating...\n");
+	polyTriangulate;
+	//print ("..finished\n");
+	select -r $geoname;
+
+	}

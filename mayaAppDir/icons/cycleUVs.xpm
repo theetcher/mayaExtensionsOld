@@ -1,0 +1,39 @@
+/* XPM */
+static char *cycleUVs[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #173696",
+". c #d48a89",
+"# c #fc0406",
+"a c #ec3e3f",
+"b c #c4c1c3",
+"c c #e35f5f",
+"d c #f5201f",
+"e c #cc9c9d",
+/* pixels */
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbea######aebbbbbbb",
+"bbbbbbc##dddddd##cbbbbbb",
+"bbbbbc#daebbbbead#cbbbbb",
+"bbbbc##.bbbbbbbb.##cbbbb",
+"bbbb#de```````````d#bbbb",
+"bbba#ab```````````a#abbb",
+"bbb#d.b``bbbbbbb``ed#bbb",
+"bbb#dbb``bbbbbbb``bd#bbb",
+"bbb#dbb``bbbbbbb``bd#bbb",
+"bbb#dbb``bbbbbbb``bd#bbb",
+"bbb#dbb``bbbbbbb``bd#bbb",
+"bbb#deba#bbbbbbb``ed#bbb",
+"bbba#ac##ebbbbbb``a#abbb",
+"bbbb#####`````````d#bbbb",
+"bbbbd####````````##cbbbb",
+"bbba#####ebbbbbba#cbbbbb",
+"bba######cbbbbb.#cbbbbbb",
+"bbd######cbbbbbbebbbbbbb",
+"bbbbbbbebbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbb"
+};

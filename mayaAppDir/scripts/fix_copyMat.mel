@@ -1,0 +1,67 @@
+
+// Combines objects, parents it to the first selected object's parent and deletes history //
+
+global proc fix_copyMat( )
+{
+
+	source watch;
+
+	string $initialSel[] = `ls -sl -l -fl`;
+	PolySelectConvert 1;
+	string $selection[] = `ls -sl -l -fl`;
+	string $SG[];
+	string $NewSG[];
+	string $shadingGroup;
+	
+	if ($selection[0] != "")
+		{
+
+	//	$selection = `ls -sl -l`;
+		select $selection[0];
+				
+
+
+
+		string $comps[] = `ls -flatten -selection -l`;
+		if (`size($comps)` > 0)
+			{
+
+			// find the shape node
+			string $shape[] = `listRelatives -parent -f $comps[0]`;
+
+			// find the shading engine
+			string $connections[] = `listConnections -source false -type 
+				"shadingEngine" $shape[0]`;
+
+			// there may be more than one shading group connected to the
+			// geometry so find the exact one
+			$connections = `stringArrayRemoveDuplicates $connections`;
+
+
+			for ($connection in $connections)
+				{
+				int $result = `sets -isMember $connection`;
+				if ($result == 1) {$shadingGroup = $connection;}
+				}
+
+			// if no shading group has been found, the components must not be
+			// mapped - this means the shape is mapped
+			if ($shadingGroup == "")
+				{
+				for ($connection in $connections)
+					{
+					int $result = `sets -isMember $connection $shape[0]`;
+					if ($result == 1) {$shadingGroup = $connection;}
+					}
+				}
+
+			}
+		
+		
+//		$SG = `ls -sl -l`;
+		watchStr($shadingGroup,"$shadingGroup");
+		$NewSG = `duplicate -upstreamNodes $shadingGroup`;
+		sets -e -forceElement $NewSG[0] $initialSel; 
+		select $initialSel;
+		}
+}

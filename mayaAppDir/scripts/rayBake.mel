@@ -1,0 +1,1497 @@
+/*
+MEL SCRIPT FILE
+---------------
+
+SCRIPT NAME: rayBake.mel
+VERSION: 1.3
+(C) 2001-2003 Light Engine 3d
+
+AUTHOR: Mark Davies
+lightengine3d@hotmail.com
+
+MODIFIED: 06.20.03
+
+DESCRIPTION: interface for baking rayDiffuse calculations
+
+USAGE:
+1. type `rayBake;`
+
+INPUTS:
+
+RETURN: none
+
+NOTES: see "Help->Help with rayBake" for docs
+*/
+
+
+global proc rayBake()
+{
+//load plug-ins
+pluginLoader("md_rayDiffuse");
+pluginLoader("scanCookNode");
+
+delAllUI();
+string $selList[] = `ls -sl`;
+
+window -s 1 -w 1 -h 500 -t "rayBake v1.3" -mxb 0 -in "rayBake" 
+	-mb 1 -mbv 1 -rtf 0 -tlc 0 0 rayBakeUI;
+
+menu -l "Help" -tearOff 0;
+menuItem -l "Help with rayBake" -c "rayBake_help(1)";
+menuItem -l "About this script" -c "rayBake_help(2)";
+menuItem -divider 1;
+menuItem -l "LightEngine3d Homepage" -c "showHelp -a \"http://www.lightengine3d.com\"" le3d_webMI;
+menuItem -l "Nozon Homepage" -c "showHelp -a \"http://www.nozon.com\"" nz_webMI;
+
+formLayout rayBakeLayout;
+	picture -image "le3d_banner1.xpm" splashPIC;
+	button -w 100 -l "Bake" -ann "start baking process" -al "center" -c "rayBakeGO(0)" bakeBTN;
+	button -w 100 -l "Close" -ann "close window" -al "center" -c "delAllUI()" closeBTN;
+setParent ..;
+
+frameLayout -l "" -bv 0 rayBakeFrame;
+
+tabLayout -imh 6 -imw 6 mainTabLayout;
+
+	formLayout generalSetupForm;
+
+	separator -style "none" -w 293;
+
+	text -l "Bake Mode" -ann "type of bake" bakeModeTX;
+	radioButtonGrp -sl 1 -nrb 2 -cw 1 130 -cc "updateUI(3)" -labelArray2 "Image Maps" "Per-Vertex Data" bakeModeRBG;
+
+	optionMenu -l "Node Type" -ann "type of shading node to bake" -cc "getShNodes()" nodeTypeMNU;
+
+	//adding lightEngine3d node types
+	menuItem -en 0 -l ("===LightEngine3d===") -p nodeTypeMNU;
+	menuItem -l "rayDiffuse" -p nodeTypeMNU;
+	menuItem -l "rayDiffuseLight" -p nodeTypeMNU;
+
+	//adding Maya shading node types
+	string $nodeCat[] = {"shader", "texture", "utility"};
+	string $nodeCatNm[] = {"Shaders", "Textures", "Utilities"};
+		for ($i=0; $i<`size $nodeCat`; $i++)
+		{
+		string $nodeTypes[] = (`listNodeTypes $nodeCat[$i]`);
+		menuItem -en 0 -l ("==="+$nodeCatNm[$i]+"===") -p nodeTypeMNU;
+			for ($node in $nodeTypes)
+			menuItem -l $node -p nodeTypeMNU;
+		}
+	optionMenu -e -sl 2 nodeTypeMNU;
+
+	text  -l "Node Output" nodeOutputTX;
+	textScrollList -w 190 -numberOfRows 5 -ams 0 -showIndexedItem 1 
+		-ann "shading node output to bake" nodeOutputTSL;
+
+	optionMenu -l "Default Node" -ann "default node to use if none is found in assigned shading group" defaultNodeMNU;
+	menuItem -l "None" -p defaultNodeMNU;
+
+	checkBox -l "Confirm on Overwrite" -v 0 -ann "confirm if bake will overwrite existing maps" cooCB;
+
+	checkBox -l "Import Baked Maps" -cc "updateUI(0)" -v 0 -ann "import baked maps as file textures" ibmCB;
+
+	checkBox -l "Create Baked Shaders" -cc "updateUI(0)" -v 0 -ann "insert the baked maps into their proper shading networks" cbsCB;
+
+	radioButtonGrp -sl 1 -nrb 2 -cw 1 130 -cc "updateUI(0)" -labelArray2 "Preserve Networks" "New Shaders" cbsModeRBG;
+
+	optionMenu -l "Shader Type" -ann "type of shader to use when creating new baked shaders" shaderTypeMNU;
+	string $shaderTypes[] = {"anisotropic", "blinn", "lambert", "phong", "phongE", "shadingMap", "surfaceShader"};
+		for ($shader in $shaderTypes)
+		menuItem -l $shader -p shaderTypeMNU;
+	optionMenu -e -sl 3 shaderTypeMNU;
+
+	text -l "Rendering Camera" camTX;
+	textScrollList -w 190 -numberOfRows 5 -ams 0 -showIndexedItem 1 
+		-ann "camera to render maps from" camTSL;
+
+	button -w 240 -l "Update Cameras" -ann "update camera list" -al "center" -c "updateUI(2)" updateCamBTN;
+
+			formLayout -e
+				-af		bakeModeTX			"top"		6
+				-af		bakeModeTX			"left"	0
+				-an		bakeModeTX			"bottom"
+				-an		bakeModeTX			"right"
+
+				-ac		bakeModeRBG		"top"		3	bakeModeTX
+				-af		bakeModeRBG		"left"	3
+				-an		bakeModeRBG		"bottom"
+				-an		bakeModeRBG		"right"
+
+				-ac		nodeTypeMNU		"top"		18	bakeModeRBG
+				-af		nodeTypeMNU		"left"	3
+				-an		nodeTypeMNU		"bottom"
+				-an		nodeTypeMNU		"right"
+
+				-ac		nodeOutputTX		"top"		18	nodeTypeMNU
+				-af		nodeOutputTX		"left"	3
+				-an		nodeOutputTX		"bottom"
+				-an		nodeOutputTX		"right"
+
+				-ac		nodeOutputTSL		"top"		3	nodeOutputTX
+				-af		nodeOutputTSL		"left"	3
+				-an		nodeOutputTSL		"bottom"
+				-an		nodeOutputTSL		"right"
+
+				-ac		defaultNodeMNU		"top"		18	nodeOutputTSL
+				-af		defaultNodeMNU		"left"	3
+				-an		defaultNodeMNU		"bottom"
+				-an		defaultNodeMNU		"right"
+
+				-ac		cooCB		"top"		18	defaultNodeMNU
+				-af		cooCB		"left"	3
+				-an		cooCB		"bottom"
+				-an		cooCB		"right"
+
+				-ac		ibmCB		"top"		3	cooCB
+				-af		ibmCB		"left"	3
+				-an		ibmCB		"bottom"
+				-an		ibmCB		"right"
+
+				-ac		cbsCB		"top"		3	ibmCB
+				-af		cbsCB		"left"	3
+				-an		cbsCB		"bottom"
+				-an		cbsCB		"right"
+
+				-ac		cbsModeRBG		"top"		3	cbsCB
+				-af		cbsModeRBG		"left"	3
+				-an		cbsModeRBG		"bottom"
+				-an		cbsModeRBG		"right"
+
+				-ac		shaderTypeMNU		"top"		3	cbsModeRBG
+				-af		shaderTypeMNU		"left"	3
+				-an		shaderTypeMNU		"bottom"
+				-an		shaderTypeMNU		"right"
+
+				-ac		camTX		"top"		18	shaderTypeMNU
+				-af		camTX		"left"	3
+				-an		camTX		"bottom"
+				-an		camTX		"right"
+
+				-ac		camTSL		"top"		3	camTX
+				-af		camTSL		"left"	3
+				-an		camTSL		"bottom"
+				-an		camTSL		"right"
+
+				-ac		updateCamBTN		"top"		3	camTSL
+				-af		updateCamBTN		"left"	3
+				-an		updateCamBTN		"bottom"
+				-an		updateCamBTN		"right"
+
+				generalSetupForm;
+
+			setParent ..;
+
+////
+
+	formLayout outputSetupForm;
+
+	checkBox -l "Bake Sequence of Maps" -align "left" -v 0 -cc "updateUI(0)" 
+	-ann "bake maps as a texture sequence" bseqCB;
+
+	text -l "Start/End/By Frame" frameTX;
+	intField -v 1 -w 35 startIF;
+	intField -v 24 -w 35 endIF;
+	intField -v 1 -w 35 byIF;
+
+	text -l "Texture Size Min" -ann "min dimensions of baked maps" texSizeMinTX;
+	intField -w 60 -v 64 -min 1 -rfc "changeDim(4)" -ec "changeDim(0)" texSizeMinXIF;
+	intField -w 60 -v 64 -min 1 -rfc "changeDim(4)" -ec "changeDim(1)" texSizeMinYIF;
+	floatField -w 60 -h 1 -v 1 -vis 0 -pre 3 texSizeMinXArFF;
+	floatField -w 60 -h 1 -v 1 -vis 0 -pre 3 texSizeMinYArFF;
+
+	text -l "Texture Size" -ann "dimensions of baked maps" texSizeTX;
+	intField -w 60 -v 128 -min 1 -rfc "changeDim(4)" -ec "changeDim(2)" texSizeXIF;
+	intField -w 60 -v 128 -min 1 -rfc "changeDim(4)" -ec "changeDim(3)" texSizeYIF;
+	floatField -w 60 -h 1 -v 1 -vis 0 -pre 3 texSizeXArFF;
+	floatField -w 60 -h 1 -v 1 -vis 0 -pre 3 texSizeYArFF;
+
+	checkBox -l "Preserve Aspect Ratio" -align "left" -v 0 
+		-ann "preserves aspect ratio of map dimensions" constpCB;
+
+	checkBox -l "Volume Weighting" -align "left" -v 0 -cc "updateUI(0)" 
+		-ann "estimate texture dimensions based on bounding box sizes" vwCB;
+
+	text -l "U Range" -ann "U range to bake within" uRangeTX;
+	floatField -w 60 -v 0 uRangeMinFF;
+	floatField -w 60 -v 1 uRangeMaxFF;
+	text -l "V Range" -ann "V range to bake within" vRangeTX;
+	floatField -w 60 -v 0 vRangeMinFF;
+	floatField -w 60 -v 1 vRangeMaxFF;
+
+	checkBox -l "Determine From Surface" -align "left" -v 0 
+		-ann "UV range taken from surface [NURBS only]" -cc "updateUI(0)" uvSurfCB;
+
+	text -l "Edge Padding" -ann "width of pixel padding at UV edges" paddingTX;
+	intField -w 60 -v 2 paddingIF;
+
+	text -l "Output Format" -ann "output file format for baked textures" fileFormatTX;
+	optionMenu fileFormatMNU;
+	string $formatList[] = {"Alias PIX (als)","GIF (gif)","JPEG (jpg)","Maya IFF (iff)","RLA (rla)",
+					"SGI (sgi)","SoftImage (pic)","Targa (tga)","Tiff (tif)","Windows Bitmap (bmp)",
+					"RenderMan (tex)"};
+		for ($format in $formatList)
+		menuItem -l $format -p fileFormatMNU;
+	optionMenu -e -sl 4 fileFormatMNU;
+
+	text -l "Prefix" -ann "prefix to append to baked elements" prefixTX;
+	text -en 0 -l "prefix[surface name].[ext]" prefixPattTX;
+	textField -w 230 -tx "rb_" prefixTF;
+
+	text -l "Output Directory" -ann "directory to output baked maps to" savePathTX;
+
+	string $outPath = (`workspace -q -rd`+"textures");
+	textField -w 230 -tx $outPath savePathTF;
+	button -w 60 -ann "select output directory" -l "Browse" -al "center" -c "fileBrowser (\"getOutDir\", \"Select Output Directory\", \"\", 4)" browseBTN;
+
+			formLayout -e
+				-af		bseqCB			"top"		6
+				-af		bseqCB			"left"	0
+				-an		bseqCB			"bottom"
+				-an		bseqCB			"right"
+
+				-ac		frameTX		"top"		2	bseqCB
+				-af		frameTX		"left"	16
+				-an		frameTX		"bottom"
+				-an		frameTX		"right"
+
+				-ac		startIF		"top"		2	bseqCB
+				-ac		startIF		"left"	3	frameTX
+				-an		startIF		"bottom"
+				-an		startIF		"right"
+
+				-ac		endIF		"top"		2	bseqCB
+				-ac		endIF		"left"	0	startIF
+				-an		endIF		"bottom"
+				-an		endIF		"right"
+
+				-ac		byIF		"top"		2	bseqCB
+				-ac		byIF		"left"	0	endIF
+				-an		byIF		"bottom"
+				-an		byIF		"right"
+
+				-ac		texSizeMinTX		"top"		24	byIF
+				-af		texSizeMinTX		"left"	0
+				-an		texSizeMinTX		"bottom"
+				-an		texSizeMinTX		"right"
+
+				-ac		texSizeMinXIF		"top"		24	byIF
+				-af		texSizeMinXIF		"left"	100
+				-an		texSizeMinXIF		"bottom"
+				-an		texSizeMinXIF		"right"
+
+				-ac		texSizeMinYIF		"top"		24	byIF
+				-ac		texSizeMinYIF		"left"	0	texSizeMinXIF
+				-an		texSizeMinYIF		"bottom"
+				-an		texSizeMinYIF		"right"
+
+				-ac		texSizeMinXArFF		"top"		24	byIF
+				-af		texSizeMinXArFF		"left"	0
+				-an		texSizeMinXArFF		"bottom"
+				-an		texSizeMinXArFF		"right"
+
+				-ac		texSizeMinYArFF		"top"		24	byIF
+				-ac		texSizeMinYArFF		"left"	0	texSizeMinXArFF
+				-an		texSizeMinYArFF		"bottom"
+				-an		texSizeMinYArFF		"right"
+
+				-ac		texSizeTX		"top"		24	texSizeMinYArFF
+				-af		texSizeTX		"left"	0
+				-an		texSizeTX		"bottom"
+				-an		texSizeTX		"right"
+
+				-ac		texSizeXIF		"top"		24	texSizeMinYArFF
+				-af		texSizeXIF		"left"	100
+				-an		texSizeXIF		"bottom"
+				-an		texSizeXIF		"right"
+
+				-ac		texSizeYIF		"top"		24	texSizeMinYArFF
+				-ac		texSizeYIF		"left"	0	texSizeXIF
+				-an		texSizeYIF		"bottom"
+				-an		texSizeYIF		"right"
+
+				-ac		texSizeXArFF		"top"		24	texSizeMinYArFF
+				-af		texSizeXArFF		"left"	0
+				-an		texSizeXArFF		"bottom"
+				-an		texSizeXArFF		"right"
+
+				-ac		texSizeYArFF		"top"		24	texSizeMinYArFF
+				-ac		texSizeYArFF		"left"	0	texSizeXArFF
+				-an		texSizeYArFF		"bottom"
+				-an		texSizeYArFF		"right"
+
+				-ac		constpCB		"top"		24	texSizeYArFF
+				-af		constpCB		"left"	100
+				-an		constpCB		"bottom"
+				-an		constpCB		"right"
+
+				-ac		vwCB		"top"		3	constpCB
+				-af		vwCB		"left"	100
+				-an		vwCB		"bottom"
+				-an		vwCB		"right"
+
+				-ac		uRangeTX		"top"		24	vwCB
+				-af		uRangeTX		"left"	0
+				-an		uRangeTX		"bottom"
+				-an		uRangeTX		"right"
+
+				-ac		uRangeMinFF		"top"		24	vwCB
+				-af		uRangeMinFF		"left"	100
+				-an		uRangeMinFF		"bottom"
+				-an		uRangeMinFF		"right"
+
+				-ac		uRangeMaxFF		"top"		24	vwCB
+				-ac		uRangeMaxFF		"left"	0	uRangeMinFF
+				-an		uRangeMaxFF		"bottom"
+				-an		uRangeMaxFF		"right"
+
+				-ac		vRangeTX		"top"		0	uRangeMaxFF
+				-af		vRangeTX		"left"	0
+				-an		vRangeTX		"bottom"
+				-an		vRangeTX		"right"
+
+				-ac		vRangeMinFF		"top"		0	uRangeMaxFF
+				-af		vRangeMinFF		"left"	100
+				-an		vRangeMinFF		"bottom"
+				-an		vRangeMinFF		"right"
+
+				-ac		vRangeMaxFF		"top"		0	uRangeMaxFF
+				-ac		vRangeMaxFF		"left"	0	vRangeMinFF
+				-an		vRangeMaxFF		"bottom"
+				-an		vRangeMaxFF		"right"
+
+				-ac		uvSurfCB		"top"		0	vRangeMaxFF
+				-af		uvSurfCB		"left"	100
+				-an		uvSurfCB		"bottom"
+				-an		uvSurfCB		"right"
+
+				-ac		paddingTX		"top"		24	uvSurfCB
+				-af		paddingTX		"left"	0
+				-an		paddingTX		"bottom"
+				-an		paddingTX		"right"
+
+				-ac		paddingIF		"top"		24	uvSurfCB
+				-af		paddingIF		"left"	100
+				-an		paddingIF		"bottom"
+				-an		paddingIF		"right"
+
+				-ac		fileFormatTX		"top"		24	paddingIF
+				-af		fileFormatTX		"left"	0
+				-an		fileFormatTX		"bottom"
+				-an		fileFormatTX		"right"
+
+				-ac		fileFormatMNU		"top"		24	paddingIF
+				-af		fileFormatMNU		"left"	100
+				-an		fileFormatMNU		"bottom"
+				-an		fileFormatMNU		"right"
+
+				-ac		prefixTX		"top"		24	fileFormatMNU
+				-af		prefixTX		"left"	0
+				-an		prefixTX		"bottom"
+				-an		prefixTX		"right"
+
+				-ac		prefixPattTX		"top"		0	prefixTX
+				-af		prefixPattTX		"left"	0
+				-an		prefixPattTX		"bottom"
+				-an		prefixPattTX		"right"
+
+				-ac		prefixTF		"top"		0	prefixPattTX
+				-af		prefixTF		"left"	0
+				-an		prefixTF		"bottom"
+				-an		prefixTF		"right"
+
+				-ac		savePathTX		"top"		16	prefixTF
+				-af		savePathTX		"left"	0
+				-an		savePathTX		"bottom"
+				-an		savePathTX		"right"
+
+				-ac		savePathTF		"top"		0	savePathTX
+				-af		savePathTF		"left"	0
+				-an		savePathTF		"bottom"
+				-an		savePathTF		"right"
+
+				-ac		browseBTN		"top"		0	savePathTX
+				-ac		browseBTN		"left"	0	savePathTF
+				-an		browseBTN		"bottom"
+				-an		browseBTN		"right"
+
+				outputSetupForm;
+
+			setParent ..;
+
+	setParent ..;
+
+////
+
+	formLayout -e
+		-af	splashPIC		"top"		0
+		-af	splashPIC		"left"	5
+		-an	splashPIC		"bottom"
+		-an	splashPIC		"right"
+
+		-ac	rayBakeFrame	"top"		5	splashPIC
+		-af	rayBakeFrame	"left"	5
+		-an	rayBakeFrame	"bottom"
+		-an	rayBakeFrame	"right"
+
+		-an	bakeBTN		"top" 
+		-af	bakeBTN		"left"  5
+		-ap	bakeBTN		"right" 0 50
+		-af	bakeBTN		"bottom" 5
+
+		-aoc	closeBTN		"top" 0 bakeBTN
+		-ap	closeBTN		"left"  5 50
+		-af	closeBTN		"right" 5
+		-af	closeBTN		"bottom" 5
+	rayBakeLayout;
+
+	tabLayout -edit
+		-tabLabel generalSetupForm "General Setup" 
+		-tabLabel outputSetupForm "Output Setup" 
+	mainTabLayout;
+
+
+cleanUp();
+getShNodes();
+updateUI(0);
+updateUI(2);
+
+	if (`size $selList` > 0)
+	select -r $selList;
+
+showWindow rayBakeUI;
+}
+
+
+global proc delAllUI()
+{
+string $uiList[] = {"rayBakeUI", "rayBake_helpUI"};
+	for ($i=0; $i<`size $uiList`; $i++)
+	{
+		if (`window -exists $uiList[$i]`)
+		deleteUI $uiList[$i];
+	}
+}
+
+
+global proc updateUI(int $mode)
+{
+	if ($mode == 0)
+	{
+	int $ibm = `checkBox -q -v ibmCB`;
+	int $cbs = `checkBox -q -v cbsCB`;
+	int $cbsMode = `radioButtonGrp -q -sl cbsModeRBG`;
+	checkBox -e -en $ibm cbsCB;
+	radioButtonGrp -e -en $cbs cbsModeRBG;
+
+		if ($cbs && $cbsMode == 2)
+		optionMenu -e -en 1 shaderTypeMNU;
+		else
+		optionMenu -e -en 0 shaderTypeMNU;
+
+	int $vw = `checkBox -q -v vwCB`;
+	text -e -en $vw texSizeMinTX;
+	intField -e -en $vw texSizeMinXIF;
+	intField -e -en $vw texSizeMinYIF;
+		if ($vw)
+		text -e -l "Texture Size Max" -ann "max dimensions of baked maps" texSizeTX;
+		else
+		text -e -l "Texture Size" -ann "dimensions of baked maps" texSizeTX;
+
+	int $cbseq = `checkBox -q -v bseqCB`;
+	text -e -en $cbseq frameTX;
+	intField -e -en $cbseq startIF;
+	intField -e -en $cbseq endIF;
+	intField -e -en $cbseq byIF;
+
+	int $uvSurf = `checkBox -q -v uvSurfCB`;
+	floatField -e -en (1-$uvSurf) uRangeMinFF;
+	floatField -e -en (1-$uvSurf) uRangeMaxFF;
+	floatField -e -en (1-$uvSurf) vRangeMinFF;
+	floatField -e -en (1-$uvSurf) vRangeMaxFF;
+	}
+
+	if ($mode == 2)
+	{
+	textScrollList -e -ra camTSL;
+
+	string $camList[] = `listCameras`;
+		for ($cam in $camList)
+		{
+		textScrollList -e -append $cam camTSL;
+			if ($cam == "persp")
+			textScrollList -e -si $cam camTSL;
+		}
+	}
+
+	if ($mode == 3)
+	{
+	int $pVert = `radioButtonGrp -q -sl bakeModeRBG`;
+	$pVert -= 2;
+     	checkBox -e -en $pVert cooCB;
+     	checkBox -e -en $pVert ibmCB;
+     	checkBox -e -en 0 cbsCB;
+     	radioButtonGrp -e -en $pVert cbsModeRBG;
+     	optionMenu -e -en $pVert shaderTypeMNU;
+     	checkBox -e -en $pVert bseqCB;
+     	intField -e -en $pVert startIF;
+     	intField -e -en $pVert endIF;
+     	intField -e -en $pVert byIF;
+     	checkBox -e -en $pVert vwCB;
+	text -e -en $pVert texSizeMinTX;
+     	intField -e -en $pVert texSizeMinXIF;
+     	intField -e -en $pVert texSizeMinYIF;
+	text -e -en $pVert texSizeTX;
+     	intField -e -en $pVert texSizeXIF;
+     	intField -e -en $pVert texSizeYIF;
+	checkBox -e -en $pVert constpCB;
+	checkBox -e -en $pVert uvSurfCB;
+	floatField -e -en $pVert uRangeMinFF;
+	floatField -e -en $pVert uRangeMaxFF;
+	floatField -e -en $pVert vRangeMinFF;
+	floatField -e -en $pVert vRangeMaxFF;
+	text -e -en $pVert paddingTX;
+	intField -e -en $pVert paddingIF;
+	text -e -en $pVert fileFormatTX;
+	optionMenu -e -en $pVert fileFormatMNU;
+	text -e -en $pVert prefixTX;
+     	textField -e -en $pVert prefixTF;
+	text -e -en $pVert savePathTX;
+     	textField -e -en $pVert savePathTF;
+
+	updateUI(0);
+	}
+}
+
+
+global proc changeDim(int $mode)
+{
+int $constp = `checkBox -q -v constpCB`;
+float $szMinX = `intField -q -v texSizeMinXIF`;
+float $szMinY = `intField -q -v texSizeMinYIF`;
+float $szX = `intField -q -v texSizeXIF`;
+float $szY = `intField -q -v texSizeYIF`;
+float $aspectX, $aspectY;
+int $scale;
+
+	if ($constp)
+	{
+		if ($mode == 0)
+		{
+		$aspectX = `floatField -q -v texSizeMinXArFF`;
+		$aspectY = `floatField -q -v texSizeMinYArFF`;
+		$scale = int($szMinX/$aspectX);
+			if ($scale <= 0)
+			$scale = 1;
+		intField -e -v $scale texSizeMinYIF;
+		}
+		if ($mode == 1)
+		{
+		$aspectX = `floatField -q -v texSizeMinXArFF`;
+		$aspectY = `floatField -q -v texSizeMinYArFF`;
+		$scale = int($szMinY/$aspectY);
+			if ($scale <= 0)
+			$scale = 1;
+		intField -e -v $scale texSizeMinXIF;
+		}
+		if ($mode == 2)
+		{
+		$aspectX = `floatField -q -v texSizeXArFF`;
+		$aspectY = `floatField -q -v texSizeYArFF`;
+		$scale = int($szX/$aspectX);
+			if ($scale <= 0)
+			$scale = 1;
+		intField -e -v $scale texSizeYIF;
+		}
+		if ($mode == 3)
+		{
+		$aspectX = `floatField -q -v texSizeXArFF`;
+		$aspectY = `floatField -q -v texSizeYArFF`;
+		$scale = int($szY/$aspectY);
+			if ($scale <= 0)
+			$scale = 1;
+		intField -e -v $scale texSizeXIF;
+		}
+	}
+
+	if ($mode == 4)
+	{
+	$aspectX = $szMinX / $szMinY;
+	$aspectY = $szMinY / $szMinX;
+	floatField -e -v $aspectX texSizeMinXArFF;
+	floatField -e -v $aspectY texSizeMinYArFF;
+	$aspectX = $szX / $szY;
+	$aspectY = $szY / $szX;
+	floatField -e -v $aspectX texSizeXArFF;
+	floatField -e -v $aspectY texSizeYArFF;
+	}
+}
+
+
+global proc cleanUp()
+{
+string $shTmp[] = `ls "rb*Tmp_*"`;
+	if (`size $shTmp` > 0)
+	delete "rbTmp_*" "rbTmp_*SG";
+
+	if (`objExists "nodeGatherer"`)
+	delete "nodeGatherer";
+
+string $nodeList[] = `ls -typ "scanCookNode"`;
+	for ($node in $nodeList)
+	delete $node;
+}
+
+
+global proc getShNodes()
+{
+textScrollList -e -ra nodeOutputTSL;
+
+string $nodeType = `optionMenu -q -v nodeTypeMNU`;
+string $nodeList[] = `ls -typ $nodeType`;
+
+      if (`size $nodeList` > 0)
+      {
+            for ($node in $nodeList)
+		menuItem -l $node -p defaultNodeMNU;
+	optionMenu -e -sl 2 defaultNodeMNU;
+	optionMenu -e -en 1 defaultNodeMNU;
+      }
+	else
+	{
+	optionMenu -e -sl 1 defaultNodeMNU;
+	optionMenu -e -en 0 defaultNodeMNU;
+	}
+
+	string $node = `createNode $nodeType`;
+	string $outputs[] = `listAttr $node`;
+		for ($out in $outputs)
+		{
+			if (`match "out" $out` == "out" && 
+				`match "outputBentNormals" $out` != "outputBentNormals")
+			{
+			textScrollList -e -append $out nodeOutputTSL;
+				if ($out == "outColor")
+				textScrollList -e -si "outColor" nodeOutputTSL;
+			}
+		}
+delete $node;
+}
+
+
+global proc getOutDir(string $outFileTarget1, string $test)
+{
+textField -e -tx $outFileTarget1 savePathTF;
+}
+
+
+global proc pluginLoader(string $pluginName)
+{
+	//load the plugin if necessary
+	if (!`pluginInfo -query -loaded $pluginName`)
+	{
+	loadPlugin $pluginName;
+	print ("rayBake: loaded plug-in: "+$pluginName+".\n");
+	}
+}
+
+
+global proc rayBakeGO(int $mode)
+{
+waitCursor -state on;
+
+string $objectList[] = `ls -sl`;
+
+int $pVert = `radioButtonGrp -q -sl bakeModeRBG`;
+string $outType;
+	if ($pVert == 2)
+	$outType = "vertex data";
+	else
+	$outType = "map(s)";
+string $nodeType = `optionMenu -q -v nodeTypeMNU`;
+string $nodeOutput[] = `textScrollList -q -si nodeOutputTSL`;
+int $coo = `checkBox -q -v cooCB`;
+int $ibm = `checkBox -q -v ibmCB`;
+int $cbs = `checkBox -q -v cbsCB`;
+int $cbsMode = `radioButtonGrp -q -sl cbsModeRBG`;
+string $shaderType = `optionMenu -q -v shaderTypeMNU`;
+string $defaultNode = `optionMenu -q -v defaultNodeMNU`;
+string $renderCamList[] = `textScrollList -q -si camTSL`;
+int $bseq = `checkBox -q -v bseqCB`;
+int $startFrame = `intField -q -v startIF`;
+int $endFrame = `intField -q -v endIF`;
+int $byFrame = `intField -q -v byIF`;
+int $vw = `checkBox -q -v vwCB`;
+int $texSizeMinX = `intField -q -v texSizeMinXIF`;
+int $texSizeMinY = `intField -q -v texSizeMinYIF`;
+int $texSizeX = `intField -q -v texSizeXIF`;
+int $texSizeY = `intField -q -v texSizeYIF`;
+int $uvSurf = `checkBox -q -v uvSurfCB`;
+float $uRangeMin = `floatField -q -v uRangeMinFF`;
+float $uRangeMax = `floatField -q -v uRangeMaxFF`;
+float $vRangeMin = `floatField -q -v vRangeMinFF`;
+float $vRangeMax = `floatField -q -v vRangeMaxFF`;
+int $padding = `intField -q -v paddingIF`;
+
+int $outFormat = `optionMenu -q -sl fileFormatMNU`;
+string $ext = "iff", $convExt;
+	switch($outFormat)
+	{
+	case 1:
+		$convExt = "als";	break;
+	case 2:
+		$convExt = "gif";	break;
+	case 3:
+		$convExt = "jpg";	break;
+	case 5:
+		$convExt = "rla";	break;
+	case 6:
+		$convExt = "sgi";	break;
+	case 7:
+		$convExt = "pic";	break;
+	case 8:
+		$convExt = "tga";	break;
+	case 9:
+		$convExt = "tif";	break;
+	case 10:
+		$convExt = "bmp";	break;
+	case 11:
+		$convExt = "tif";	break;
+	default:
+		$convExt = "iff";	break;
+	}
+
+string $prefix = `textField -q -tx prefixTF`;
+string $textureFolder = `textField -q -tx savePathTF`;
+
+	if (!`filetest -d $textureFolder`)
+	error("rayBake: Specified output directory not found.");
+	if (`size $objectList` == 0)
+	error ("rayBake: No selected surfaces found.");
+	if (`size $renderCamList` == 0)
+	error ("rayBake: No renderable camera selected.");
+	if ($bseq && $startFrame >= $endFrame)
+	error ("rayBake: Invalid frame range specified.");
+
+global string $texList[], $uiNameList[], $destColorList[], $destAlphaList[], $convertList[];
+string $changedNodes1[];
+float $changedValues1[];
+string $uiName, $textureName, $convertName, $writeFile;
+int $curFrame;
+string $assignedShaderList[];
+float $baseColor[];
+
+	print("rayBake: Baking "+$outType+" from camera: "+$renderCamList[0]+"\n");
+
+		if ($bseq)
+		$curFrame = `currentTime -e ($startFrame - $byFrame)`;
+		else
+		{
+		$curFrame = `currentTime -query`;
+		$endFrame = $curFrame+1;
+		}
+
+	int $success = 0;
+	int $go = 0;
+	int $fr = 0;
+      		int $k = 0;
+      		int $m = 0;
+
+		//store SG assignments
+		for ($i=0; $i<`size $objectList`; $i++)
+      	{
+		string $objShape[] = `listRelatives -f -s $objectList[$i]`;
+			if ($objShape[0] == "")
+			error ("rayBake: Selected object '"+$objectList[$i]+"' has no valid shape node");
+		string $assignedShader[] = `listSets -type 1 -object $objShape[0]`;
+		$assignedShaderList[$i] = $assignedShader[0];
+		}
+
+	int $volTexSizes[];
+	int $j=0;
+		if ($vw)
+		$volTexSizes = volumeWeight($objectList, $texSizeMinX, $texSizeMinY, $texSizeX, $texSizeY);
+
+      while ($curFrame < $endFrame)
+      {
+      $fr++;
+      	if ($bseq)
+      	{
+      	float $prevFrame = `currentTime -query`;
+      	$curFrame = `currentTime -e ($prevFrame + $byFrame)`;
+      	}
+
+            for ($i=0; $i<`size $objectList`; $i++)
+            {
+      	string $objShape[] = `listRelatives -f -s $objectList[$i]`;
+
+      		if (`size $objShape` == 0 || `objectType $objShape[0]` != "nurbsSurface" && `objectType $objShape[0]` != "mesh")
+      		{
+      		warning ("rayBake: Selected object '"+$objectList[$i]+"' is not a valid surface.");
+      		continue;
+      		}
+
+			if ($uvSurf)
+			{
+				if (`objectType $objShape[0]` == "nurbsSurface")
+				{
+				$uRangeMin = `getAttr ($objShape[0]+".minValueU")`;
+				$uRangeMax = `getAttr ($objShape[0]+".maxValueU")`;
+				$vRangeMin = `getAttr ($objShape[0]+".minValueV")`;
+				$vRangeMax = `getAttr ($objShape[0]+".maxValueV")`;
+				}
+				else
+				{
+				warning ("rayBake: '"+$objectList[$i]+"': UV ranges cannot be automatically determined for polygonal surfaces. Using default range (0 > 1).");
+				$uRangeMin = 0;
+				$uRangeMax = 1;
+				$vRangeMin = 0;
+				$vRangeMax = 1;
+      			continue;
+		     		}
+			}
+
+      		if (`match "|" $objectList[$i]` == "|")
+			$uiName = `substituteAllString $objectList[$i] "|" "_"`;
+      		else
+      		$uiName = $objectList[$i];
+
+      		if ($bseq)
+      		$textureName = ($textureFolder+"/"+$prefix+$uiName+"."+$curFrame+"."+$ext);
+      		else
+      		$textureName = ($textureFolder+"/"+$prefix+$uiName+"."+$ext);
+
+      		if ($outFormat != 4)
+      		$convertList[$i] = `substitute ("."+$ext) $textureName ("."+$convExt)`;
+
+      	$writeFile = "Yes";
+
+                  if ($coo && `file -q -ex $textureName`)
+            	{
+      		$writeFile = `confirmDialog -title "rayBake: file exists" -message ("File '"+$textureName+"' already exists. Overwrite?")
+      		-button "Yes" -button "No" -defaultButton "No" -cancelButton "No" -dismissString "No"`;
+            	}
+
+      		if ($writeFile == "Yes")
+      		{
+      		$success++;
+
+      			if ($vw)
+      			{
+      			$texSizeX = $volTexSizes[$j];
+      			$texSizeY = $volTexSizes[$j+1];
+      			}
+
+			//find any nodes of specified type in aggigned SG
+      		string $nodeToBake = findShadingNode($assignedShaderList[$i], $nodeType);
+
+      			if ($nodeToBake == "")
+      			{
+      			print ("rayBake: No '"+$nodeType+"' nodes found in assigned shader. Using 'Default Node'.\n");
+      			$nodeToBake = `optionMenu -q -v defaultNodeMNU`;
+	      			if ($nodeToBake == "None")
+      				error "rayBake: No 'Default Node' specified. Bake cancelled.";
+      			}
+
+				if ($nodeType == "rayDiffuse")
+				$baseColor = `getAttr ($nodeToBake+".baseColor")`;
+				else
+				{
+				$baseColor[0] = 0;
+				$baseColor[1] = 0;
+				$baseColor[2] = 0;
+				}
+
+      		string $connectList[] = `listConnections -s 0 -c 1 -p 1 ($nodeToBake+"."+$nodeOutput[0])`;
+
+      			if (`size $connectList` > 0)
+      			{
+      				for ($j=0; $j<`size $connectList`; $j+=2)
+      				{
+      					if (`match "outColor" $connectList[$j]` == "outColor")
+      					{
+      					$destColorList[$k] = $connectList[$j+1];
+      					$k++;
+      					}
+      					if (`match "outAlpha" $connectList[$j]` == "outAlpha")
+      					{
+      					$destAlphaList[$m] = $connectList[$j+1];
+      					$m++;
+      					}
+      				}
+      			}
+
+      		string $shadingGroup = createShading(0, $objectList[$i], $ibm, $cbs, $cbsMode, $shaderType, $textureName, $prefix, $destColorList[$i], $destAlphaList[$i], $texSizeX, $texSizeY, 0, 0.01, $nodeToBake, ($uiName+"_"+$curFrame), $bseq, $startFrame, $endFrame, 0, $baseColor, $pVert, $uRangeMin, $uRangeMax, $vRangeMin, $vRangeMax, $padding, $convertList[$i]);
+      		$writeList[$i] = 1;
+	      	$texList[$i] = $textureName;
+      		$uiNameList[$i] = $uiName;
+
+				if ($pVert == 1)
+	      		print ("rayBake: Baking: '"+$textureName+"'\n");
+      		}
+      		else
+      		{
+      		warning ("rayBake: Bake cancelled for: '"+$textureName+"'");
+      		continue;
+      		}
+		$j+=2;
+            }
+
+            if ($success > 0)
+            {
+                  float $startFrameTime = `timerX`;
+
+            	rb_Render($renderCamList[0]);
+
+            	float $frameTime = `timerX -st $startFrameTime`;
+
+            	if ($bseq)
+            	print ("Time For Bake (ss.ms): "+$frameTime+" Frame "+$curFrame+" ("+$fr+" of "+(($endFrame-$startFrame)+1)+")\n");
+            	else
+            	print ("Time For Bake (ss.ms): "+$frameTime+"\n");
+
+            		//if ($ibm)
+            		//{
+            			if ($bseq && $curFrame == $endFrame)
+            			{
+            				for ($i=0; $i<`size $objectList`; $i++)
+            				createShading(1, $objectList[$i], $ibm, $cbs, $cbsMode, $shaderType, $texList[$i], $prefix, $destColorList[$i], $destAlphaList[$i], 0, 0, 0, 0, "", $uiNameList[$i], $bseq, $startFrame, $endFrame, 0, $baseColor, $pVert, $uRangeMin, $uRangeMax, $vRangeMin, $vRangeMax, $padding, $convertList[$i]);
+            			}
+            			else if (!$bseq)
+            			{
+            				for ($i=0; $i<`size $objectList`; $i++)
+            				createShading(1, $objectList[$i], $ibm, $cbs, $cbsMode, $shaderType, $texList[$i], $prefix, $destColorList[$i], $destAlphaList[$i], 0, 0, 0, 0, "", $uiNameList[$i], 0, 0, 0, 0, $baseColor, $pVert, $uRangeMin, $uRangeMax, $vRangeMin, $vRangeMax, $padding, $convertList[$i]);
+            			}
+            		//}
+            }
+cleanUp();
+
+	if (!$bseq)
+     	break;
+}
+
+	//reassign SGs to objects
+	if (!$cbs && $mode != 1)
+	{
+		for ($i=0; $i<`size $objectList`; $i++)
+		{
+     		//select -r $objectList[$i];
+     		sets -e -forceElement $assignedShaderList[$i] $objectList[$i];
+		//string $objShape[] = `listRelatives -f -s $objectList[$i]`;
+		//string $assignedShader[] = `listSets -type 1 -object $objShape[0]`;
+		}
+	}
+
+	if ($pVert == 2)
+	{
+	PaintVertexColorTool;
+	select -cl;
+	}
+
+cleanUp();
+print "===============================\n";
+print "rayBake: Done.\n\n";
+waitCursor -state off;
+}
+
+
+global proc rb_Render(string $renderCam)
+{
+//build attr + value arrays
+string $qualAttrs[] = {"edgeAntiAliasing", "shadingSamples", "maxShadingSamples", "redThreshold", "greenThreshold", "blueThreshold", "useMultiPixelFilter", "enableRaytracing", "reflections", "refractions", "shadows", "rayTraceBias"};
+float $qualValues[] = {0,1,1,0,0,0,0,1,1,0,0,0};
+float $oldQualValues[];
+
+	//get old quality settings
+	for ($i=0; $i < `size $qualAttrs`-1; $i++)
+	$oldQualValues[$i] = `getAttr ("defaultRenderQuality."+$qualAttrs[$i])`;
+
+	//set bake quality settings
+	for ($i=0; $i < `size $qualAttrs`; $i++)
+	setAttr ("defaultRenderQuality."+$qualAttrs[$i]) $qualValues[$i];
+
+int $devAspect = `getAttr ("defaultResolution.lockDeviceAspectRatio")`;
+int $changedAspect = 0;
+	if ($devAspect)
+	{
+	setAttr "defaultResolution.lockDeviceAspectRatio" 0;
+	$changedAspect = 1;
+	}
+
+	//get nodes with connections from nodeGatherer.iffMessage
+	string $list[] = `listConnections -d 1 -s 0 nodeGatherer.iffMessage`;
+		for ($i=0; $i<`size $list`; $i++)
+		setAttr ($list[$i]+".order") 1; //open file and get ready to record
+
+	//run render
+	render -x 64 -y 64 -nsh 0 -ngl 0 $renderCam;
+
+	//get nodes with connections from nodeGatherer.iffMessage
+	string $list[] = `listConnections -d 1 -s 0 nodeGatherer.iffMessage`;
+		for ($i=0; $i<`size $list`; $i++)
+		getAttr ($list[$i]+".colorOut"); //force evaluation of the node --> finishes the job
+
+	if ($changedAspect)
+	setAttr "defaultResolution.lockDeviceAspectRatio" 1;
+
+	//restore old quality settings
+	for ($i=0; $i < `size $qualAttrs`-1; $i++)
+	setAttr ("defaultRenderQuality."+$qualAttrs[$i]) $oldQualValues[$i];
+}
+
+
+global proc string createShading(int $mode, string $obj, int $ibm, int $cbs, int $cbsMode, string $shaderType, string $textureName, string $prefix, string $destColor, string $destAlpha, int $texSizeX, int $texSizeY, int $over, float $sOff, string $nodeToBake, string $uiName, int $bseq, int $startFrame, int $endFrame, int $infType, float $baseColor[], int $pVert, float $uRangeMin, float $uRangeMax, float $vRangeMin, float $vRangeMax, int $padding, string $convertName)
+{
+string $shadingGroup;
+string $nodeType = `optionMenu -q -v nodeTypeMNU`;
+string $nodeOutput[] = `textScrollList -q -si nodeOutputTSL`;
+int $outFormat = `optionMenu -q -sl fileFormatMNU`;
+
+      if ($mode == 0)
+      {
+      	if (!`objExists "nodeGatherer"`)
+      	{
+      	//create node gatherer
+      	string $node = `createNode unknownTransform -name "nodeGatherer"`;
+      	string $attrList[] = `listAttr -k $node`;
+      		for ($attr in $attrList)
+      		setAttr -k 0 ($node+"."+$attr);
+      	//add message attributes
+      	addAttr -ln "iffMessage" -sn "ifm" -at message $node;
+      	addAttr -ln "objectMessage" -sn "obm" -at message $node;
+      	}
+
+      	//create temp shader
+           	string $shader = `shadingNode -asShader surfaceShader -n ("rbTmp_"+$uiName)`;
+           	$shadingGroup = `sets -renderable true -noSurfaceShader true -empty -n ("rbTmp_"+$uiName+"SG")`;
+           	connectAttr -f ($shader+".outColor") ($shadingGroup+".surfaceShader");
+
+           	//create scanCookNode
+           	string $scanCookNode = `createNode scanCookNode`;
+
+            //set attrs on scanCookNode
+            setAttr -type "string" ($scanCookNode+".fileName") $textureName;
+            setAttr ($scanCookNode+".sizeX") $texSizeX;
+            setAttr ($scanCookNode+".sizeY") $texSizeY;
+      	setAttr ($scanCookNode+".surfaceOffset") $sOff;
+      	setAttr ($scanCookNode+".colorBack") -type double3 $baseColor[0] $baseColor[1] $baseColor[2];
+      		if ($pVert == 2)
+      		setAttr ($scanCookNode+".bakeJustVertices") 1;
+      	setAttr ($scanCookNode+".minU") $uRangeMin;
+      	setAttr ($scanCookNode+".maxU") $uRangeMax;
+      	setAttr ($scanCookNode+".minV") $vRangeMin;
+      	setAttr ($scanCookNode+".maxV") $vRangeMax;
+      	setAttr ($scanCookNode+".padding") $padding;
+
+           	//our network
+		string $outputType = `getAttr -type ($nodeToBake+"."+$nodeOutput[0])`;
+			if ($outputType == "float")
+			{
+	           	connectAttr -f ($nodeToBake+"."+$nodeOutput[0]) ($scanCookNode+".rIn");
+	           	connectAttr -f ($nodeToBake+"."+$nodeOutput[0]) ($scanCookNode+".gIn");
+	           	connectAttr -f ($nodeToBake+"."+$nodeOutput[0]) ($scanCookNode+".bIn");
+			}
+			else
+			connectAttr -f ($nodeToBake+"."+$nodeOutput[0]) ($scanCookNode+".colorIn");
+
+           	connectAttr -f ($scanCookNode+".colorOut") ($shader+".outColor");
+
+			if (`objectType $nodeToBake` == "rayDiffuse" && 
+				`attributeQuery -n $nodeToBake -ex "outputBentNormals"` && 
+				`getAttr ($nodeToBake+".outputBentNormals")` == 1)
+			{
+			connectAttr -f ($nodeToBake+".outAlpha") ($scanCookNode+".inAlpha");
+			}
+
+           	connectAttr -f nodeGatherer.iffMessage ($scanCookNode+".iffMessage");
+      	connectAttr -f ($obj+".message") ($scanCookNode+".objectMessage");
+
+           	//assign material to obgect
+           	select -r $obj;
+           	sets -e -forceElement $shadingGroup;
+      }
+
+      if ($mode == 1)
+      {
+      global string $file1;
+            if (`file -q -ex $textureName`)
+            {
+      		//run post-render conversion of the completed image file
+      		if ($outFormat != 4)
+            	{
+			print ("rayBake: Converting to: '"+$convertName+"'\n");
+      		system("imgcvt -f iff -t "+$outFormat+" "+$textureName+" "+$convertName);
+				if (`file -q -ex $convertName`)
+				{
+				//delete .iff file
+      			system("rm "+$textureName);
+				$textureName = $convertName;
+				}
+				else
+				{
+				warning ("rayBake: Conversion failed for: "+$convertName);
+				return "";
+				}
+
+				//RenderMan .tex conversion
+				if ($outFormat == 11)
+				{
+				string $buffer[];
+				tokenize($textureName, ".", $buffer);
+				print ("rayBake: Converting to: '"+$buffer[0]+".tex'\n");
+				system("txmake "+$textureName+" "+$buffer[0]+".tex");
+					if (!`file -q -ex ($buffer[0]+".tex")`)
+					{
+					warning ("rayBake: Conversion failed for: "+$buffer[0]+".tex");
+					return "";
+					}
+				}
+      		}
+
+                  if ($ibm)
+                  {
+                  $file1 = `shadingNode -asTexture file -n ($prefix+$uiName)`;
+                  setAttr -type "string" ($file1+".fileTextureName") $textureName;
+                  string $place1 = `shadingNode -asUtility place2dTexture`;
+                  connectAttr -f ($place1+".coverage") ($file1+".coverage");
+                  connectAttr -f ($place1+".translateFrame") ($file1+".translateFrame");
+                  connectAttr -f ($place1+".rotateFrame") ($file1+".rotateFrame");
+//			connectAttr -f ($place1+".mirror") ($file1+".mirror");
+			connectAttr -f ($place1+".mirrorU") ($file1+".mirrorU");
+			connectAttr -f ($place1+".mirrorV") ($file1+".mirrorV");
+                  connectAttr -f ($place1+".stagger") ($file1+".stagger");
+                  connectAttr -f ($place1+".wrapU") ($file1+".wrapU");
+                  connectAttr -f ($place1+".wrapV") ($file1+".wrapV");
+                  connectAttr -f ($place1+".repeatUV") ($file1+".repeatUV");
+                  connectAttr -f ($place1+".offset") ($file1+".offset");
+                  connectAttr -f ($place1+".rotateUV") ($file1+".rotateUV");
+                  connectAttr -f ($place1+".outUV") ($file1+".uv");
+                  connectAttr -f ($place1+".outUvFilterSize") ($file1+".uvFilterSize");
+
+      			if ($bseq)
+      			{
+      			setAttr ($file1+".useFrameExtension") 1;
+
+      			currentTime -e $startFrame;
+      			setAttr ($file1+".frameExtension") $startFrame;
+      			setKeyframe ($file1+".frameExtension");
+
+      			currentTime -e $endFrame;
+      			setAttr ($file1+".frameExtension") $endFrame;
+      			setKeyframe ($file1+".frameExtension");
+      			}
+      		
+            		if ($cbs)
+            		{
+            			//create baked shader (insert)
+      				if ($cbsMode == 1)
+      				{
+      					if ($destColor != "")
+      					connectAttr -f ($file1+".outColor") $destColor;
+
+      					if ($destAlpha != "")
+      					connectAttr -f ($file1+".outAlpha") $destAlpha;
+      				}
+
+            			//create baked shader (new)
+      				if ($cbsMode == 2)
+      				{
+                 			string $shader = `shadingNode -asShader $shaderType -n ($prefix+$uiName)`;
+                 			$shadingGroup = `sets -renderable true -noSurfaceShader true -empty -n ($prefix+$uiName+"SG")`;
+                 			connectAttr -f ($shader+".outColor") ($shadingGroup+".surfaceShader");
+      					if ($shaderType == "shadingMap")
+      					connectAttr -f ($file1+".outColor") ($shader+".shadingMapColor");
+      					else if ($shaderType == "surfaceShader")
+      	      			connectAttr -f ($file1+".outColor") ($shader+".outColor");
+      					else
+      	      			connectAttr -f ($file1+".outColor") ($shader+".color");
+
+            			//assign material to obgect
+            			select -r $obj;
+            			sets -e -forceElement $shadingGroup;
+      				}
+            		}
+                  }
+            }
+      	else
+      	warning ("rayBake: Texture file "+$textureName+" doesn't exist");
+      }
+
+return $shadingGroup;
+}
+
+
+global proc int[] volumeWeight(string $selList[], int $texSizeMinX, int $texSizeMinY, int $texSizeMaxX, int $texSizeMaxY)
+{
+int $newTexSizes[];
+int $weightSizeX, $weightSizeY;
+int $selSize = `size $selList`;
+float $bboxSzList[];
+
+	for ($i=0; $i<$selSize; $i++)
+	{
+		float $bbox[] = `getAttr ($selList[$i]+".boundingBoxSize")`;
+		float $bboxSz = ($bbox[0])*($bbox[1]) + ($bbox[0])*($bbox[2]) + ($bbox[1])*($bbox[2]);
+		$bboxSzList[$i] = $bboxSz;
+	}
+
+float $bboxSort[] = `sort $bboxSzList`;
+int $j=0;
+
+	for ($i=0; $i<$selSize; $i++)
+	{
+		if ($bboxSort[$selSize-1] == $bboxSort[0])
+		{
+		$weightSizeX = $texSizeMaxX;
+		$weightSizeY = $texSizeMaxY;
+		}
+		else if ($selSize == 1)
+		{
+		$weightSizeX = $texSizeMaxX;
+		$weightSizeY = $texSizeMaxY;
+		}
+		else
+		{
+		$weightSizeX = $texSizeMinX + (($bboxSzList[$i]-$bboxSort[0])/($bboxSort[$selSize-1]-$bboxSort[0]))*($texSizeMaxX - $texSizeMinX);
+		$weightSizeY = $texSizeMinY + (($bboxSzList[$i]-$bboxSort[0])/($bboxSort[$selSize-1]-$bboxSort[0]))*($texSizeMaxY - $texSizeMinY);
+		}
+
+	$newTexSizes[$j] = $weightSizeX;
+	$newTexSizes[$j+1] = $weightSizeY;
+	$j+=2;
+	}
+
+return $newTexSizes;
+}
+
+
+global proc string findShadingNode(string $assignedShader, string $nodeType)
+{
+string $node;
+
+string $material[] = `listConnections ($assignedShader+".surfaceShader")`;
+string $matConnect[] = `listConnections -p 1 $material[0]`;
+string $connect1[] = $matConnect;
+string $buffer[];
+int $j = 0;
+
+	for ($i=0; $i < `size $matConnect`; $i++)
+	{
+      	if (`match "message" $matConnect[$i]` != "message" && `match "material" $matConnect[$i]` != "material" && `match "shaders" $matConnect[$i]` != "shaders" && `match "surfaceShader" $matConnect[$i]` != "surfaceShader")
+      	{
+		tokenize($matConnect[$i], ".", $buffer);
+		$matConnect[$i] = $buffer[0];
+
+			if (`objectType $matConnect[$i]` == $nodeType)
+			return $matConnect[$i];
+			else
+			{
+			$connect1 = `listConnections -s 1 -d 0 $matConnect[$i]`;
+      			while ($j < `size $connect1`)
+      			{
+      			tokenize($connect1[$j], ".", $buffer);
+      			$connect1[$j] = $buffer[0];
+
+                  		if (`objectType $connect1[$j]` == $nodeType)
+      				return $connect1[$j];
+                  		else if ($j == `size $connect1`-1)
+                  		{
+                  		$connect1 = `listConnections -s 1 -d 0 $connect1[$j]`;
+      				$j=0;
+            			}
+      				else
+      				$j++;
+      			}
+			}
+      	}
+	}
+return $node;
+}
+
+
+global proc rayBake_help(int $function)
+{
+	int $uiLabelWidth = 150;
+	int $uiInputWidth = 80;
+	int $uiWidth = $uiLabelWidth + $uiInputWidth + 220;
+
+	if ( `window -exists rayBake_helpUI` )
+		deleteUI rayBake_helpUI;
+
+	window -h 600 -w 200
+		-maximizeButton 0
+		-resizeToFitChildren 1
+		-title "rayBake Help"
+		-iconName "rayBake Help" rayBake_helpUI;
+ 
+ 		tabLayout -innerMarginWidth 5 -innerMarginHeight 5 -childResizable true helpTab;
+			string $rb_form1 = `formLayout -numberOfDivisions 100 "rayBake Docs"`;
+	    			string $rb_scroll1 = `scrollLayout -hst 16 -vst 16 -childResizable true -minChildWidth $uiWidth`;
+					columnLayout -adjustableColumn true -rowSpacing 6;
+
+// documentation
+					frameLayout 
+					-label "Documentation"
+					-labelAlign "center"
+					-cll false
+					-lw $uiWidth
+					-mh 3
+					-bv 0;
+							columnLayout -adjustableColumn true;
+								rowLayout
+									-numberOfColumns 1
+									-cat 1 "left" 5;
+									text rb_docs;
+									setParent ..;
+								setParent ..;
+							setParent ..;
+						setParent ..;
+					setParent ..;
+
+				string $rb_button1 = `button -l "Close" -c "deleteUI rayBake_helpUI"`;
+				setParent ..;
+
+// about
+			string $rb_form3 = `formLayout -numberOfDivisions 100 "About"`;
+	    			string $rb_scroll3 = `scrollLayout -hst 16 -vst 16 -childResizable true -minChildWidth $uiWidth`;
+					columnLayout -adjustableColumn true -rowSpacing 6;
+
+						frameLayout
+							-label "About rayBake"
+							-labelAlign "center"
+							-cll false
+							-lw $uiWidth
+							-mh 3
+							-bv 0;
+							columnLayout -adjustableColumn true;
+								rowLayout
+									-numberOfColumns 1
+									-cat 1 "left" 5;
+									text rb_about;
+									setParent ..;
+								setParent ..;
+							setParent ..;
+						setParent ..;
+					setParent ..;
+
+				string $rb_button3 = `button -l "Close" -c "deleteUI rayBake_helpUI"`;
+
+	// set form layouts
+	formLayout -edit
+		-attachForm $rb_scroll1 "top" 4
+		-attachForm $rb_scroll1 "left" 4
+		-attachControl $rb_scroll1 "bottom" 4 $rb_button1
+		-attachForm $rb_scroll1 "right" 4
+		$rb_form1;
+
+	formLayout -edit
+		-attachNone $rb_button1 "top"
+		-attachForm $rb_button1 "left" 4
+		-attachForm $rb_button1 "bottom" 4
+		-attachForm $rb_button1 "right" 4
+		$rb_form1;
+
+	formLayout -edit
+		-attachForm $rb_scroll3 "top" 4
+		-attachForm $rb_scroll3 "left" 4
+		-attachControl $rb_scroll3 "bottom" 4 $rb_button3
+		-attachForm $rb_scroll3 "right" 4
+		$rb_form3;
+
+	formLayout -edit
+		-attachNone $rb_button3 "top"
+		-attachForm $rb_button3 "left" 4
+		-attachForm $rb_button3 "bottom" 4
+		-attachForm $rb_button3 "right" 4
+		$rb_form3;
+
+	string $rb_docs =
+		"Description:\n" +
+		"========================\n" +
+		"'rayBake' is an interface for baking rayDiffuse plug-in calculations to texture maps.\n" +
+		"(see www.lightengine3d.com for plug-in and documentation)\n" +
+		"\n" +
+
+		"Usage:\n" +
+		"========================\n" +
+		"1: Select surfaces you want to bake maps for (either NURBS or Polygon surface types).\n" +
+		"2: Select a rendering camera from the 'Rendering Camera' menu.\n" +
+		"3: Enter options as needed and click 'Bake Maps'.\n" +
+		"\n" +
+
+		"Tips:\n" +
+		"========================\n" +
+		"In order to trigger the baking process surfaces must be visible from the rendering camera,\n" +
+		"     and must have their 'VisibleInReflections' flag enabled.\n" +
+		"\n" +
+
+		"Inputs:\n" +
+		"========================\n" +
+		"Bake Mode - toggle that controls the type of baking to be done:\n" +
+		"     Image Maps - calculations are baked to image maps [default]\n" +
+		"     Per-Vertex Data - calculations are baked to per-vertex mesh data [polygons only]\n" +
+		"Node Type - type of node to bake out [rayDiffuse is the default]\n" +
+		"Node Output - output value to bake. this will vary with the type of node chosen for baking,\n" +
+		"     however 'outColor' is the most common\n" +
+		"Default Node - node to use if no nodes of the specified type are found within a surface's \n" +
+		"     shading network. if 'None' is selected, the bake process will be skipped for that surface.\n" +
+		"\n" +
+
+		"Confirm on Overwrite - optional confirmation if bake will overwrite an existing map.\n" +
+		"Import Baked Maps - optional import of baked maps as file textures. when baking a map\n" +
+		"     sequence, one file texture will be imported with its extension animated over time.\n" +
+		"Create Baked Shaders - optional creation of baked shaders.\n" +
+		"Preserve Networks - inserts the resulting baked maps into the shading networks in place \n" +
+		"     of the baked nodes (supports destination connections only).\n" +
+		"New Shaders - new shaders are created and assigned that use the baked maps.\n" +
+		"Shader Type - type of shaders to create if the 'New Shader' option is selected.\n" +
+		"\n" +
+
+		"Rendering Camera - list of cameras available to render maps from.\n" +	
+		"Update Cameras - update list of cameras.\n" +	
+		"\n" +
+
+		"Bake Sequence of Maps - optional baking of map sequence.\n" +
+		"Start/End/By Frame - frame range controls for sequence.\n" +
+		"Pre/Post Infinity - type of anim curve evaluation outside sequence range.\n" +
+		"\n" +
+
+		"Texture Size Min - minimum pixel dimensions of baked maps.\n" +
+		"Texture Size - pixel dimensions of baked maps. if using volume weighting, this represents the\n" +
+		"     maximum texture size to weight by.\n" +
+		"Preserve Aspect Ratio - maintain the ratio described between the X and Y texture sizes.\n" +
+		"Volume Weighting - optional estimation of texture dimensions based on bounding box sizes.\n" +
+		"\n" +
+
+		"U Range - U range to bake within.\n" +
+		"V Range - V range to bake within.\n" +
+		"Determine From Surface - UV ranges will be determined from the UVs of the baked surface.\n" +
+		"     this feature is supported for NURBS surfaces only.\n" +
+		"Edge Padding - pixel size of the border surrounding UV edges. this prevents pixels of the\n" +
+		"     baked map that are at UV edges from incorrectly blending with the background color.\n" +
+		"\n" +
+
+		"Output Format - file format to convert baked images to.\n" +
+		"Prefix - prefix to append to baked elements (uses 'prefix[surface name].[ext]' pattern).\n" +
+		"Output Directory - output path for baked maps.\n";
+
+	string $rb_about =
+		"rayBake v1.3\n" +
+		"\n" +
+		"MEL interface and 'rayDiffuse' plug-in programmed by Mark Davies\n" +
+		"(C) 2001-2003 Light Engine 3d\n" +
+		"Email: lightEngine3d@hotmail.com\n" +
+		"Web: www.lightengine3d.com\n" +
+		"\n" +
+		"'scanCookNode' baking plug-in programmed by Tristan Salome\n" +
+		"(C) 2001-2003 Nozon\n" +
+		"Email: tristan@nozon.com\n" +
+		"Web: www.nozon.com\n" +
+		"\n";
+
+	text -e -label $rb_docs rb_docs;
+	text -e -label $rb_about rb_about;
+
+	tabLayout -e -selectTabIndex $function helpTab;
+
+	showWindow rayBake_helpUI;
+}

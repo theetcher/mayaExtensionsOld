@@ -1,0 +1,1063 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: zooXferAnimation v1.4
+''    Author: Hamish McKenzie
+''    Last Updated: July 13, 2003
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=animation#2383
+''  
+''  History:
+''    zooXferAnimation v1.1 on June 19, 2003 by Hamish McKenzie
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//
+// xfer animation
+//
+// Created by Hamish McKenzie mel@mel.macaronikazoo.com
+// Created : 10 May 2003
+//
+// Description:
+// This script will transfer animation from one group ob objects to another.  Its basically
+// just a batch copy and paste, with a few additionals.  It takes a bunch of source objects,
+// and tries to match them with a list of target objects.  The object mapping may be
+// changed, if the script either gets it wrong, or you just want it done in a different
+// order.
+//
+// Usage:
+//  simply run the command:
+//	zooXferAnim;
+//
+// Hamish McKenzie ©2003...
+// Macaroni Kazoo Productions ©2003...
+
+
+global proc zooXferAnim() {
+	string $windowName = "zooXferAnimWindow";
+	string $windowTitle = "zooXferAnim v" + `zooXferAnimInfo version` + "   ::macaroniKazoo::";
+
+	if ( `window -exists $windowName` ) deleteUI $windowName;
+	window -title $windowTitle -resizeToFitChildren 1 -maximizeButton 0 -sizeable 1 -width 210 $windowName;
+
+		//scriptJob -p $windowName -e "SelectionChanged" "zooXferAnimWindowFunctions update n";
+
+		menuBarLayout zooXferAnimMenuMain;
+			menu -label "File";
+				//if the zooAnimFile script is installed, build menu items to access its functionality
+				if( `exists zooAnimFile` ) {
+					eval( "source zooAnimFile" );
+					if( (float)`zooAnimFileInfo version` < 1.31 ) warning "The latest version of zooAnimFile is required for import/export of animation";
+					else {
+						menuItem -l "Load File" -c ( "zooXferAnimWindowFunctions loadFile n" ) zooXferAnimMenuLoadFile;
+						menuItem -l "Write File" -c ( "zooXferAnimWindowFunctions writeFile n" ) zooXferAnimMenuWriteFile;
+						menuItem -divider 1;
+						menuItem -l "Write Pose" -c ( "zooXferAnimWindowFunctions writePose n" ) zooXferAnimMenuWritePose;
+						menuItem -divider 1;
+						}
+					}
+
+				menuItem -l "Remap Objects" -c ( "zooXferAnimWindowFunctions matchSrcTgt n; zooXferAnimWindowFunctions update n;" ) zooXferAnimMenuRemap;
+				menuItem -divider 1;
+				menuItem -l "Xfer Animation" -c ( "zooXferAnimWindowFunctions mappingCheck n" ) zooXferAnimMenuXfer;
+				setParent ..;
+
+			columnLayout -adjustableColumn 1 -rowSpacing 2;
+				rowLayout -numberOfColumns 2
+					-columnWidth2 180 110
+					-columnAttach 1 "both" 	5
+					-columnAttach 2 "both" 	5;
+					setParent..;
+
+				formLayout zooXferAnimForm;
+					text -l "Source Objects" zooXferAnimTextSrc;
+					scrollLayout -width 170 -horizontalScrollBarThickness 5 -verticalScrollBarThickness 5 -p zooXferAnimForm zooXferAnimScrollSrc;
+						columnLayout -adjustableColumn 1 -rowSpacing 1 -p zooXferAnimScrollSrc zooXferAnimCol01;
+							radioCollection zooXferAnimRadioSrc;
+							setParent..;
+						setParent..;
+
+					text -l "Target Objects" zooXferAnimTextTgt;
+					columnLayout -adjustableColumn 1 -rowSpacing 5 -p zooXferAnimForm zooXferAnimCol02;
+						textScrollList -width 110 -numberOfRows 22 -allowMultiSelection 0 -sc ( "zooXferAnimWindowFunctions tgtChange n" ) -doubleClickCommand ( "zooXferAnimWindowFunctions select n" ) -deleteKeyCommand ( "zooXferAnimWindowFunctions deleteLink n" ) zooXferAnimScrollTargetObjects;
+						setParent..;
+
+					columnLayout -adjustableColumn 1 -rowSpacing 5 -p zooXferAnimForm zooXferAnimCol03;
+						rowLayout -numberOfColumns 3
+							-columnWidth3 80 145 130
+							-columnAttach 1 "both" 	5
+							-columnAttach 2 "both" 	5
+							-columnAttach 3 "both" 	5;
+							text -l "xfer Mode:" zooXferAnimTextMode;
+							columnLayout -adjustableColumn 1;
+								radioCollection zooXferAnimRadioMode;
+								radioButton -l "duplicate nodes" -align left -sl -cc( "zooXferAnimWindowFunctions update n" ) zooXferAnimRadioModeDupe;
+								radioButton -l "copy/paste keys" -align left -cc( "zooXferAnimWindowFunctions update n" ) zooXferAnimRadioModeCopy;
+								radioButton -l "trace objects" -align left -cc( "zooXferAnimWindowFunctions update n" ) zooXferAnimRadioModeTrace;
+								setParent ..;
+
+							columnLayout -adjustableColumn 1;
+								checkBox -l "instance animation" zooXferAnimCheckInstance;
+								checkBox -l "match rotate order" -v 1 zooXferAnimCheckRotateOrder;
+								checkBox -l "world space" -v 0 zooXferAnimCheckTraceMode;
+								setParent ..;
+							setParent..;
+
+						rowLayout -numberOfColumns 6
+							-columnWidth6 85 72 55 45 55 45
+							-columnAttach 1 "both" 	1
+							-columnAttach 2 "both" 	1
+							-columnAttach 3 "both" 	1
+							-columnAttach 4 "both" 	5
+							-columnAttach 5 "both" 	1
+							-columnAttach 6 "both" 	5;
+							checkBox -l "sequence" -v 0 -cc( "zooXferAnimWindowFunctions update n" ) zooXferAnimCheckTraceSequence;
+							checkBox -l "keys only" -v 1 -cc( "zooXferAnimWindowFunctions update n" ) zooXferAnimCheckKeysOnly;
+							text -l "start time ->";
+							intField -enable 0 -v `playbackOptions -q -min` zooXferAnimIntTraceStart;
+							text -l "end time ->";
+							intField -enable 0 -v `playbackOptions -q -max` zooXferAnimIntTraceEnd;
+							setParent ..;
+
+						button -l "Xfer Animation" -c ( "zooXferAnimWindowFunctions mappingCheck n" ) zooXferAnimButtonXfer;
+						button -l "unLoad All References" -c ( "file -rr `file -q -r`" ) zooXferAnimButtonRemoveRefs;
+						setParent..;
+
+					string $image = `image -p zooXferAnimForm -width 300 -height 8 -backgroundColor ((float)1) ((float)0) ((float)0) -image ( internalVar("-userBitmapsDir") + "/zoo_sig.tga" )`;
+						popupMenu -p $image -b 1 -pmc ( "showHelp -a \"http://www.macaronikazoo.com/mel\"" );
+					setParent..;
+
+			formLayout -edit
+				-attachControl		zooXferAnimScrollSrc "top" 5 zooXferAnimTextSrc
+				-attachForm			zooXferAnimScrollSrc "left" 5
+				-attachControl		zooXferAnimScrollSrc "bottom" 5 zooXferAnimCol03
+				-attachPosition 	zooXferAnimScrollSrc "right" 5 50
+
+				-attachForm			zooXferAnimTextSrc "top" 5
+				-attachForm			zooXferAnimTextSrc "left" 5
+				-attachNone			zooXferAnimTextSrc "bottom"
+				-attachPosition 	zooXferAnimTextSrc "right" 5 50
+
+				-attachForm			zooXferAnimTextTgt "top" 5
+				-attachControl		zooXferAnimTextTgt "left" 5 zooXferAnimScrollSrc
+				-attachNone			zooXferAnimTextTgt "bottom"
+				-attachForm			zooXferAnimTextTgt "right" 5
+
+				-attachControl		zooXferAnimCol02 "top" 5 zooXferAnimTextTgt
+				-attachControl		zooXferAnimCol02 "left" 5 zooXferAnimScrollSrc
+				-attachControl		zooXferAnimCol02 "bottom" 5 zooXferAnimCol03
+				-attachForm			zooXferAnimCol02 "right" 5
+
+				-attachNone			zooXferAnimCol03 "top"
+				-attachForm			zooXferAnimCol03 "left" 2
+				-attachControl		zooXferAnimCol03 "bottom" 2 $image
+				-attachForm			zooXferAnimCol03 "right" 2
+				
+				-attachNone			$image "top"
+				-attachForm			$image "left" 2
+				-attachForm			$image "bottom" 2
+				-attachForm			$image "right" 2
+				zooXferAnimForm;
+
+	menu -label "Load Items" -p zooXferAnimMenuMain zooXferAnimMenuQss;
+		menuItem -l "Load Source" -c ( "zooXferAnimWindowFunctions loadSrc n" ) zooXferAnimMenuSrc;
+		menuItem -l "Load Target" -c ( "zooXferAnimWindowFunctions loadTgt n" ) zooXferAnimMenuTgt;
+		menuItem -divider 1;
+
+		menuItem -l "Load qss to Source" -p zooXferAnimMenuQss -subMenu 1 zooXferAnimMenuQssSource;
+		menuItem -l "Load qss to Target" -p zooXferAnimMenuQss -subMenu 1 zooXferAnimMenuQssTarget;
+		menuItem -p zooXferAnimMenuQss -divider 1;
+
+		menuItem -l "Load Previous Objs" -p zooXferAnimMenuQss -c ( "zooXferAnimWindowFunctions loadPrev n" );
+
+		popupMenu -b 3 -p zooXferAnimTextSrc -pmc ( "zooXferAnimBuildQssMenu loadSrc zooXferAnimPopupSrc" ) zooXferAnimPopupSrc;
+		popupMenu -b 3 -p zooXferAnimTextTgt -pmc ( "zooXferAnimBuildQssMenu loadTgt zooXferAnimPopupTgt" ) zooXferAnimPopupTgt;
+		zooXferAnimBuildQssMenu loadSrc zooXferAnimMenuQssSource;
+		zooXferAnimBuildQssMenu loadTgt zooXferAnimMenuQssTarget;
+
+	menu -label "Prefs";
+		menuItem -l "sort Alphabetically" -checkBox ( `optionVar -exists zooXferAnimAlphabetically`?`optionVar -q zooXferAnimAlphabetically`:0 ) -c ( "optionVar -iv zooXferAnimAlphabetically ( `menuItem -q -checkBox zooXferAnimMenuAlphabetically` )" ) zooXferAnimMenuAlphabetically;
+		menuItem -divider 1;
+		menuItem -l "unLoad Reminder" -checkBox ( `optionVar -exists zooXferAnimationRemind`?`optionVar -q zooXferAnimationRemind`:0 ) -c ( "optionVar -iv zooXferAnimationRemind ( `menuItem -q -checkBox zooXferAnimationRemind` )" ) zooXferAnimationRemind;
+		setParent ..;
+
+	menu -label "Help" -p zooXferAnimMenuMain;
+		menuItem -l "Help..." -c ( "zooXferAnimHelp help" );
+		menuItem -divider 1;
+		menuItem -l "About" -c ( "zooXferAnimHelp about" );
+
+	showWindow $windowName;
+	zooXferAnimWindowFunctions update n;
+	}
+
+
+//just about all UI controls use this function in some way.  This is the layer between the UI, and the actual command engine
+//almost all script functionality can be accessed through the command engine, without using the UI.  This makes it useful to other scripts
+global proc zooXferAnimWindowFunctions ( string $function, string $variable01 ) {
+	string $srcChildren[] = `columnLayout -q -ca zooXferAnimCol01`;
+	string $tgtChildren[] = `textScrollList -q -allItems zooXferAnimScrollTargetObjects`;
+	string $isSrcLoaded = ( `size $srcChildren`>0 )?1:0;
+	string $isTgtLoaded = ( `size $tgtChildren`>0 )?1:0;
+	string $UIPrefix = "zooXferAnimRadioSrc_";
+
+	switch ( $function ) {
+		case "update":  //handles all updates of the UI
+		string $selObjs[] = `ls -sl`;
+
+		if( `size $selObjs` > 0 ) {
+			menuItem -e -enable 1 zooXferAnimMenuWriteFile;
+			menuItem -e -enable 1 zooXferAnimMenuSrc;
+			}
+		else {
+			menuItem -e -enable 0 zooXferAnimMenuWriteFile;
+			menuItem -e -enable 0 zooXferAnimMenuSrc;
+			}
+
+		if( `radioCollection -q -sl zooXferAnimRadioMode` == "zooXferAnimRadioModeDupe" ) checkBox -e -enable 1 zooXferAnimCheckInstance;
+		else checkBox -e -v 0 -enable 0 zooXferAnimCheckInstance;
+
+		if( `radioCollection -q -sl zooXferAnimRadioMode` == "zooXferAnimRadioModeTrace" ) {
+			checkBox -e -enable 1 zooXferAnimCheckTraceMode;
+			checkBox -e -enable 1 zooXferAnimCheckTraceSequence;
+			}
+		else {
+			checkBox -e -enable 0 -v 0 zooXferAnimCheckTraceMode;
+			checkBox -e -enable 0 -v 0 zooXferAnimCheckTraceSequence;
+			}
+
+		if( `checkBox -q -v zooXferAnimCheckTraceSequence` ) checkBox -e -enable 1 zooXferAnimCheckKeysOnly;
+		else checkBox -e -enable 0 -v 0 zooXferAnimCheckKeysOnly;
+
+		if( `checkBox -q -v zooXferAnimCheckTraceSequence` && !`checkBox -q -v zooXferAnimCheckKeysOnly` ) {
+			intField -e -enable 1 zooXferAnimIntTraceStart;
+			intField -e -enable 1 zooXferAnimIntTraceEnd;
+			}
+		else {
+			intField -e -enable 0 zooXferAnimIntTraceStart;
+			intField -e -enable 0 zooXferAnimIntTraceEnd;
+			}
+
+		if ( $isSrcLoaded ) menuItem -e -enable 1 zooXferAnimMenuTgt;
+		else menuItem -e -enable 0 zooXferAnimMenuTgt;
+
+		if ( $isTgtLoaded ) {
+			button -e -enable 1 zooXferAnimButtonXfer;
+			menuItem -e -enable 1 zooXferAnimMenuXfer;
+			menuItem -e -enable 1 zooXferAnimMenuRemap;
+			}
+		else {
+			button -e -enable 0 zooXferAnimButtonXfer;
+			menuItem -e -enable 0 zooXferAnimMenuXfer;
+			menuItem -e -enable 0 zooXferAnimMenuRemap;
+			}
+
+		if( size( `file -q -r` ) > 0 ) button -e -enable 1 zooXferAnimButtonRemoveRefs;
+		else button -e -enable 0 zooXferAnimButtonRemoveRefs;
+
+		if ( `radioCollection -q -sl zooXferAnimRadioSrc` != "NONE" && $isTgtLoaded ) zooXferAnimWindowFunctions srcChange n;
+		break;
+
+
+		case "loadSrc":  //called to load selected objects into the source pane
+		string $selObjs[] = `ls -sl`;
+		string $clearUIObjs[] = `columnLayout -q -ca zooXferAnimCol01`;
+
+		if( `optionVar -q zooXferAnimAlphabetically` ) $selObjs = `sort $selObjs`;
+		text -e -l ( "Source Objects - " + `size $selObjs` + " objects" ) zooXferAnimTextSrc;
+
+		for ( $ui in $clearUIObjs ) deleteUI $ui;
+		for ( $obj in $selObjs ) {
+			string $objNameInfo[] = `zooXferAnimBreakdownPath $obj`;
+			string $objName = $objNameInfo[1];
+			radioButton -l $obj -docTag $obj -p zooXferAnimCol01 -align left -cl zooXferAnimRadioSrc -onc ( "zooXferAnimWindowFunctions srcChange " + $objName ) ( $UIPrefix + $objName );
+			}
+
+		//update UI elements
+		columnLayout -e -docTag "" zooXferAnimCol01;
+		text -e -l "xfer Mode:" zooXferAnimTextMode;
+		radioButton -e -enable 1 -l "duplicate nodes" zooXferAnimRadioModeDupe;
+		radioButton -e -enable 1 -l "copy/paste keys" zooXferAnimRadioModeCopy;
+		radioButton -e -enable 1 -l "trace objects" zooXferAnimRadioModeTrace;
+
+		if ( $isTgtLoaded ) zooXferAnimWindowFunctions matchSrcTgt n;
+		if( $variable01!=0 ) zooXferAnimWindowFunctions storeConfig n;
+		zooXferAnimWindowFunctions update n;
+		break;
+
+
+		case "loadTgt":  //called to load selected objects into the target pane
+		string $selObjs[] = `ls -sl`;
+
+		if( `optionVar -q zooXferAnimAlphabetically` ) $selObjs = `sort $selObjs`;
+		text -e -l ( "Target Objects - " + `size $selObjs` + " objects" ) zooXferAnimTextTgt;
+
+		textScrollList -e -removeAll zooXferAnimScrollTargetObjects;
+		for ( $obj in $selObjs ) textScrollList -e -append $obj zooXferAnimScrollTargetObjects;
+		zooXferAnimWindowFunctions matchSrcTgt n;
+		if( $variable01!=0 ) zooXferAnimWindowFunctions storeConfig n;
+		zooXferAnimWindowFunctions update n;
+		break;
+
+
+		case "loadFile":  //this will load the list of objects from a .znm file as if they were source objects
+		string $previousFile = ( `optionVar -exists zooAnimFileExportFile` )?`optionVar -q zooAnimFileExportFile`:"";
+		string $filename = ( $variable01=="n" )? `fileDialog -directoryMask ( $previousFile + "/*.znm" )`: $variable01;
+		string $fileContents[] = `zooAnimFileLoadFile $filename`;
+		string $importObjs[] = `zooAnimFileGetFileInfo -o $fileContents n n`;
+		string $clearUIObjs[] = `columnLayout -q -ca zooXferAnimCol01`;
+
+		if( `optionVar -q zooXferAnimAlphabetically` ) $importObjs = `sort $importObjs`;
+		text -e -l ( "Source Objects - " + `size $importObjs` + " objects" ) zooXferAnimTextSrc;
+
+		for ( $ui in $clearUIObjs ) deleteUI $ui;
+		for ( $obj in $importObjs ) {
+			string $objNameInfo[] = `zooXferAnimBreakdownPath $obj`;
+			string $objName = $objNameInfo[1];
+			radioButton -l $obj -docTag $obj -p zooXferAnimCol01 -align left -cl zooXferAnimRadioSrc -onc ( "zooXferAnimWindowFunctions srcChange " + $objName ) ( $UIPrefix + $objName );
+			}
+
+		//update UI elements
+		columnLayout -e -docTag $filename zooXferAnimCol01;
+		text -e -l "import Mode:" zooXferAnimTextMode;
+		radioButton -e -enable 1 -l "absolute" zooXferAnimRadioModeDupe;
+		radioButton -e -enable 1 -l "current time offset" zooXferAnimRadioModeCopy;
+		radioButton -e -enable 0 -l "trace objects" zooXferAnimRadioModeTrace;
+
+		if( $isTgtLoaded ) zooXferAnimWindowFunctions matchSrcTgt n;
+		if( $variable01=="n" ) zooXferAnimWindowFunctions storeConfig n;  //only store config if a filename isn't passed in
+		zooXferAnimWindowFunctions update n;
+		break;
+
+
+		case "loadPrev":  //this handles loading the previous mapping configuration
+		string $filename = `optionVar -q zooXferAnimPrevFile`;
+		string $config = `optionVar -q zooXferAnimPrevConfig`;
+		string $srcObjs[];
+		string $tgtObjs[];
+		string $buffer[];
+
+		//if a filename exists, load that file
+		if( $filename != "" ) zooXferAnimWindowFunctions loadFile $filename;
+
+		//now parse the mapping info - separate it into source and target object arrays
+		tokenize $config "," $buffer;		
+		for( $entry in $buffer ) {
+			string $objs[];
+			tokenize $entry "^" $objs;
+			$srcObjs[( `size $srcObjs` )] = $objs[0];
+			$tgtObjs[( `size $tgtObjs` )] = $objs[1];
+			}
+
+		//if no file name was specified, load the source objects
+		if( $filename == "" ) {
+			select -cl;
+			for( $obj in $srcObjs ) if( `objExists $obj` ) select -add $obj;
+			zooXferAnimWindowFunctions loadSrc 0;
+			}
+
+		//load the target objects
+		select -cl;
+		for( $obj in $tgtObjs ) if( `objExists $obj` ) select -add $obj;
+		zooXferAnimWindowFunctions loadTgt 0;
+
+		string $srcObjUIs[] = `columnLayout -q -ca zooXferAnimCol01`;
+
+		//first, blank all docTags - to make sure we're only getting info from the loaded data
+		for( $UIObj in $srcObjUIs ) radioButton -e -docTag "" $UIObj;
+
+		//for all src UI elements, go through the source object list to find a match, then add the corresponding target object if it exists to the docTag of the src object UI
+		for( $UIObj in $srcObjUIs ) for( $n = 0; $n < `size $srcObjs`; $n++ ) if( `radioButton -q -l $UIObj`==$srcObjs[$n] ) if( `objExists $tgtObjs[$n]` ) radioButton -e -docTag $tgtObjs[$n] $UIObj;
+		break;
+
+
+		case "storeConfig":  //this will store all info associated with loading a previous mapping config - its basically called everytime mappings are changed
+		string $filename = `columnLayout -q -docTag zooXferAnimCol01`;
+		string $srcObjUIs[] = `columnLayout -q -ca zooXferAnimCol01`;
+		string $storeInfo = "";
+
+		optionVar -sv zooXferAnimPrevFile $filename;
+		for( $obj in $srcObjUIs ) $storeInfo = $storeInfo + `radioButton -q -l $obj` + "^" + `radioButton -q -docTag $obj` + ",";
+		optionVar -sv zooXferAnimPrevConfig $storeInfo;
+		break;
+
+
+		case "writeFile":  //handles writing an animation .znm to a file
+		string $windowName = "zooXferAnimExportPath";
+		string $windowTitle = ".znm Export Animation Path";
+		string $buffer[];
+
+		if ( `window -exists $windowName` ) deleteUI $windowName;
+		window -title $windowTitle -resizeToFitChildren 1 -maximizeButton 0 -sizeable 1 -width 400 $windowName;
+
+			columnLayout -adjustableColumn true -rowSpacing 7;
+				rowLayout -numberOfColumns 4
+					-columnWidth4 110 350 40 40
+					-columnAttach 1 "both" 	1
+					-columnAttach 2 "both" 	1
+					-columnAttach 3 "both" 	1
+					-columnAttach 4 "both" 	0;
+					text -label "To File:";
+					textField -ed 1 -text `optionVar -q zooAnimFileExportFile` -cc ( "optionVar -sv zooAnimFileExportFile `textField -q -tx zooXferAnimExportFile`" ) zooXferAnimExportFile;
+					button -height 20 -label "export" -c ( "optionVar -sv zooAnimFileExportFile `textField -q -tx zooXferAnimExportFile`; zooAnimFileWrite `textField -q -tx zooXferAnimExportFile`; deleteUI " + $windowName );
+					button -height 20 -label "cancel" -c ( "deleteUI " + $windowName );
+					setParent ..;
+				setParent ..;
+
+		showWindow $windowName;
+		break;
+
+
+		case "writePose":  //handles writing a pose .znm to a file
+		string $windowName = "zooXferAnimExportPath";
+		string $windowTitle = ".znm Export Pose Path";
+		string $buffer[];
+
+		if ( `window -exists $windowName` ) deleteUI $windowName;
+		window -title $windowTitle -resizeToFitChildren 1 -maximizeButton 0 -sizeable 1 -width 400 $windowName;
+
+			columnLayout -adjustableColumn true -rowSpacing 7;
+				rowLayout -numberOfColumns 4
+					-columnWidth4 110 350 40 40
+					-columnAttach 1 "both" 	1
+					-columnAttach 2 "both" 	1
+					-columnAttach 3 "both" 	1
+					-columnAttach 4 "both" 	0;
+					text -label "To File:";
+					textField -ed 1 -text `optionVar -q zooAnimFileExportFile` -cc ( "optionVar -sv zooAnimFileExportFile `textField -q -tx zooXferAnimExportFile`" ) zooXferAnimExportFile;
+					button -height 20 -label "export" -c ( "optionVar -sv zooAnimFileExportFile `textField -q -tx zooXferAnimExportFile`; zooAnimFileWritePose `textField -q -tx zooXferAnimExportFile`; deleteUI " + $windowName );
+					button -height 20 -label "cancel" -c ( "deleteUI " + $windowName );
+					setParent ..;
+				setParent ..;
+
+		showWindow $windowName;
+		break;
+
+
+		case "srcChange":  //called when an object is "selected" in the source pane.  Its only a UI update function, to display the source's target
+		string $srcObject = `radioCollection -q -sl zooXferAnimRadioSrc`;
+		string $tgt = `radioButton -q -docTag $srcObject`;
+		string $buffer[];
+
+		tokenize $tgt "^" $buffer;
+		if ( $buffer[0] != "" ) textScrollList -e -selectItem $buffer[0] zooXferAnimScrollTargetObjects;
+		else textScrollList -e -deselectAll zooXferAnimScrollTargetObjects;
+		break;
+
+
+		case "tgtChange":  //called when a new target is selected for a given source object
+		string $newTargets[] = `textScrollList -q -selectItem zooXferAnimScrollTargetObjects`;
+		string $srcObject = `radioCollection -q -sl zooXferAnimRadioSrc`;
+
+		radioButton -e -docTag $newTargets[0] $srcObject;
+		zooXferAnimWindowFunctions storeConfig n;
+		break;
+
+
+		case "matchSrcTgt":  //used to do start the auto object mapping process
+		string $srcs[] = `columnLayout -q -ca zooXferAnimCol01`;
+		string $tgts[] = `textScrollList -q -ai zooXferAnimScrollTargetObjects`;
+		int $n = 0;
+
+		for ( $obj in $srcs ) {
+			int $startLength = `size $UIPrefix` + 1;
+			int $nameLength = `size $obj`;
+
+			$srcs[$n] = `substring $obj $startLength $nameLength`;
+			$n++;
+			}
+
+		for ( $n = 0; $n < `size $srcs`; $n++ ) {
+			string $tgt = `zooXferAnimMatchObj $srcs[$n] $tgts`;
+
+			if ( $tgt == "" ) { $tgt = $tgts[$n]; }
+			radioButton -e -docTag "" ( $UIPrefix + $srcs[$n] );
+			radioButton -e -docTag $tgt ( $UIPrefix + $srcs[$n] );
+			}
+		break;
+
+
+		case "select":  //select a target object
+		string $objs[] = `textScrollList -q -si zooXferAnimScrollTargetObjects`;
+		select $objs[0];
+		break;
+
+
+		case "selectAll":
+		if( $variable01 == "tgt" ) select `textScrollList -q -allItems zooXferAnimScrollTargetObjects`;
+		if( $variable01 == "src" ) {
+			string $srcObjUIs[] = `columnLayout -q -ca zooXferAnimCol01`;
+			int $startPos = `size $UIPrefix`+1;
+
+			select -cl;
+			for( $obj in $srcObjUIs ) {
+				int $endPos = `size $obj`;
+				select -add `substring $obj $startPos $endPos`;
+				}
+			}
+		break;
+
+
+		case "deleteLink":  //delete a mapping
+		string $srcObject = `radioCollection -q -sl zooXferAnimRadioSrc`;
+		radioButton -e -docTag "" $srcObject;
+		textScrollList -e -deselectAll zooXferAnimScrollTargetObjects;
+		zooXferAnimWindowFunctions storeConfig n;
+		break;
+
+
+		case "mappingCheck":  //check to see if there are any targets being mapped to by multiple source objects...  this would cause weirdness
+		string $srcObjUIs[] = `columnLayout -q -ca zooXferAnimCol01`;
+		string $srcObjsToCheck[];
+		string $tgtObjs[];
+		string $proceed = "";
+		int $tgtSrcMappings[];
+		int $warn = 0;
+		int $n = 0;
+
+		for( $obj in $srcObjUIs ) $tgtObjs[( `size $tgtObjs` )] = `radioButton -q -docTag $obj`;
+		for( $n = 0; $n < `size $tgtObjs`; $n++ ) for( $entry in $tgtObjs ) if( $tgtObjs[$n] == $entry ) $tgtSrcMappings[$n] += 1;
+		for( $n = 0; $n < `size $tgtSrcMappings`; $n++ ) if( $tgtSrcMappings[$n] > 1 ) $warn += 1;
+		if( $warn ) $proceed = `confirmDialog -title "Oh, By the way..." -message ( "You have " + ($warn/2) + " target objects being mapped to by multiple source objects.  Are you sure you want to continue?  Weirdness may ensue..." ) -button "Yes" -button "No" -defaultButton "Yes" -cancelButton "No" -dismissString "No"`;
+		if( $proceed != "No" ) zooXferAnimWindowFunctions xferAnim n;
+		break;
+
+
+		case "xferAnim":  //this is the function that deals with doing the xfer essentially.  it figures out how the xfer needs to be handled, but the actual xferring is done in other procs
+		string $filename = `columnLayout -q -docTag zooXferAnimCol01`;
+		string $srcObjUIs[] = `columnLayout -q -ca zooXferAnimCol01`;
+		string $srcObjs[];
+		string $tgtObjs[];
+		string $unloadReferences = "";
+		int $addCurves = ( `radioCollection -q -sl zooXferAnimRadioMode` == "zooXferAnimRadioModeCopy" )?1:0;
+		int $instance = `checkBox -q -v zooXferAnimCheckInstance`;
+
+		//source object names are taken from the radio button label, as they're the exact object name of the object, including path info
+		for( $obj in $srcObjUIs ) $srcObjs[( `size $srcObjs` )] = `radioButton -q -l $obj`;
+
+		//build the target object array.  for each entry in the source array there is a corresponding entry in the target
+		for( $src in $srcObjs ) $tgtObjs[( `size $tgtObjs` )] = `radioButton -q -docTag ( $UIPrefix + $src )`;
+
+		//if no filename is specified, it must be a scene object-object xfer
+		if( $filename == "" ) {
+			int $mode = 0;
+			int $traceKeysOnly = `checkBox -q -v zooXferAnimCheckKeysOnly`;
+			int $startTime = `intField -q -v zooXferAnimIntTraceStart`;
+			int $endTime = `intField -q -v zooXferAnimIntTraceEnd`;
+			int $isTraced = `radioCollection -q -sl zooXferAnimRadioMode` == "zooXferAnimRadioModeTrace";
+
+			//if tracing is enabled
+			if( `checkBox -q -v zooXferAnimCheckTraceMode` ) $mode = 1;
+			if( $isTraced ) {
+				float $increment = 100/(float)( `size $srcObjs` );
+				float $progress = 0;
+
+				$srcObjs = `zooSortToHeirarchy $srcObjs`;
+				progressWindow -title "Trace in progress" -progress ((int)$progress) -status "Progress: 0%" -isInterruptable 1;
+
+				//this is the loop for a key based trace, where only times where the source object has keys are traced
+				if( $traceKeysOnly ) {
+					float $keyTimeList[] = `keyframe -q -tc $srcObjs`;
+
+					$increment /= `size $keyTimeList`;
+					$keyTimeList = `sort $keyTimeList`;
+					$keyTimeList = `zooXferAnimRemoveDuplicateTimes $keyTimeList`;
+					for( $n = 0; $n <= `size $keyTimeList`; $n++ ) {
+						if( `progressWindow -q -isCancelled` ) break;
+
+						int $t = $keyTimeList[$n];						
+						for( $i = 0; $i < `size $srcObjs`; $i++ ) {
+							string $src = $srcObjs[$i];
+							string $tgt = `radioButton -q -docTag ( $UIPrefix + $src )`;
+
+							//update progress window
+							$progress += $increment;
+							progressWindow -e -progress ((int)$progress) -status ( $src + " -> " + $tgt );
+
+							//make sure both the target object exist AND the object's source has a key on this frame
+							if( `objExists $tgt` ) if( `keyframe -t $t -q -kc $src` ) zooXferAnimTrace $src $tgt $mode $t;
+							}
+						}
+					}
+
+				//this is a time based trace sequence - ie all frame between start and end are traced
+				else {
+					//make sure some joker hasn't made the start time greater than the end time
+					$startTime = ( $startTime < $endTime )?$startTime:$endTime;
+					$endTime = ( $endTime > $startTime )?$endTime:$startTime;
+
+					//if its not a sequence, make sure the start and end times are both set to the current time
+					if( !`checkBox -q -v zooXferAnimCheckTraceSequence` ) $startTime = $endTime = `currentTime -q`;
+
+					float $frames = ( $endTime-$startTime );
+
+					if( $frames ) $increment /= $frames;
+					for( $n = $startTime; $n <= $endTime; $n++ ) {
+						if( `progressWindow -q -isCancelled` ) break;
+						for( $i = 0; $i < `size $srcObjs`; $i++ ) {
+							string $src = $srcObjs[$i];
+							string $tgt = `radioButton -q -docTag ( $UIPrefix + $src )`;
+
+							//update progress window
+							$progress += $increment;
+							progressWindow -e -progress ((int)$progress) -status ( $src + " -> " + $tgt );
+
+							//make sure the target object actually exists before attempting to trace
+							if( `objExists $tgt` ) zooXferAnimTrace $src $tgt $mode $n;
+							}
+						}
+					}
+
+				progressWindow -endProgress;
+				}
+
+			//if tracing isn't enabled
+			else {
+				for( $src in $srcObjs ) {
+					//because we're using object paths, we must specify the end name for any calls to UI elements
+					string $srcUIName[] = `zooXferAnimBreakdownPath $src`;
+					string $tgt = `radioButton -q -docTag ( $UIPrefix + $srcUIName[1] )`;
+					if( $tgt != "" ) {
+						if ( $addCurves ) zooXferAnimTransferAdd $src $tgt;  //this is the copy paste keys condition
+						else if ( `radioCollection -q -sl zooXferAnimRadioMode` == "zooXferAnimRadioModeDupe" ) zooXferAnimTransfer $instance $src $tgt;  //duplicate animNode condition
+						}
+					}
+				}
+			}
+		
+		//if a filename is specified, we must load animation from a .znm file
+		else {
+			string $fileContents[] = `zooAnimFileLoadFile $filename`;
+			float $timeOffset = $addCurves? `currentTime -q`: 0;
+			float $increment = 100/(float)( `size $srcObjs` );
+			float $progress = 0;
+
+			progressWindow -title "Importing From File" -progress ((int)$progress) -status "Progress: 0%" -isInterruptable 0;
+			for ( $src in $srcObjs ) {
+				string $tgt = `radioButton -q -docTag ( $UIPrefix + $src )`;
+				if( $tgt != "" ) zooAnimFileLoadObject $fileContents $timeOffset $src $tgt;
+
+				//update progress window
+				$progress += $increment;
+				progressWindow -e -progress ((int)$progress) -status ( "Progress: " + ((int)$progress) + "%" );
+				}
+
+			progressWindow -endProgress;
+			}
+
+		if( $filename == "" ) {
+			//does the user want unLoad reminders?  if so, pop up a dialog asking if the user wants to unload all references in the scene
+			if( `optionVar -q zooXferAnimationRemind` ) {
+				$unloadReferences = `confirmDialog -title "unLoad References?" -message "do you want to unload all referenced files in the scene?" -button "Yes" -button "No" -defaultButton "Yes" -cancelButton "No" -dismissString "No"`;
+				string $referencedFiles[] = `file -q -r`;
+				if( $unloadReferences == "Yes" ) for( $file in $referencedFiles ) file -rr $file;
+				}
+			}
+
+		break;
+		}
+	}
+
+
+//zooXferAnimRemoveDuplicateTimes {1,1,1,1,2,2,2,3,5,5,6,7,8,9,9}
+global proc float[] zooXferAnimRemoveDuplicateTimes( float $array[] ) {
+	float $returnArray[];
+	float $prevVal = $array[0];
+
+	$returnArray[0] = $array[0];
+	for( $n = 1; $n < `size $array`; $n++ ) {
+		if( $prevVal != $array[$n] ) $returnArray[( `size $returnArray` )] = $array[$n];
+		$prevVal = $array[$n];
+		}
+
+	return $returnArray;
+	}
+
+
+//list only the attributes of an object that are animated (ie have animCurves connected to them)
+global proc string[] zooXferAnimGetAnimatedAttribs ( string $function, string $obj ) {
+	string $animCurves[] = `listConnections -d 0 -connections 1 -plugs 1 -type animCurve $obj`;
+	string $targetAttrib[];
+	string $animCurveName[];
+	string $return[];
+	int $i = 0;
+
+	for ( $n = 0; $n < `size $animCurves`; $n+=2 ) {
+		string $buffer[];
+
+		tokenize $animCurves[$n] "." $buffer;
+		$targetAttrib[$i] = $buffer[1];
+		$animCurveName[$i] = $animCurves[( $n + 1 )];
+		$i++;
+		}
+
+	if ( $function == "animated" ) $return = $targetAttrib;
+	if ( $function == "curves" ) $return = $animCurveName;
+	return $return;
+	}
+
+
+global proc zooXferAnimTransfer ( int $instance, string $src, string $tgt ) {
+	string $attribPairs[] = `zooXferAnimMatchAttribs $src $tgt`;
+	int $n = 0;
+
+	for ( $attrib in $attribPairs ) {
+		string $buffer[];
+		string $srcAttrib;
+		string $tgtAttrib;
+		string $srcAnimCurveInfo[];
+		string $srcAnimCurveName;
+		string $srcAnimCurveOut;
+
+		if ( `objExists ( $src + ".rotateOrder " )` ) {
+			int $doesRotateOrderMatch = ( `getAttr ( $src + ".rotateOrder " )` == `getAttr ( $tgt + ".rotateOrder " )` )?1:0;
+
+			if ( !$doesRotateOrderMatch ) {
+				if ( `checkBox -q -v zooXferAnimCheckRotateOrder` ) setAttr ( $tgt + ".rotateOrder " ) `getAttr ( $src + ".rotateOrder " )`;
+				else warning( "the rotate order on object " + $tgt + " doesn't match its source object's rotate order" );
+				}
+			}
+
+		clear $buffer;
+		tokenize $attrib "^" $buffer;
+		$srcAttrib = $buffer[0];
+		$tgtAttrib = $buffer[1];
+
+		$srcAnimCurveInfo = `listConnections -d 0 -connections 0 -plugs 1 -type animCurve ( $src + "." + $srcAttrib )`;
+
+		clear $buffer;
+		tokenize $srcAnimCurveInfo[0] "." $buffer;
+		$srcAnimCurveName = $buffer[0]; //stores the name of the anim curve node
+		$srcAnimCurveOut = $buffer[1]; //stores the output attribute name
+
+		if ( !$instance ) { //if the user doesn't want to instance the anim curves, then duplicate the anim curve nodes
+			string $tmp[];
+			$tmp = `duplicate $srcAnimCurveName`;
+			$srcAnimCurveName = $tmp[0];
+			}
+
+		if ( $tgtAttrib != "" ) connectAttr -f ( $srcAnimCurveName + "." + $srcAnimCurveOut ) ( $tgt + "." + $tgtAttrib );
+		$n++;
+		}
+	}
+
+
+//deals with tracing objects.  tracing is done based on either 
+//mode 0 is object space mode, which will copy values.  mode=1 does world space match where the position in space matches, not nessecarily the attribute values
+global proc zooXferAnimTrace( string $src, string $tgt, int $isWorldSpace, float $time ) {
+	string $attribPairs[] = `zooXferAnimMatchAttribs $src $tgt`;
+	currentTime -e $time;
+	for ( $attrib in $attribPairs ) {
+		string $buffer[];
+		string $srcAttrib;
+		string $tgtAttrib;
+
+		clear $buffer;
+		tokenize $attrib "^" $buffer;
+		$srcAttrib = $buffer[0];
+		$tgtAttrib = $buffer[1];
+
+		if( $isWorldSpace ) {
+			if( $srcAttrib == "translateX" ) { zooXferAnimTraceXform $src $tgt translate 0; setKeyframe -at "translateX" $tgt; }
+			else if( $srcAttrib == "translateY" ) { zooXferAnimTraceXform $src $tgt translate 1; setKeyframe -at "translateY" $tgt; }
+			else if( $srcAttrib == "translateZ" ) { zooXferAnimTraceXform $src $tgt translate 2; setKeyframe -at "translateZ" $tgt; }
+			else if( $srcAttrib == "rotateX" ) { zooXferAnimTraceXform $src $tgt rotate 0; setKeyframe -at "rotateX" $tgt; }
+			else if( $srcAttrib == "rotateY" ) { zooXferAnimTraceXform $src $tgt rotate 1; setKeyframe -at "rotateY" $tgt; }
+			else if( $srcAttrib == "rotateZ" ) { zooXferAnimTraceXform $src $tgt rotate 2; setKeyframe -at "rotateZ" $tgt; }
+			else setKeyframe -at $tgtAttrib -v `getAttr ( $src + "." + $srcAttrib )` -t $time $tgt;
+			}
+		else setKeyframe -at $tgtAttrib -v `getAttr -time $time ( $src + "." + $srcAttrib )` -t $time $tgt;
+
+		if ( `objExists ( $src + ".rotateOrder " )` ) {
+			int $doesRotateOrderMatch = ( `getAttr ( $src + ".rotateOrder " )` == `getAttr ( $tgt + ".rotateOrder " )` )?1:0;
+			if ( !$doesRotateOrderMatch ) {
+				if ( `checkBox -q -v zooXferAnimCheckRotateOrder` ) setAttr ( $tgt + ".rotateOrder " ) `getAttr ( $src + ".rotateOrder " )`;
+				else warning( "the rotate order on object " + $tgt + " doesn't match its source object's rotate order" );
+				}
+			}
+		}
+	}
+
+
+//attribType is one of either translate or rotate and the axis is 0, 1 or 2 corresponding to x, y or z
+global proc zooXferAnimTraceXform( string $src, string $tgt, string $attribType, int $axis ) {
+	string $axes[] = { "x", "y", "z" };
+	string $parent[] = `listRelatives -parent $tgt`;
+	float $xform[];
+	float $localPivot[];
+	float $parentPivot[] = { (float)0, (float)0, (float)0 };
+
+	if( $attribType == "translate" ) {
+		$xform = `xform -q -ws -rp $src`;
+		$localPivot = `xform -q -rp $tgt`;
+		if( $parent[0] != "" ) $parentPivot = `xform -q -ws -rp $parent[0]`;
+		move -a -ws -rpr ( $xform[0] ) ( $xform[1] ) ( $xform[2] ) $tgt;
+		}
+	else if( $attribType == "rotate" ) {
+		$xform = `xform -q -ws -ro $src`;
+		rotate -ws $xform[0] $xform[1] $xform[2] $tgt;
+		}
+	}
+
+
+global proc zooXferAnimTransferAdd( string $src, string $tgt ) {
+	float $time = `currentTime -q`;
+
+	if ( `objExists ( $src + ".rotateOrder " )` ) {
+		int $doesRotateOrderMatch = ( `getAttr ( $src + ".rotateOrder " )` == `getAttr ( $tgt + ".rotateOrder " )` )?1:0;
+
+		//match the rotation orders of the objects.  This can be pretty crucial to do.  If there is a discrepancy, the animation will potentially
+		//look different, but the animation curves will be identical.
+		if ( !$doesRotateOrderMatch ) {
+			if ( `checkBox -q -v zooXferAnimCheckRotateOrder` ) setAttr ( $tgt + ".rotateOrder " ) `getAttr ( $src + ".rotateOrder " )`;
+			else warning( "the rotate order on object " + $tgt + " doesn't match its source object's rotate order" );
+			}
+		}
+
+	copyKey -time ":" -hierarchy none -animation objects $src;
+	pasteKey -time $time -option merge -animation objects $tgt;
+	}
+
+
+global proc string zooXferAnimMatchObj( string $source, string $targets[] ) {
+	string $matchedObjs[];
+	string $finalMatch = "";
+	string $srcBuffer[];
+	string $leftParityTests[] = { "L","l","Left","left", "lft", "lt" };
+	string $rightParityTests[] = { "R","r","Right","right", "rgt", "rt" };
+	string $possibleParitySuffixes[] = { "", "1", "2", "3" };
+	int $tokenMatchCount[];
+	int $numSrcTokens = `tokenize $source "_" $srcBuffer`;
+	int $srcHasParity = 0;
+	int $srcIsLeft = 0;
+	int $srcIsRight = 0;
+	int $n = 0;
+
+	$targets = `sort $targets`;
+
+	//figure out if the source name has parity
+	for ( $srcToken in $srcBuffer ) {
+		for ( $test in $leftParityTests ) {
+			for ( $suffix in $possibleParitySuffixes ) {
+				$test = $test + $suffix;
+				if ( $test == $srcToken ) {
+					$srcHasParity = 1;
+					$srcIsLeft = 1;
+					$srcIsRight = 0;
+					break;
+					}
+				}
+			}
+		for ( $test in $rightParityTests ) {
+			for ( $suffix in $possibleParitySuffixes ) {
+				$test = $test + $suffix;
+				if ( $test == $srcToken ) {
+					$srcHasParity = 1;
+					$srcIsLeft = 0;
+					$srcIsRight = 1;
+					break;
+					}
+				}
+			}
+		}
+
+	for ( $obj in $targets ) {
+		string $srcMatch = `match $source $obj`;
+		string $tgtMatch = `match $obj $source`;
+		string $tgtBuffer[];
+		int $numTgtTokens = `tokenize $obj "_" $tgtBuffer`;
+		int $tgtHasParity = 0;
+		int $tgtIsLeft = 0;
+		int $tgtIsRight = 0;
+		int $isOpposite = 1;
+		int $passedParityTest = 0;
+
+		for ( $tgtToken in $tgtBuffer ) {
+			for ( $test in $leftParityTests ) {
+				for ( $suffix in $possibleParitySuffixes ) {
+					$test = $test + $suffix;
+					if ( $test == $tgtToken ) {
+						$tgtHasParity = 1;
+						$tgtIsLeft = 1;
+						$tgtIsRight = 0;
+						break;
+						}
+					}
+				}
+			for ( $test in $rightParityTests ) {
+				for ( $suffix in $possibleParitySuffixes ) {
+					$test = $test + $suffix;
+					if ( $test == $tgtToken ) {
+						$tgtHasParity = 1;
+						$tgtIsLeft = 0;
+						$tgtIsRight = 1;
+						break;
+						}
+					}
+				}
+			}
+
+		$tokenMatchCount[$n] = 0;
+		if ( $srcIsLeft == $tgtIsLeft && $srcIsRight == $tgtIsRight ) { $isOpposite = 0; }
+		if (( $srcHasParity == $tgtHasParity ) && !$isOpposite ) { $passedParityTest = 1; }
+		if ( $passedParityTest ) {
+			for ( $srcToken in $srcBuffer ) {
+				for ( $tgtToken in $tgtBuffer ) {
+					string $srcTokenMatch = `match ( ".*" + $tgtToken + ".*" ) $obj`;
+					if ( $srcToken == $tgtToken ) $tokenMatchCount[$n] += 1;
+					}
+				}
+			}
+		$n++;
+		}
+
+	int $temp = $tokenMatchCount[0];
+	int $closestMatchIndex = 0;
+	int $actualMatch = ($temp>0)?1:0;
+	int $j = 0;
+
+	for ( $j = 0; $j < `size $tokenMatchCount`; $j++ ) {
+		if ( $tokenMatchCount[$j] > $temp ) {
+			$temp = $tokenMatchCount[$j];
+			$closestMatchIndex = $j;
+			if ( $temp > 0 ) $actualMatch = 1;
+			}
+		}
+
+	if ( $actualMatch ) $finalMatch = $targets[$closestMatchIndex];
+	return $finalMatch;
+	}
+
+
+global proc string[] zooXferAnimMatchAttribs ( string $src, string $tgt ) {
+	string $matchedAttribs[];
+
+	string $sourceAttribs[] = `zooXferAnimGetAnimatedAttribs animated $src`;
+	string $targetAttribs[] = `listAttr -connectable -multi -keyable $tgt`;
+	int $n = 0;
+	
+	for ( $srcAttrib in $sourceAttribs ) {
+		string $tgtAttrib = `zooXferAnimMatchObj $srcAttrib $targetAttribs`;
+		$matchedAttribs[$n] = $srcAttrib + "^" + $tgtAttrib;
+		$n++;
+		}
+
+	return $matchedAttribs;
+	}
+
+
+//takes a full path name for an object, and returns an array containing the path, and then the object name
+global proc string[] zooXferAnimBreakdownPath( string $obj ) {
+	string $path = "";
+	string $objName = "";
+	string $buffer[];
+	int $numToks = `tokenize $obj "|" $buffer`;
+
+	for( $n = 0; $n < $numToks-1; $n++ ) {
+		$path = $path + $buffer[$n] + "|";
+		}
+	$objName = $buffer[( $numToks-1 )];
+	return { $path, $objName };
+	}
+
+
+//builds the qss menus - this is a separate proc so that it can be called when the popupMenu are built, so they're always current
+global proc zooXferAnimBuildQssMenu( string $subCmd, string $parent ) {
+	string $sets[] = `ls -sets`;
+	string $qssSets[];
+	string $selectAllFlag = $subCmd=="loadSrc"? "src": "tgt";
+
+	menu -e -dai $parent;
+	menuItem -l "Load Selected" -p $parent -c ( "zooXferAnimWindowFunctions " + $subCmd + " n" );
+	menuItem -divider 1 -p $parent;
+
+	for( $set in $sets ) if( `sets -q -t $set` == "gCharacterSet" ) $qssSets[( `size $qssSets` )] = $set;
+	for( $set in $qssSets ) menuItem -l $set -p $parent -c ( "{string $selObjs[] = `ls -sl`; select `sets -q " + $set + "`; zooXferAnimWindowFunctions " + $subCmd + " n; select $selObjs; }" );
+
+	menuItem -divider 1 -p $parent;
+	menuItem -l "Select all Objects" -p $parent -c ( "zooXferAnimWindowFunctions selectAll " + $selectAllFlag );
+	}
+
+
+global proc zooXferAnimHelp ( string $function ) {
+	string $windowName = "zooXferAnimAbout";
+	string $windowTitle = "About zooXferAnim v" + `zooXferAnimInfo version` + "   ::macaroniKazoo::";
+	string $aboutSections[];
+	string $aboutScript;
+	string $aboutAuthor = "Version: " + `zooXferAnimInfo version` + "\nCreation Date: " + `zooXferAnimInfo created` + "\nModified: " + `zooXferAnimInfo modified` + "\n\nzooXferAnim was written by Macaroni Kazoo Productions  www.macaronikazoo.com\n\n" + `zooXferAnimInfo history`;
+	int $selTab = ( $function == "about" )?2:1;
+
+	$aboutSections[( `size $aboutSections` )] = "Overview:\nzooXferAnim is an animation transfer script, that will transfer the animation from a bunch of \"source\" objects onto a bunch of \"target\" objects.  The script gives control over the \"mapping\" of the animation, ie which object \"source\" object equals which \"target\" object.\n\n";
+	$aboutSections[( `size $aboutSections` )] = "Usage:\nMake a selection, and go to File->Load Source, to define the source objects.  Defining source and target objects can also be done through the use of quick selection sets.  Also present are rmb popup menus on the text \"Source Objects\" and \"Target Objects\".\n\nOnce the source objects are loaded, select the target objects, and go to File->Load Target.  Selecting an object in the source panel, will highlight the object the script thinks its target should be, in the target pane.  Sometimes, the script gets the mapping wrong, in which case you can select the object you want it mapped to instead.\n\nTo change the mapping, select the source object you wish to change, and select the new target in the target pane.  To delete an object mapping, make sure the target object pane has focus, and press delete.  Double clicking a target object will select it in maya.\n\nOnce correct mapping has been determined, hit the xfer button to actually transfer the animation.  The unLoad references button can then remove all referenced files in a scene.\n\n";
+	$aboutSections[( `size $aboutSections` )] = "Xfer Mode:\nThere are three types of transfer modes, duplicate, copy and trace.\n\n";
+	$aboutSections[( `size $aboutSections` )] = "Duplicate:\nDuplicate works by copying the actual curve nodes that make up an animation.  When duplicate option is selected, the instance checkbox is highlighted.  If instance is turned on, then the curve nodes aren't actually duplicated, their output is just plugged into the target attributes as well as the source. So, if you change the target the source will update, and vice-versa.\n\n";
+	$aboutSections[( `size $aboutSections` )] = "Copy/Paste Key Mode:\nThis mode will actually copy the keys, and paste them onto the target's timeline, without destroying any animation that was there previously.\n\n";
+	$aboutSections[( `size $aboutSections` )] = "Trace Mode:\nTrace mode works not only on keys, but also on frames/poses.  It will transfer poses from frame to frame exactly.  Its useful more for matching single poses than entire animations as it traces frame by frame.\n\nTracing can be done in either local or world space.  Local space tracing matches attribute values, whereas world space tracing actually matches world space positions.  World space tracing can be useful for transferring animation between differently proportioned characters.\n\nYou can trace single frames, a sequence of frames, or trace only when the source object has keys.\n\nNOTE: currently a minor bug exists with trace.  The source objects must have a keyframe on them for trace to work.\n\n";
+	$aboutSections[( `size $aboutSections` )] = "Match Rotate Order:\nIf the rotation order of source and target objects differs, the resulting animation can look vastly different.  This can be changed at any time, and doesn't have to be done at copy time, but it is easiest to let the script do it for you.  Leaving it on, should guarantee that the resulting animation on the target matches the source exactly.\n\n";
+	$aboutSections[( `size $aboutSections` )] = "Working with Files:\nAnimation can be exported to files.  This allows animation to be transferred without the original objects present in a scene.  To do so, select all objects you wish to export animation for, and go to File->Write File.  You will then be prompted for a filepath.  On windows systems, you must use forward slashes instead of backslashes in your path.  Ie:  c:/animExports/test.znm\n\nThe file extension should be .znm.  To import animation from a file, simply use the File->Load File option, which will then load all objects contained in the .znm file into the source objects pane, for mapping on to the target objects.  This works the same way as if you had the objects present in the scene.";
+	for( $entry in $aboutSections ) $aboutScript = $aboutScript + $entry;
+
+	if ( `window -exists $windowName` ) deleteUI $windowName;
+
+	window -title $windowTitle -resizeToFitChildren 1 -maximizeButton 0 -sizeable 1 -widthHeight 330 350 $windowName;
+
+		string $form = `formLayout`;
+		string $tabs = `tabLayout -p $form -innerMarginWidth 5 -innerMarginHeight 5`;
+		string $image = `image -p $form -width 300 -height 8 -backgroundColor ((float)96/255) ((float)100/255) ((float)146/255) -image ( internalVar("-userBitmapsDir") + "/zoo_sig.tga" )`;
+		formLayout -edit
+			-attachForm $tabs "top" 0
+			-attachForm $tabs "left" 0
+			-attachForm $tabs "right" 0
+			-attachControl $tabs "bottom" 2 $image
+
+			-attachNone $image "top"
+			-attachForm $image "left" 0
+			-attachForm $image "right" 0
+			-attachForm $image "bottom" 0
+			$form;
+
+			string $child1 = `paneLayout -configuration "single"`;
+				scrollField -ed 0 -wordWrap 1 -font plainLabelFont -w 300 -h 200 -numberOfLines 15 -text $aboutScript;
+				setParent ..;
+
+			string $child2 = `paneLayout -configuration "single"`;
+				scrollField -ed 0 -wordWrap 1 -font plainLabelFont -w 300 -h 200 -numberOfLines 15 -text $aboutAuthor;
+				setParent ..;
+
+			tabLayout -e -selectTabIndex $selTab -tabLabel $child1 "zooXferAnim Help" -tabLabel $child2 "About zooXferAnim" $tabs;
+
+	popupMenu -p $image -b 1 -pmc ( "showHelp -a \"http://www.macaronikazoo.com/mel\"" );
+	showWindow $windowName;
+	}
+
+
+global proc string zooXferAnimInfo ( string $function ) {
+	string $creationDate = "10 May 2003";
+	string $lastRevision = "18 November 2003";
+	string $revisionHistory = "v2.11  18-11-03\nNEW: added previous config loading\n\nv2.02  04-11-03\nNEW: tracing mode now has a keys only option, which only performs a trace on the target object if the source has a key.\nFIX: trace bug where rotation keys weren't set.\n\nv1.91  28-10-03\nNEW: export pose function added (requires v1.31 or above of zooAnimFile).\nFIX: slight reshuffling of UI.\n\nv1.84  22-10-03\nFIX: when importing from a file, if no target was specified for a given source object, an error was thrown.\n\nv1.83  17-10-03\nFIX: qss menus are now dynamically created, so they always display the current selection sets in the scene.\n\nv1.82  16-10-03\nNEW: integrated v1.21 of zooAnimFile for file loading.  You can now use the copy/paste function to add imported animation to the current time.  ie if turn on copy/paste, set current frame to 10, then all imported animations will be offset by 10 frames\nFIX: some object path issues, for non-unique names.\n\nv1.79  01-10-03\nFIX: stupid error fixed where world space tracing didn't match rotation.\n\nv1.78  12-09-03\nNEW: added an alphabetize option.\nFIX: objects loaded from files now displays the number of objects.\n\nv1.77  08-09-03\nNEW: target and source panes are now alphabetically sorted.\nNEW: displays number of objects.\nFIX: when tracing, if an source object was not mapped, the script would stop.\nFIX: serious world space tracing bug.  it used to just not work most of the time.\n\nv1.75 05-09-03\nNEW: world space tracing now works.\n\nv1.69 25-08-03\nNEW: multiple source->target mapping check, as well as a few minor UI update changes.\n\nv1.65 03-08-03\nNEW: using zooAnimFile, animation can be transferred to and from files.\n\nv1.48 30-07-03\nNEW: added a remove references button.\n\nv1.47 22-07-03\nNEW: added rmb menus above the source and target UI panes.\n\nv1.45 14-07-03\nNEW: Added a new transfer mode called trace.  Trace will key target objects on every frame to match their source counterpart.\n\nv1.18 05-06-03\nNEW: Added the ability to delete mappings, and double click to select in target pane.\nNEW: Changed attribute matching algorithm to use the same code as the object matching.\nFIX: rematches target objects when source objects are changed.\n\nv1.09 21-05-03\nNEW: added match rotation order option";
+	string $info = "";
+	float $currentVersion = 2.11;
+
+	if ( $function == "created" ) $info = $creationDate;
+	if ( $function == "modified" ) $info = $lastRevision;
+	if ( $function == "history" ) $info = $revisionHistory;
+	if ( $function == "version" ) $info = $currentVersion;
+	return $info;
+	}
+
+
+global proc string[] zooXferAnimDependencies( string $mode ) {
+	string $melDependencies[];
+	string $iconDependencies[];
+
+	$melDependencies[( `size $melDependencies` )] = "zooAnimFile";
+	$melDependencies[( `size $melDependencies` )] = "zooSortToHeirarchy";
+	$iconDependencies[( `size $iconDependencies` )] = "zoo_sig.tga";
+	$iconDependencies[( `size $iconDependencies` )] = "zooXferAnim.bmp";
+
+	if( $mode == "-scripts" ) return $melDependencies;
+	if( $mode == "-icons" ) return $iconDependencies;
+	}

@@ -1,0 +1,8 @@
+global proc string arrStrElem( string $arr[], int $i )
+{
+	return $arr[$i];
+}   
+
+
+
+

@@ -1,0 +1,80 @@
+global proc renamer( )
+{
+	string $result = `promptDialog
+		-title "Renamer"
+		-message "Enter new name: "
+		-text ""
+		-button "OK"
+		-button "Cancel"
+		-defaultButton "OK"
+		-cancelButton "Cancel"
+		-dismissString "Cancel"`;
+
+	if ( $result == "OK" ) {
+
+		string $newname = `promptDialog -q`;
+
+		string $currentNodes[] = `ls -sl -l`;
+		int $i = 1;
+
+		for ($currentNode in $currentNodes){
+			//watchStr($currentNode,"$currentNode");
+			rename $currentNode ($newname+$i);
+			$i++;
+		}
+
+	}
+}
+
+
+/* OLD VERSION
+
+proc renNode(string $newname, string $node)
+{	
+	string $isType[]	= `ls -type transform $node`;
+	if (size($isType) > 0 ) {
+
+		string $nodeName;
+		string $newName;
+
+		$nodeName = `substitute ".*|" $node ""`;
+
+		$newName = `rename $node $newname`;
+	}
+}
+
+global proc renamer( )
+{
+	string $result = `promptDialog
+		-title "Renamer"
+		-message "Enter new name: "
+		-text ""
+		-button "OK"
+		-button "Cancel"
+		-defaultButton "OK"
+		-cancelButton "Cancel"
+		-dismissString "Cancel"`;
+
+	if ( $result == "OK" ) {
+
+		string $newname = `promptDialog -q`;
+
+		string $currentNodes[] = eval("listRelatives -pa -ad `ls -sl -l`");
+
+		if ( size( $currentNodes ) > 0 ) {
+			for( $i=0; $i < size( $currentNodes ); $i++ ) {
+				renNode( $newname, $currentNodes[$i]);
+			}
+		}
+
+		$currentNodes = `ls -sl -l`;
+	
+		if ( size( $currentNodes ) > 0 ) {
+			for( $i=0; $i < size( $currentNodes ); $i++ ) {
+				renNode( $newname, $currentNodes[$i]);
+			}
+		}
+	}
+}
+
+*/

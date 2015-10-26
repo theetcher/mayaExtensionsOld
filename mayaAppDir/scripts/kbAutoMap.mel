@@ -1,0 +1,389 @@
+/*
+--------------------
+
+kbAutoMap.mel V0.0.3b2
+
+Copyright (C) 2003:
+	Kari Brown
+	brown.kari@luukku.com
+	http://kotisivu.mtv3.fi/karppa/
+
+--------------------
+
+LICENSE:
+
+YOU MAY MAKE MODIFICATIONS AT YOUR OWN RISK FOR YOUR OWN PURPOSES. PLEASE
+CONTACT THE AUTHOR FIRST IF YOU WANT THE MODIFICATIONS/ADD-ONS TO BE INCLUDED
+IN THIS DISTRIBUTION.
+
+FURTHER DISTRIBUTION AND REPRODUCTION WITHOUT WRITTEN PERMISSION FROM THE 
+AUTHOR IS PROHIBITED.
+
+This program is free software and is distributed in the hope that it will 
+be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+
+--------------------
+
+Description:
+	This script automatically maps a polygon object's UVs. Maya's built-in 
+	Automatic Mapping works by projecting the UVs from a number of planes or
+	angles. This script has a different approach. It basically sorts the faces in
+	groups based on neighbouring face normal angles. If the angle is smaller than
+	the user defineded threshold, the group will get planar mapped using best
+	plane projection.
+	
+	More info and documentation can be found at my site:
+	http://kotisivu.mtv3.fi/karppa/
+--------------------
+
+Usage:
+	- Run the following command from Maya's command line or the script editor:
+	
+		kbAutoMap;
+
+	- A dialog box opens.
+	- Select some faces on a polygon object. These faces will be mapped into
+	  the first shell. Other shells are mapped automatically.
+	- Choose your options as desired and click "Go"
+	
+--------------------
+        
+Notes:
+	- Construction history of the object being mapped will be lost! 
+	- dannyUvTools must be installed for the "Use with dannyUvTools" feature
+	  to work.
+	- Currently the script works on all faces of a polygon object. In future 
+	  versions I will add an option to automap only the selected faces. 
+	- Make sure you have the UV Texture Editor closed or hidden before running
+	  this script. Otherwise the performance will be extremely slow.
+	- Mapping dense meshes is not recommended. You may run out of memory and
+	  Maya may crash.
+	  
+	- More information on my homepage at http://kotisivu.mtv3.fi/karppa/
+
+--------------------
+
+Works on:
+	Tested on Maya 4.5, 5.0 and 4.5 PLE on Windows.
+	Please report if this works on other versions too.
+
+--------------------
+        
+Todo:
+	- I'm still not happy with the face group solving part. Let's see if I can get
+	  it working better in the future versions...
+
+--------------------
+
+History:
+	V0.0.3b2	Bug fixes:
+				- Selection check at the beginning was incorrect
+				- Face #0 got included in the first shell even if it shouldn't have
+	V0.0.3b		First public beta release.
+	V0.0.3a		Added ability to let the user set the first group to be mapped.
+				The script can now be used with Danny Ngan's UV Tools if desired.
+				Added some other options as well.
+	V0.0.2b		Almost ready for first public beta version
+	V0.0.2a		Better approach on sorting out the faces
+	V0.0.1a		Experimental development version.
+
+*/
+
+proc vector getFaceNormal(string $sFace)
+{
+	// select the face
+	select -r $sFace;
+	
+	// get the face normal
+	// polyInfo -fn returns rows like this one: FACE_NORMAL    399: 0.078453 0.996840 -0.012427
+	string $sFaceNormal[] = `polyInfo -fn`;
+	
+	// split the string returned by polyInfo
+	string $sBuffer[];
+	tokenize($sFaceNormal[0], $sBuffer);
+	
+	// convert the string elements to a vector
+	float $fX = $sBuffer[2];
+	float $fY = $sBuffer[3];
+	float $fZ = $sBuffer[4];
+	vector $vNormal = <<$fX, $fY, $fZ>>;
+	
+	// return the vector
+	return $vNormal;
+}
+
+proc mapFaces(string $sObjName, int $iFaceGrp[], int $iMode)
+{
+	int $i;
+	
+	// prepare a selection command
+	string $sCmd = "select -r ";
+	for($i = 0; $i < size($iFaceGrp); $i++)
+	{
+		// add faces in the $iFaceGrp to the selection command
+		$sCmd += "\"" + $sObjName + ".f[" + $iFaceGrp[$i] + "]\" ";
+	}
+	$sCmd += ";";
+	
+	// evaluate the command
+	eval($sCmd);
+
+	if($iMode)
+	{
+		// use with dannyUvTools was on so assign materials instead of mapping the faces
+		assignMat();
+	}
+	else
+	{
+		// use with dannyUvTools was off so apply planar mapping to the selected faces.
+		$projResults = `polyProjection -ch 1 -type Planar -ibd on -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -md b`;
+		if (`objectType -i "polyPlanarProj" $projResults`)
+		{
+			// scale the shell so that every shell is pixelwise in the correct proportion
+			eval("setAttr " + $projResults[0] + ".projectionWidth 15");
+			eval("setAttr " + $projResults[0] + ".projectionHeight 15");
+		}
+	}
+
+	// we don't want to spam the construction history so let's get rid of it
+	select -r $sObjName;
+	DeleteHistory;
+}
+
+proc int getFaceNo(string $sFace)
+{
+	// split $sFace to extract out the face number
+	string $sBuffer[];
+	tokenize($sFace, "[]", $sBuffer);
+	
+	// convert the number part to an integer and return it
+	int $iFaceNo = $sBuffer[1];
+	return $iFaceNo;
+}
+
+global proc execKbAutoMap()
+{
+	// get an array of selected objetcs
+	string $sSel[] = `ls -sl -o -dag -type mesh`;
+	
+	// check if there was none or more than one objects selected
+	if(size($sSel) == 0 || size($sSel) > 1)
+		error("This script can operate only on one polygon object at a time");
+
+	string $sPolyObject = $sSel[0];
+	
+	// get a list of selected polygon faces
+	$sSel = `filterExpand -fp 1 -sm 34`;
+
+	// select the first face if there wasn't any in the selection
+	if(size($sSel) == 0)
+	{
+		select -r ($sPolyObject + ".f[0]");
+		$sSel = `ls -sl`;
+	}
+
+	int $i, $k, $iFaces[], $iFaceGrp[];
+
+	// get the face count of the object
+	int $iFaceCount[] = `polyEvaluate -f $sPolyObject`;
+
+	// initialize $iFaces[]
+	$iFaces[$iFaceCount[0] - 1] = 0;
+
+	// add the selected faces to our first group
+	for($k = 0; $k < size($sSel); $k++)
+	{
+		$iFaceGrp[$k] = getFaceNo($sSel[$k]);
+		$iFaces[$iFaceGrp[$k]] = 1;
+	}
+	$k--;
+			
+	// get the user defined settings from the GUI
+	float $fAngleThresHold = `floatSliderGrp -q -v kbampAngle`;
+	int $iNewUvSet = `checkBox -q -v kbampNewUvSet`;
+	string $sUvSet = `textField -q -tx kbampNewUvSetName`;
+	int $iUseDannyUvTools = `checkBox -q -v kbampUseDannyUvTools`;
+	int $iVerbose = `checkBox -q -v kbampVerbose`;
+	
+	// create a new uv set and use it if the user wants to
+	if($iNewUvSet)
+		if(size($sUvSet) > 0)
+		{
+			polyUVSet -create -uvSet $sUvSet $sPolyObject;
+			polyUVSet -currentUVSet -uvSet $sUvSet $sPolyObject;
+		}
+		else
+			error("Empty UV Set Name");
+	
+	// source Danny's script if it is going to be used
+	if($iUseDannyUvTools)
+	{
+		eval("source dannyUvTools.mel");
+		select -r $sPolyObject;
+		initMesh();
+	}
+	
+	select -r $sSel;
+	
+	// print the object name we're mapping
+	print("\nMapping: " + $sPolyObject + "(" + $iFaceCount[0] + " faces)");
+	refresh;
+	
+	// iterate through all faces
+	// $iFaces[$i] is our reference face on which we compare the normal angles of the other faces
+	for($i = 0; $i < $iFaceCount[0]; $i++)
+	{
+		vector $vFaceRef;
+
+		// unless running the first round
+		if($i > 0)
+		{
+			// jump to next face if this face is already mapped
+			if($iFaces[$i] == 1)
+				continue;
+
+			if($iVerbose)
+				print("\nSolving new shell starting at face: " + $i);
+
+			// add the ref face to the group and mark it for mapping
+			$iFaceGrp[$k] = $i; $iFaces[$i] = 1;
+
+			// select next unmapped face
+			select -r ($sPolyObject + ".f[" + $i + "]");
+
+			// get the normal of the reference face
+			$vFaceRef = getFaceNormal($sPolyObject + ".f[" + $i + "]");
+		}
+		else
+		{
+			// first round is in question so get the face normal of the first face in the selection
+			$vFaceRef = getFaceNormal($sSel[0]);
+
+			if($iVerbose)
+				print("\nSolving new shell starting at face: " + $sSel[0]);
+		}
+		
+		int $iLoopOn = 1;
+		// find out if there are more faces to add to this group
+		do
+		{
+			if($iVerbose)
+				print ("\nAdding faces: ");
+			
+			//  grow selection
+			polySelectConstraint -pp 1;
+			
+			// get the array of selected faces				
+			$sSel = `ls -fl -sl`;
+
+			// iterate through the selection
+			string $sFace, $sCmd;
+			$sCmd = "select -r ";
+
+			for($sFace in $sSel)
+			{
+				int $iFaceNo = getFaceNo($sFace);
+
+				// get the normal of the next face
+				vector $vFace    = getFaceNormal($sPolyObject + ".f[" + $iFaceNo + "]");
+
+				// calculate the angle between the normals
+				float $fAngle = angle($vFaceRef, $vFace);
+				$fAngle = rad_to_deg($fAngle);
+				
+				// DEBUG
+				// print("Face normal angle: faces " + $i + ", " + $iFaceNo + " = " + $fAngle + "\n");
+
+				//  add only unmapped faces which are inside the angle threshold to our group
+				if($iFaces[$iFaceNo] == 0 && $fAngle <= $fAngleThresHold)
+				{
+					// mark the face as mapped
+					$iFaces[$iFaceNo] = 1;
+					
+					// add the face to the group
+					$k++;
+					$iFaceGrp[$k] = $iFaceNo;
+					
+					$sCmd += $sPolyObject + ".f[" + $iFaceNo + "] ";
+					
+					if($iVerbose)
+						print($iFaceNo + " ");
+				}
+			}
+
+			// select the mapped faces
+			if(size($sCmd) > 10)
+				eval($sCmd);
+			else
+				// we were at the last face so flag to break out from the loop
+				$iLoopOn = 0;
+
+		} while ($iLoopOn); // loop if the amount of faces in selection grew from original
+		
+		// DEBUG
+		// return;
+		
+		// map all faces in $iFaceGrp
+		mapFaces($sPolyObject, $iFaceGrp, $iUseDannyUvTools);
+		
+		// prepare for next group
+		clear($iFaceGrp); $k = 0;
+	}
+	// layout the mapped uvs
+	if(!$iUseDannyUvTools)
+		polyLayoutUV -l 2 -sc 1 -se 2 -rbf 1 -fr 1 -ps 0.1 -ch 0 ($sPolyObject + ".f[*]");
+	
+	select -r $sPolyObject;
+
+	TextureViewWindow;
+	
+	clear($iFaces); clear($iFaceGrp);
+	
+	print("kbAutoMap completed.\n");
+}
+
+// the GUI stuff starts from here
+
+global proc checkKbampControls()
+{
+	int $iNewUvSet = `checkBox -q -v kbampNewUvSet`;
+	textField -e -ed $iNewUvSet kbampNewUvSetName;
+}
+
+global proc kbAutoMap()
+{
+	if(`window -exists kbamp_ui`)
+		deleteUI kbamp_ui;
+
+	window
+		-maximizeButton false
+		-resizeToFitChildren false
+		-title "kbAutoMap V0.0.3b2"
+		-iconName "kbAutoMap"
+		-menuBar false
+		-widthHeight 400 225
+		kbamp_ui;
+
+	columnLayout -cat both 4 -rowSpacing 4 -adj 1;
+	text -l "Copyright (C) 2003 Kari Brown (brown.kari@luukku.com)\nhttp://kotisivu.mtv3.fi/karppa/" -align left;
+	separator;
+	floatSliderGrp -field 1 -l "Angle Threshold" -ann "The maximum angle which the faces should be in to be mapped in the same shell" -min 1 -max 180 -fieldMinValue 1 -fieldMaxValue 180 -value 60 kbampAngle;
+	rowLayout -numberOfColumns 3 -cw3 140 140 110;
+		text -l "";
+		checkBox -rs 1 -l "New UV Set" -v 0 -cc "checkKbampControls" -ann "Map the UVs to a new empty UV Set." kbampNewUvSet;
+		textField -w 100 -ed 0 kbampNewUvSetName;
+	setParent ..;
+	rowLayout -numberOfColumns 3 -cw3 140 140 110;
+		text -l "";
+		checkBox -rs 1 -l "Use with dannyUvTools" -ann "Use \"Assign Material\" from dannyUvTools instead of mapping the faces directly. Requires dannyUvTools 2.0 or later." -v 0 kbampUseDannyUvTools;
+		checkBox -rs 1 -l "Verbose" -ann "Print some mumbojumbo in the script editor :)" -v 0 kbampVerbose;
+	setParent ..;
+	separator; text -l "";
+	rowLayout -numberOfColumns 2;
+		button -l "Go" -w 80 -c "execKbAutoMap()" kbampBtnGo;
+		button -l "Close" -w 80 -c "deleteUI kbamp_ui" kbampBtnClose;
+	setParent ..;
+
+	showWindow kbamp_ui;
+}

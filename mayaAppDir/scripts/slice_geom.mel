@@ -1,0 +1,17 @@
+proc bbooll() {
+     string $l1[] = `ls -sl -l`;
+     if (size($l1) != 2) return;
+     string $l2[] = `duplicate`;
+
+     string $a[] = `polyBoolOp -op 3 -ch 0 -useThresholds 1 $l1[0] $l1[1]`;
+     string $b[] = `polyBoolOp -op 2 -ch 0 -useThresholds 1 $l2[0] $l2[1]`;
+
+     select -r $a[0];
+     select -tgl $b[0];
+}
+
+bbooll();
+SeparatePolygon;
+CenterPivot;
+SoftPolyEdgeElements 0;
+DeleteHistory;

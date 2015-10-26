@@ -1,0 +1,49 @@
+proc string[] getSoftEdges(string $mesh)
+{
+	string $retStr[];
+	string $egesNotFlatten[] = `polyListComponentConversion -toEdge $mesh`;
+	string $edges[] = `ls -l -fl $egesNotFlatten`;
+	for ($edge in $edges) { 
+		string $edgeInfo[] = `polyInfo -ev $edge`; 
+		if (!`gmatch $edgeInfo[0] "*Hard*"`) $retStr[size($retStr)] = $edge;
+	}
+	
+	return $retStr;
+}
+
+global proc fx_selectPolygonsByAngle( float $min, float $max )
+{
+
+	string $selNodes[] = `ls -sl -l`;
+	string $targetEdgesAll[];
+	
+	for ($selNode in $selNodes) {
+	
+		string $softEdgeNode[] = `polySoftEdge -angle $max $selNode`;
+		string $targetEdges[] = getSoftEdges($selNode);
+		delete $softEdgeNode;
+		delete -ch $selNode;
+
+		string $softEdgeNode[] = `polySoftEdge -angle $min $selNode`;
+		string $substractEdges[] = getSoftEdges($selNode);
+		delete $softEdgeNode;
+		delete -ch $selNode;
+		
+		$targetEdges = stringArrayRemove($substractEdges, $targetEdges);
+		
+		appendStringArray($targetEdgesAll, $targetEdges, size($targetEdges));
+	
+	}
+	
+	select $selNodes;
+	changeSelectMode -component;
+	setComponentPickMask "All" 0;
+	setComponentPickMask "Facet" true;
+	string $targetFaces[] = `polyListComponentConversion -fromEdge -toFace $targetEdgesAll`;
+	select $targetFaces;
+	
+}   
+
+
+
+

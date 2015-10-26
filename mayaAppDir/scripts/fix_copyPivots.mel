@@ -1,0 +1,24 @@
+// 1. Select source object
+// 2. Select object with pivot to change.
+// 3. Execute script
+
+global proc fix_copyPivots ()
+{
+
+	string $obj[]=`ls -l -sl`;
+	string $target = $obj[0];
+	string $pivotObject = $obj[1];
+	float $tmpDouble3[] = `xform -q -ws -rp $target`;
+	xform -ws -rp $tmpDouble3[0] $tmpDouble3[1] $tmpDouble3[2] $pivotObject;
+	float $tmpDouble3[] = `xform -q -ws -sp $target`;
+	xform -ws -sp $tmpDouble3[0] $tmpDouble3[1] $tmpDouble3[2] $pivotObject;
+	float $worldRotateTarget[] = `xform -q -ws -ro $target`;
+	float $axisRotationTarget[] = `xform -q -ws -ra $target`;
+	float $worldRotationPO[] = `xform -q -ws -ro $pivotObject`;
+	float $tmpX = $worldRotationPO[0]-$worldRotateTarget[0]+$axisRotationTarget[0];
+	float $tmpY = $worldRotationPO[1]-$worldRotateTarget[1]+$axisRotationTarget[1];
+	float $tmpZ = $worldRotationPO[3]-$worldRotateTarget[2]+$axisRotationTarget[2];
+	xform -ws -ra $tmpX $tmpY $tmpZ $pivotObject;
+
+
+}

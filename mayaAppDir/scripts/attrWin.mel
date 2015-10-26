@@ -1,0 +1,58 @@
+// MODIFY THIS AT YOUR OWN RISK
+//
+// Creation Date:  27 Jul. 1997
+// Author:         Jason Schleifer
+//
+//  WebDesc: Create a window with sliders for dynamic attributes.
+//  WebVersion: $Revision 1.0
+//  WebMayaVersion: Beta 5
+//  WebAuthor: Jason Schleifer
+//
+//  Procedure Name:
+//
+//      attrWin
+//
+//  Description:
+//
+//		This script creates a window with sliders for all the dynamic attributes
+//		on the selected object.
+//                           
+//  Input Arguments:
+//
+//  Return Value:
+//
+//      
+global proc buildAttrWindow (  )
+{
+	window 
+		-rtf true
+		attrWin;
+
+	columnLayout;
+	
+	$obj = `ls -sl`;
+	$attrs = `listAttr -k $obj[0]`;
+//	$attrs = `listAttr -ud $obj[0]`;
+	for ($x = 0; $x < size($attrs); $x++)
+	{
+		if ($attrs[$x] != "attributeAliasList")
+		{
+			attrFieldSliderGrp
+				-at ($obj[0] + "." + $attrs[$x])
+				-w 392
+				($attrs[$x] + "_slider");
+		}
+	}
+
+}
+global proc attrWin (  )
+{
+	
+    if (!`window -exists attrWin`) {
+    	buildAttrWindow;    
+	}
+	showWindow attrWin;
+
+
+
+}

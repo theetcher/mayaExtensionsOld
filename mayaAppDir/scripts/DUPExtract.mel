@@ -1,0 +1,95 @@
+//	SCRIPT NAME:  DUPExtract.mel v1.0 (Maya4 version)
+//	AUTHOR:  Thomas Hamilton
+//	LAST UPDATED:   February 4, 2001
+//	http://metanurb.homestead.com
+
+
+
+//DESCRIPTION:
+//DUPExtract is an alternative to using Maya's default Duplicate Faces and Extract tools.
+//Instead of breaking up geometery by going through an objects history and nodes, DUPExtracot
+//instead uses duplication methods to isolate and Duplicate or Extract the desired faces.
+//To use, select the faces you wish to duplicate or extract and run DUPExtract.  It will ask
+//you if you want to keep the original faces you selected.  If you say yes, DUPExtract will only
+//duplicate the faces you selected and place them in a new object with the same name as the orininal,
+//but with _DUP appended to it.  If you say yes, it will duplicate the faces, and remove the original 
+//faces selected.
+
+//SETUP:
+////Copy DUPExtract.mel to My Documents\maya\4.0\scripts.  Type DUPExtract in the 
+//command line, highlight, and middle mouse drag to your shelf.
+
+
+
+global proc DUPExtract()
+{
+string $Faces[];
+clear $Faces;
+string $Faces[] = `ls -sl`;
+string $buffer[];
+$numTokens = `tokenize $Faces[0] "." $buffer`;
+string $ObjectOG = $buffer[0];
+select $ObjectOG;
+duplicate -rr;
+string $Temp[] = `ls -sl`;
+string $ObjectDup = $Temp[0];
+//rename $ObjectDup ($ObjectDup + "_DUP");
+//string $Temp[] = `ls -sl`;
+//string $ObjectDup = $Temp[0];
+int $i = 0;
+string $FacesDup[];
+clear $FacesDup;
+for ($i = 0; $i < size($Faces); $i++ )
+	{
+	$FacesDup[$i] = `substitute $ObjectOG $Faces[$i] $ObjectDup`;
+	}
+PolySelectConvert 1;
+select -d $FacesDup;
+delete;
+
+select -cl;
+select $ObjectDup;
+CenterPivot;
+select -add $Faces;
+if (`window -exists DelFacesConfirm` == true)
+{
+deleteUI DelFacesConfirm;
+}
+	window  -title "Delete Original Faces?"
+		-widthHeight 200 100
+		-sizeable false
+		DelFacesConfirm;
+		columnLayout
+		-w 200
+		-h 25;
+			separator 
+			-w 200
+			-h 25
+			-st "in";
+		setParent ..;
+		rowLayout -numberOfColumns 2
+			-columnWidth2 100 100
+			-ct2 "left"  "left"
+			-co2 22 22
+			-cl2 "center" "center";
+			button -label "Yes"
+				-w 50
+				-h 35
+				-c "string $ObjDupandFaces[];clear $ObjDupandFaces;string $ObjDupandFaces[] = `ls -sl`;select -cl;for ($i = 1; $i < size($ObjDupandFaces); $i++){ select -add $ObjDupandFaces[$i];}delete;select $ObjDupandFaces[0];deleteUI DelFacesConfirm;";
+			button -label "No"
+				-w 50
+				-h 35
+				-c "string $ObjDupandFaces[];clear $ObjDupandFaces;string $ObjDupandFaces[] = `ls -sl`;select $ObjDupandFaces[0];deleteUI DelFacesConfirm;";
+	showWindow DelFacesConfirm;
+
+}
+
+
+
+
+
+
+
+
+
+

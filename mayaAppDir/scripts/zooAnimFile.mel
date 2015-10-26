@@ -1,0 +1,342 @@
+//
+// zAnim Loader
+//
+// Created by Hamish McKenzie mel@mel.macaronikazoo.com
+// Created : 27 July 2003
+//
+// Description:
+// zooAnim is the macaroniKazoo animation file format for storing and transfering
+// animation data between characters in maya.  It is designed as an addon script
+// for zooXferAnim, but can be used standalone, although internally there is no
+// support for object matching, which is handled externally (see below in the
+// zooAnimFileLoad proc).
+//
+// To use as stand alone, use the zooAnimFileLoad proc to load the contents of a
+// .znm file on to a selection of objects.
+//
+// Hamish McKenzie ©2003...
+// Macaroni Kazoo Productions ©2003...
+
+
+//takes a filepath to write animation of all keyable attributes from the current selection
+global proc zooAnimFileWrite( string $filename ){
+	string $selObjs[] = `ls -sl`;
+	string $fileData = ".znm Anim File Format v" + `zooAnimFileInfo version` + "\nExported by: " + `getenv USER` + "\nFile: " + `file -q -sn` + "\n";
+	float $increment = 100/((float)(`size $selObjs`));
+	float $progress = 0;
+	int $fileId = `fopen $filename "w"`;
+
+	progressWindow -title "Writing File" -progress ((int)$progress) -status "Progress: 0%" -isInterruptable 1;
+	for( $obj in $selObjs ){
+		string $attribs[] = `zooXferAnimGetAnimatedAttribs animated $obj`;
+
+		//update progress window
+		$progress += $increment;
+		progressWindow -e -progress ((int)$progress) -status ( "Progress: " + ((int)$progress) + "%" );
+
+		//terminate the loop if cancelled
+		if( `progressWindow -query -isCancelled` ) break;
+
+		$fileData = $fileData + "*" + $obj + "\n";
+		for( $attrib in $attribs ){
+			string $valTimes = "=";
+			string $tTypes = "<";
+			string $tSize = ">";
+			string $miscInfo = "@";
+			int $numKeys = `keyframe -q -keyframeCount ( $obj + "." + $attrib )`;
+			int $rotationOrder = ( `objExists ( $obj + ".rotateOrder" )` )?`getAttr ( $obj + ".rotateOrder" )`:0;
+
+			$fileData = $fileData + "^" + $attrib + "\n";
+			$miscInfo = $miscInfo + $rotationOrder + ",";
+			for( $n = 0; $n < $numKeys; $n++ ){
+				string $keytt[2] = `keyTangent -in $n -q -itt -ott ( $obj + "." + $attrib )`;
+				float $keyVal[2] = `keyframe -in $n -q -vc ( $obj + "." + $attrib )`;
+				float $keyTime[2] = `keyframe -in $n -q ( $obj + "." + $attrib )`;
+				float $ittSize[2] = `keyTangent -in $n -q -ia -iw ( $obj + "." + $attrib )`;
+				float $ottSize[2] = `keyTangent -in $n -q -oa -ow ( $obj + "." + $attrib )`;
+				//if( $keytt[0] == "" || $keytt[1] == "" ) print( $obj + "." + $attrib + "is no tangent\n" );
+
+				//if the tangent type is fixed, change it to spline, as the keyTangent command doesn't recognise the "fixed" tangent type.  go figure...
+				for( $i = 0; $i < `size $keytt`; $i++ ) if( $keytt[$i] == "fixed" ) $keytt[$i] = "spline";
+
+				//now string all the times, values, tangent types, and tangent sizes together into their respective strings
+				$valTimes = $valTimes + $keyVal[0] + "," + $keyTime[0] + ",";
+				$tTypes = $tTypes + $keytt[0] + "," + $keytt[1] + ",";
+				$tSize = $tSize + $ittSize[0] + "," + $ittSize[1] + "," + $ottSize[0] + "," + $ottSize[1] + ",";
+				}
+
+			//add the strings obtained from the previous loop to the string to write out to the file
+			$fileData = $fileData + $valTimes + "\n" + $tTypes + "\n" + $tSize + "\n" + $miscInfo + "\n";
+			}
+
+		//add the end of object descriptor to the fileData string
+		$fileData = $fileData + "&end" + "\n";
+		}
+
+	//now write all the data to the file, and force write to disk
+	fprint $fileId $fileData;
+	fflush $fileId;
+	fclose $fileId;
+
+	//close progress window
+	progressWindow -endProgress;
+	}
+
+
+//writes only keyable attribs' values from the current frame into a file
+global proc zooAnimFileWritePose( string $filename ){
+	string $selObjs[] = `ls -sl`;
+	string $fileData = ".znm Anim File Format v" + `zooAnimFileInfo version` + "\nExported by: " + `getenv USER` + "\nFile: " + `file -q -sn` + "\n";
+	float $increment = 100/((float)(`size $selObjs`));
+	float $progress = 0;
+	int $fileId = `fopen $filename "w"`;
+
+	progressWindow -title "Writing File" -progress ((int)$progress) -status "Progress: 0%" -isInterruptable 1;
+	for( $obj in $selObjs ){
+		string $attribs[] = `listAttr -m -k -u $obj`;
+
+		//update progress window
+		$progress += $increment;
+		progressWindow -e -progress ((int)$progress) -status ( "Progress: " + ((int)$progress) + "%" );
+
+		//terminate the loop if cancelled
+		if( `progressWindow -query -isCancelled` ) break;
+
+		$fileData = $fileData + "*" + $obj + "\n";
+		for( $attrib in $attribs ){
+			string $valTimes = "=";
+			string $tTypes = "<";
+			string $tSize = ">";
+			string $miscInfo = "@";
+			int $rotationOrder = ( `objExists ( $obj + ".rotateOrder" )` )?`getAttr ( $obj + ".rotateOrder" )`:0;
+
+			//float $attribVal = ;
+
+			$fileData = $fileData + "^" + $attrib + "\n";
+			$miscInfo = $miscInfo + $rotationOrder;
+			$valTimes = $valTimes + `getAttr ( $obj + "." + $attrib )` + ",0";
+			$tTypes = $tTypes + "spline,spline";
+			$tSize = $tSize + "1,1,1,1";
+
+			//add the strings obtained from the previous loop to the string to write out to the file
+			$fileData = $fileData + $valTimes + "\n" + $tTypes + "\n" + $tSize + "\n" + $miscInfo + "\n";
+			}
+
+		//add the end of object descriptor to the fileData string
+		$fileData = $fileData + "&end" + "\n";
+		}
+
+	//now write all the data to the file, and force write to disk
+	fprint $fileId $fileData;
+	fflush $fileId;
+	fclose $fileId;
+
+	//close progress window
+	progressWindow -endProgress;
+	}
+
+
+//this load function will load the entire contents of a file on to the current selection.  The object mapping is handled externally through the presence of the zooXferAnim script
+global proc zooAnimFileLoad( string $filename ){
+	string $filename = "";
+	string $fileContents[] = `zooAnimFileLoadFile $filename`;
+	string $importObjs[] = `zooAnimFileGetFileInfo -o $fileContents n n`;
+	string $selObjs[] = `ls -sl`;
+
+	for( $obj in $importObjs ){
+		string $targetObj = `zooXferAnimMatchObj $obj $selObjs`;
+		string $srcAttribs[] = `zooAnimFileGetFileInfo -a $fileContents $obj n`;
+		int $n = 0;
+
+		for( $attrib in $srcAttribs ){
+			if( `objExists ( $targetObj + "." + $attrib )` ){
+				string $keyData[] = `zooAnimFileGetFileInfo -k $fileContents $obj $attrib`;
+				string $tangentTypes[] = `zooAnimFileGetFileInfo -tt $fileContents $obj $attrib`;
+				string $tangentValues[] = `zooAnimFileGetFileInfo -tv $fileContents $obj $attrib`;
+				string $miscInfo[] = `zooAnimFileGetFileInfo -m $fileContents $obj n`;
+
+				for( $n = 0; $n<( `size $keyData`/2 ); $n++ ){
+					string $ittType = $tangentTypes[( $n*2 )];
+					string $ottType = $tangentTypes[( $n*2+1 )];
+					float $keyVal = $keyData[( $n*2 )];
+					float $keyTime = $keyData[( $n*2+1 )];
+					float $inAngle = $tangentValues[( $n*4 )];
+					float $inWeight = $tangentValues[( $n*4+1 )];
+					float $outAngle = $tangentValues[( $n*4+2 )];
+					float $outWeight = $tangentValues[( $n*4+3 )];
+
+					//process keyframe and tangent information
+					setKeyframe -t $keyTime -v $keyVal -itt $ittType -ott $ottType ( $targetObj + "." + $attrib );
+					keyTangent -e -t $keyTime -ia $inAngle -iw $inWeight -oa $outAngle -ow $outWeight ( $targetObj + "." + $attrib );
+
+					//now process misc information
+					if( `objExists ( $targetObj + ".rotateOrder" )` ) setAttr ( $targetObj + ".rotateOrder" ) ((int)$miscInfo[0] );
+					}
+				}
+			}
+		}
+	}
+
+
+//loads info from a file on to a single, specified object.  This allows custom mapping of objects outside this script
+global proc zooAnimFileLoadObject( string $fileContents[], float $timeOffset, string $obj, string $tgt ){
+	string $srcAttribs[] = `zooAnimFileGetFileInfo -a $fileContents $obj n`;
+	string $miscInfo[] = `zooAnimFileGetFileInfo -m $fileContents $obj n`;
+	string $miscToks[];
+	//float $timeOffset = $allowTimeOffset? `currentTime -q`: 0;  //are we allowing timeOffsets?  if not, just make the offset zero
+	int $n = 0;
+
+	//first process misc information, as it is object based info
+	tokenize $miscInfo[0] "," $miscToks;
+	int $rotateOrder = $miscToks[0];
+	//if( `objExists ( $tgt + ".rotateOrder" )` ) setAttr ( $tgt + ".rotateOrder" ) $rotateOrder;
+
+	//now that object level info has been loaded, attribute based info
+	for( $attrib in $srcAttribs ){
+		if( `objExists ( $tgt + "." + $attrib )` ){
+			string $keyData[] = `zooAnimFileGetFileInfo -k $fileContents $obj $attrib`;
+			string $tangentTypes[] = `zooAnimFileGetFileInfo -tt $fileContents $obj $attrib`;
+			string $tangentValues[] = `zooAnimFileGetFileInfo -tv $fileContents $obj $attrib`;
+
+			for( $n = 0; $n<( `size $keyData`/2 ); $n++ ){
+				string $ittType = $tangentTypes[( $n*2 )];
+				string $ottType = $tangentTypes[( $n*2+1 )];
+				float $keyVal = $keyData[( $n*2 )];
+				float $keyTime = $keyData[( $n*2+1 )];
+				float $inAngle = $tangentValues[( $n*4 )];
+				float $inWeight = $tangentValues[( $n*4+1 )];
+				float $outAngle = $tangentValues[( $n*4+2 )];
+				float $outWeight = $tangentValues[( $n*4+3 )];
+
+				//process keyframe and tangent information, provided the target attribute exists and is keyable
+				if( `objExists ( $tgt + "." + $attrib )` && `getAttr -k ( $tgt + "." + $attrib )` ) {
+					setKeyframe -t ( $keyTime+$timeOffset ) -v $keyVal -itt $ittType -ott $ottType ( $tgt + "." + $attrib );
+					keyTangent -e -t $keyTime -ia $inAngle -iw $inWeight -oa $outAngle -ow $outWeight ( $tgt + "." + $attrib );
+					}
+				}
+			}
+		}
+	}
+
+
+//will get certain information from a file string.
+global proc string[] zooAnimFileGetFileInfo( string $function, string $fileContents[], string $variable01, string $variable02 ){
+	string $fileInfo[];
+	switch( $function ){
+		case "-objects":
+		case "-o":
+		string $objectList[];
+		for( $word in $fileContents ) if( `size $word` && `substring $word 1 1` == "*" ) $objectList[( `size $objectList` )] = `substring $word 2 (size($word))`;
+		return $objectList;
+		break;
+
+
+		case "-attributes":
+		case "-a":
+		string $obj = $variable01;
+		string $attributeList[];
+		int $isObjectActive = 0;
+
+		for( $word in $fileContents ) if( `size $word` ) {
+			string $prefix = `substring $word 1 1`;
+			string $suffix = `substring $word 2 (size($word))`;
+
+			if( $isObjectActive && $prefix == "^" ) $attributeList[( `size $attributeList` )] = $suffix;
+			if( $prefix == "*" && $suffix == $obj ) $isObjectActive = 1;
+			if( $isObjectActive && $word == "&end" ) { $isObjectActive = 0; break; }
+			}
+
+		return $attributeList;
+		break;
+
+
+		case "-keys":
+		case "-k":
+		case "-tangentTypes":
+		case "-tt":
+		case "-tangentValues":
+		case "-tv":
+		string $obj = $variable01;
+		string $attrib = $variable02;
+		string $keyInfo[];
+		string $keyString = "";
+		string $dataID = "";
+		int $isObjectActive = 0;
+		int $isAttributeActive = 0;
+
+		if( $function == "-keys" || $function == "-k" ) $dataID = "=";
+		if( $function == "-tangentTypes" || $function == "-tt" ) $dataID = "<";
+		if( $function == "-tangentValues" || $function == "-tv" ) $dataID = ">";
+		for( $word in $fileContents ) if( `size $word` ) {
+			string $prefix = `substring $word 1 1`;
+			string $suffix = `substring $word 2 (size($word))`;
+
+			if( $isObjectActive && $isAttributeActive && $prefix == $dataID ){
+				$keyString = $suffix;
+				$isAttributeActive = 0;
+				}
+
+			if( $prefix == "*" && $suffix == $obj ) $isObjectActive = 1;
+			if( $prefix == "^" && $suffix == $attrib ) $isAttributeActive = 1;
+			if( $isObjectActive && $word == "&end" ) { $isObjectActive = 0; break; }
+			}
+
+		tokenize $keyString "," $keyInfo;
+		return $keyInfo;
+		break;
+
+
+		case "-misc":
+		case "-m":
+		string $obj = $variable01;
+		string $miscInfo[];
+		int $isObjectActive = 0;
+
+		for( $word in $fileContents ) if( `size $word` ) {
+			string $prefix = `substring $word 1 1`;
+			string $suffix = `substring $word 2 (size($word))`;
+
+			if( $isObjectActive && $prefix == "@" ) $miscInfo[( `size $miscInfo` )] = $suffix;
+			if( $prefix == "*" && $suffix == $obj ) $isObjectActive = 1;
+			if( $isObjectActive && $word == "&end" ) { $isObjectActive = 0; break; }
+			}
+
+		return $miscInfo;
+		break;
+		}
+	}
+
+
+//will return a string array, with each entry containing a line in the .znm file
+global proc string[] zooAnimFileLoadFile( string $filename ){
+	string $fileContents[];
+	string $word = "";
+	int $fileId = `fopen $filename "r"`;
+
+	$word = `fgetline $fileId`;
+	$fileContents[0] = `substring $word 1 (size($word)-1)`;
+
+	while( `size $word` > 0 ){
+		$word = `fgetline $fileId`;
+		if( size($word) ) $fileContents[( `size $fileContents` )] = `substring $word 1 (size($word)-1)`;  //cut off the carriage return character
+		}
+
+	fclose $fileId;
+	return $fileContents;
+	}
+
+
+//simply returns versioning, and date information about this script
+global proc string zooAnimFileInfo ( string $function ) {
+	string $creationDate = "27 July 2003";
+	string $lastRevision = "28 October 2003";
+	string $revisionHistory = "v1.31  28-10-03\nNEW: added a pose export function that will only export keyable object values on the current frame.\n\nv1.21  16-10-03\nNEW: can now load keys onto the object at the currentTime (ie as a time offset).  This required a new procedure definition for zooAnimFileLoadObejct.\n\nv1.11  16-09-03\nNEW: file writing is now escapable.\nFIX: progress window didn't display progress bar correctly.\n\nv1.1  25-08-03\nFIX: the 1024 byte word limit has been overcome now.  It should be able to import any sized animation file now.  This was a real stupid mistake on my part.\n\nv1.0  19-08-03\nNEW: added a write progress dialog, as this can be a lengthy process, for long animations.\n\nv0.6  04-08-03\nNEW: initial release version.";
+	string $info = "";
+	float $currentVersion = 1.31;
+
+	if ( $function == "created" ) $info = $creationDate;
+	if ( $function == "modified" ) $info = $lastRevision;
+	if ( $function == "history" ) $info = $revisionHistory;
+	if ( $function == "version" ) $info = $currentVersion;
+	return $info;
+	}

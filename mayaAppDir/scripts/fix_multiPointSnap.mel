@@ -1,0 +1,97 @@
+global proc fix_multiPointSnap ()
+{
+	
+
+	global string $sources[];
+	global string $targets[];
+	
+	clear ($sources);
+	clear ($targets);
+	
+
+	string $cmd = "if ((size($sources) != 0) && (size($targets) != 0)) performMPS ($sources, $targets)";
+	
+	if (`window -exists MPSWindow` == 1)
+		deleteUI MPSWindow;
+
+	string $MPSWin = `window 
+				-t "Multi Points Snap"
+				-in "Multi Points Snap"
+				-s 1
+				-mnb 1
+				-mxb 0
+				-h 50
+				-w 300
+				MPSWindow`;
+	formLayout MPSWin_UIFormLayout;
+
+	//--Create Controllers--//
+
+	button -w 120 -h 25 -c ("$sources = `ls -sl -l -fl`; if (size($sources) != 0) symbolButton -e -i \"MPSLoaded.bmp\" sourcesSBTN; select -cl;") -label "load Points to snap" "loadSourcesBTN" ;
+	button -w 120 -h 25 -c ("$targets = `ls -sl -l -fl`; if (size($targets) != 0) symbolButton -e -i \"MPSLoaded.bmp\" targetsSBTN; select -cl;") -label "load Targets" "loadTargetsBTN" ;
+	button -w 200 -h 25 -c ("deleteUI " + $MPSWin) -label "Cancel" "cancelBTN" ;
+	button -w 200 -h 25 -c ($cmd + "; deleteUI " + $MPSWin) -label "OK" "okBTN" ;
+	symbolButton -image "MPSNotLoaded.bmp" "sourcesSBTN" ;
+	symbolButton -image "MPSNotLoaded.bmp" "targetsSBTN" ;
+
+	//--Arrange Controllers--//
+
+	formLayout -e
+		-af "loadSourcesBTN" "left" 85
+		-af "loadSourcesBTN" "top" 8
+		-af "loadTargetsBTN" "left" 210
+		-af "loadTargetsBTN" "top" 8
+		-af "okBTN" "left" 5
+		-af "okBTN" "top" 45
+		-af "cancelBTN" "left" 210
+		-af "cancelBTN" "top" 45
+		-af "sourcesSBTN" "left" 44
+		-af "sourcesSBTN" "top" 5
+		-af "targetsSBTN" "left" 335
+		-af "targetsSBTN" "top" 5
+
+		MPSWin_UIFormLayout;
+
+	showWindow $MPSWin;
+}
+
+/////////////////////////////////
+
+global proc performMPS (string $sources[], string $targets[])
+{
+
+	float $srcPntPos[];
+	float $tgtPntPos[];
+	string $srcPnt;
+	string $tgtPnt;
+	float $minDistance;
+	float $snapPos[];
+	
+	for ($srcPnt in $sources) {
+
+		$srcPntPos = `pointPosition -w $srcPnt`;
+		$minDistance = 1000000;
+		$snapPos = {0,0,0};
+
+		for ($tgtPnt in $targets) {
+
+			$tgtPntPos = `pointPosition -w $tgtPnt`;
+
+			if (distance ($srcPntPos, $tgtPntPos) < $minDistance) {
+				$minDistance = distance ($srcPntPos, $tgtPntPos);
+				$snapPos = $tgtPntPos;
+			}
+		
+		}
+
+		move -a -ws $snapPos[0] $snapPos[1] $snapPos[2] $srcPnt;
+
+	}
+
+}   
+
+global proc float distance (float $pos1[], float $pos2[])
+{
+	return ( sqrt( pow( ($pos2[0]-$pos1[0]),2) + pow(($pos2[1]-$pos1[1]),2) + pow(($pos2[2]-$pos1[2]),2) ) );
+}
+

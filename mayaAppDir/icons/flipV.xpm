@@ -1,0 +1,39 @@
+/* XPM */
+static char *flipV[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #17338f",
+". c #6e7ca3",
+"# c #f10d0e",
+"a c #c2c0c3",
+"b c #344995",
+"c c #e94344",
+"d c #c48c8c",
+"e c #5c1e1c",
+/* pixels */
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaa.b.aaaaaaaaaaaaaaaa",
+"aaaaa```.aaaaaaaaaaaaaaa",
+"aaaa`b`bbaaaaaaaaaaaaaaa",
+"aaa`ba`a`baaaaaaaaaaaaaa",
+"aab`aa`aa`baaaaaaaaaaaaa",
+"aa`````````aaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaa#aaaaaaaaaaaaaaaaaaaa",
+"aa###aaaaaa```````````.a",
+"aad###aacaab`aaa`aaa``aa",
+"aaa`##c##daa`baa`aa``aaa",
+"aaa.b####caaa`ba`a``aaaa",
+"aaaaae####aaa.`.`b`aaaaa",
+"aaaaae#####aaab```.aaaaa",
+"aaaaaee####aaaab`.aaaaaa",
+"aaaaaabe###aaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa"
+};

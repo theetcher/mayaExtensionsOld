@@ -1,0 +1,54 @@
+global proc fix_findTexPlacement(){
+
+	PolySelectConvert 1;
+	string $colorFile[];
+	string $filePlacement[];
+	string $comps[] = `ls -selection -flatten -long`;
+	if (`size($comps)` > 0){
+
+		// find the shape node
+		string $shape[] = `listRelatives -f -parent $comps[0]`;
+		
+		// find the shading engine
+		string $connections[] = `listConnections -source false -type 
+			"shadingEngine" $shape[0]`;
+
+		// there may be more than one shading group connected to the
+		// geometry so find the exact one
+		$connections = `stringArrayRemoveDuplicates $connections`;
+		string $shadingGroup;
+
+		for ($connection in $connections){
+			int $result = `sets -isMember $connection`;
+			if ($result == 1) {$shadingGroup = $connection;}
+		}
+		
+		// if no shading group has been found, the components must not be
+		// mapped - this means the shape is mapped
+		if ($shadingGroup == ""){
+			for ($connection in $connections){
+				int $result = `sets -isMember $connection $shape[0]`;
+				if ($result == 1) {$shadingGroup = $connection;}
+			}
+		}
+
+		if ($shadingGroup != ""){
+			// find the shader connected to the shading group
+			string $shaderConnection = `connectionInfo -sourceFromDestination 
+				($shadingGroup + ".surfaceShader")`;
+			string $shader[];
+			tokenize $shaderConnection "." $shader;
+			
+			// select and show tex placement of the color texture
+			$colorFile = listConnections ($shader[0]+".color");
+			$filePlacement = listConnections ($colorFile[0]+".uvCoord");
+			select -replace $filePlacement[0];
+			showEditor $filePlacement[0];
+		}
+
+	} else {
+		error ("No component selected: Select a component to see its " +
+			"placement attributes.");
+	}
+	
+}

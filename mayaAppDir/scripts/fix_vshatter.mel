@@ -1,0 +1,553 @@
+proc string[] voronoiRandomLocators(string $objName, int $pCount)
+{
+	// Create group to hold locators
+	string $pGRP = `group -empty -n "randomLocatorGrp"`;
+	float $objBBox[] = `polyEvaluate -b $objName`;
+
+	if (`optionVar -q "fix_vs_useSeed"`) {
+		int $seedValue = `optionVar -q "fix_vs_seed"`;
+		seed $seedValue;
+	}
+
+	for($p=0;$p<$pCount;$p++) {
+		// Create locator
+		string $pLoc[] = `spaceLocator -n "voronoiPoint_#"`;
+
+		// Set attributes
+		setAttr ($pLoc[0] + ".translate") ( rand($objBBox[0],$objBBox[1]) ) ( rand($objBBox[2],$objBBox[3]) ) ( rand($objBBox[4],$objBBox[5]) );
+		setAttr ($pLoc[0] + ".scale") 0.1 0.1 0.1;
+
+		// Parent locator
+		parent $pLoc[0] $pGRP;
+	}
+	
+	setAttr ($pGRP + ".visibility") 0;
+	
+	// Return locators list
+	return (`listRelatives -c -type transform $pGRP`);
+}
+
+proc string[] voronoiMeshToLocators(string $objName)
+{
+	// Create group to hold locators
+	string $pGRP = `group -empty -n "meshLocatorGrp"`;
+	string $allPoints[] = `polyListComponentConversion -tv $objName`;
+	$allPoints = `ls -l -fl $allPoints`;
+
+	for ($point in $allPoints) {
+		
+		string $pLoc[] = `spaceLocator -n "voronoiPoint_#"`;
+		
+		select $point;
+		float $vertexBBox[] = `polyEvaluate -bc`;
+		setAttr ($pLoc[0] + ".translate") ( $vertexBBox[0] ) ( $vertexBBox[2] ) ( $vertexBBox[4] );
+		setAttr ($pLoc[0] + ".scale") 0.1 0.1 0.1;
+
+		parent $pLoc[0] $pGRP;
+	}
+
+	setAttr ($pGRP + ".visibility") 0;
+	
+	// Return locators list
+	select -cl;
+	return (`listRelatives -c -type transform $pGRP`);
+}
+
+proc string[] voronoiParticlesToLocators(string $pName)
+{
+	// Create group to hold locators
+	string $pGRP = `group -empty -n "particleLocatorGrp"`;
+
+	string $tempP[] = `listRelatives -p -pa -f $pName`;
+	setAttr ($tempP[0] + ".visibility") 0;
+
+	// Get particle count
+	int $pCount = `getAttr ($pName + ".count")`;
+
+	// Go thru each particle
+	for($p=0;$p<$pCount;$p++) {
+		// Store worldspace translate of each particle
+		float $pPos[] = `getParticleAttr -at worldPosition ($pName + ".pt[" + $p + "]")`;
+
+		// Create locator
+		string $pLoc[] = `spaceLocator -n "voronoiPoint_#"`;
+
+		// Set attributes
+		setAttr ($pLoc[0] + ".translate") $pPos[0] $pPos[1] $pPos[2];
+		setAttr ($pLoc[0] + ".scale") 0.1 0.1 0.1;
+
+		// Parent locator
+		parent $pLoc[0] $pGRP;
+	}
+	
+	setAttr ($pGRP + ".visibility") 0;
+	
+	// Return locators list
+	return (`listRelatives -c -type transform $pGRP`);
+}
+
+proc string voronoiCreateCutBlock(string $objName)
+{
+	// Find the bounding box of obj
+	float $bbox[] = `exactWorldBoundingBox $objName`; 
+	float $biggestDimension = abs($bbox[3]-$bbox[0]); 
+	if (abs($bbox[4]-$bbox[1]) > $biggestDimension) $biggestDimension = abs($bbox[4]-$bbox[1]);
+	if (abs($bbox[5]-$bbox[2]) > $biggestDimension) $biggestDimension = abs($bbox[5]-$bbox[2]); 
+
+	// Now that we have the biggest dimension, lets increase it a bit
+	$biggestDimension = $biggestDimension * 4;
+
+	// Create the cut block geometry and store its name
+	string $cutBlockCreate[] = `polyPlane -w 1 -h 1 -sx 1 -sy 1 -ax 0 1 0 -cuv 2 -ch 0 -n "cutBlock"`;
+	string $cutBlockName = $cutBlockCreate[0];
+
+	// Set the scale of the plane
+	setAttr ($cutBlockName + ".scaleX") $biggestDimension;
+	setAttr ($cutBlockName + ".scaleZ") $biggestDimension;
+
+	// Extrude the plane into a block
+	polyExtrudeFacet -ch 0 -ltz ($biggestDimension * 2) -smoothingAngle 0 ($cutBlockName+".f[0]");
+
+	// Freeze transforms
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 $cutBlockName;
+
+	// Hide the cut block
+	setAttr ($cutBlockName + ".visibility") 0;
+
+	select -cl;
+
+	return $cutBlockName;
+}
+
+global proc do_voronoiShatter()
+{
+	float $timerTotal = `timerX`;
+//	float $timerBeginning = `timerX`;
+//	float $timer1 = 0;
+//	float $timer2 = 0;
+//	float $timer3 = 0;
+//	float $timerStart1 = 0;
+//	float $timerStart2 = 0;
+//	float $timerStart3 = 0;
+
+		
+	// Variables
+	float $crackOffset = `optionVar -q "fix_vs_crackOffset"`;
+	int $vsMode = `optionVar -q "fix_vs_mode"`;
+	int $createInnerGeom = `optionVar -q "fix_vs_createInnerGeom"`;
+	int $createShardMat = `optionVar -q "fix_vs_createShardMat"`;
+	
+	// Close Some Editors cause they slowing maya by updating themselves
+	if ( `window -exists polyTexturePlacementPanel1Window` )
+			deleteUI -window polyTexturePlacementPanel1Window;
+	
+	// may be UV Editor is in some panel so maximze Single Perspective View to disable other panels
+	// need to be restored at the end of script
+	setNamedPanelLayout "Single Perspective View"; 
+
+	// Gather selected items
+
+	string $s[] = `ls -sl -l`;
+
+	// this SWITCH statement must check
+	// - if selection is valid
+	// - create locators group
+	// - assign all their names to $locators[]\
+	// - setup $objName
+	// - setup $pCount (main counter)
+	
+	switch ($vsMode) { 
+
+		case 1 : // Random mode
+			if ( (size($s) != 1) || ( size(`ls -dag -ap -typ "mesh" $s`) < 1 ) ) error("Wrong Selection. Only one mesh must be selected.");
+			string $objName = $s[0];
+			int $pCount = `optionVar -q "fix_vs_pieces"`;
+			string $locators[] = voronoiRandomLocators($objName, $pCount);
+//			error("break automatic\n");
+			break;
+
+		case 2 : // Geometry mode
+			if ( size(`ls -dag -ap -typ "mesh" $s`) != 2 )  error("Wrong Selection. 2 meshes must be selected. First - object to shatter, second - control mesh.");
+			string $objName = $s[0];
+			int $tempInt[] = `polyEvaluate -v $s[1]`;
+			int $pCount = $tempInt[0];
+			string $locators[] = voronoiMeshToLocators($s[1]);
+//			error("break geometry\n");
+			break;
+
+		case 3 : // Particle controlled mode
+			
+			string $tempM[] = `ls -l -dag -ap -typ "mesh" $s`;
+			string $tempP[] = `ls -l -dag -ap -typ "particle" $s`;
+			
+			if ( (size($s) != 2) || ( size($tempM) < 1 ) || ( size($tempP) < 1 ) )
+					error("Wrong Selection. Only one mesh and one particle object must be selected.");
+			
+			int $pCount = `getAttr ($tempP[0]+".count")`; // main counter
+
+			// mesh transform
+			$tempM = `listRelatives -p -pa -f $tempM`;
+			string $objName = $tempM[0];
+			
+			// Convert all the particles to locators
+			string $locators[] = voronoiParticlesToLocators($tempP[0]);
+
+			break;
+	}
+
+	int $amount = 0;
+	 progressWindow
+		-title "Voronoi Shatter"
+		-progress 0
+		-status "Initializing . . ."
+		-isInterruptable true
+		-maxValue $pCount;
+
+	undoInfo -state off;
+
+
+////////////////////////		
+
+
+	// Create shard material if it doesn't exist
+	int $shardMatExists = `objExists voronoiShardMaterial`;
+	if($shardMatExists == 0) {
+		string $mat = `shadingNode -asShader lambert -name voronoiShardMaterial`;
+		sets -renderable true -noSurfaceShader true -empty -name ($mat + "SG");
+		connectAttr -f ($mat + ".outColor") ($mat + "SG.surfaceShader");
+		setAttr ($mat + ".color") -type double3 1 0 0 ;
+	}
+
+	// Create an empty group node to store shards
+	string $shardsGRP = `group -empty -n "shardsGRP"`;
+
+	// Create cut block
+	string $cutBlock = voronoiCreateCutBlock($objName);
+
+//	$timerBeginning = `timerX -st $timerBeginning`;
+	
+	// Go thru every locator and compare it to every other locator
+	// Find the midpoint, create shatter cube, and shatter
+	
+	for($a=0;$a<size($locators);$a++) {
+		
+		refresh();
+
+//		$timerStart1 = `timerX`;
+
+		// Check if the dialog has been cancelled
+		if ( `progressWindow -query -isCancelled` ) break;
+
+		// Check if end condition has been reached
+		if ( `progressWindow -query -progress` >= $pCount ) break;
+
+		$amount += 1;
+
+		// Store worldspace translate of a
+		float $aPos[] = `xform -q -ws -t $locators[$a]`;
+
+		// Variable to store active shard mesh name
+		string $activeShard = "";
+
+		// Duplicate mesh to shatter
+		string $dupMesh[] = `duplicate -rr $objName`;
+		setAttr ($objName + ".visibility") 0;
+		$activeShard = $dupMesh[0];
+		setAttr ($activeShard + ".visibility") 1;
+		
+//		$timer1 = $timer1 + (`timerX -st $timerStart1`);
+
+		// Go thru each locator
+		
+		for($b=0;$b<size($locators);$b++) {
+
+			// Check that its not going to itself
+			if($a != $b) {
+				
+//				$timerStart2 = `timerX`;
+
+				// Store worldspace translate of b
+				float $bPos[] = `xform -q -ws -t $locators[$b]`;
+				
+				// Find the midpoint between locator A and locator B
+				vector $midPoint = <<(($aPos[0] + $bPos[0])/2), (($aPos[1] + $bPos[1])/2), (($aPos[2] + $bPos[2])/2)>>;
+
+				// Convert to vectors
+				vector $aPosVector = {$aPos[0],$aPos[1],$aPos[2]};
+				vector $bPosVector = {$bPos[0],$bPos[1],$bPos[2]};
+
+				// Calculate direction vector
+				vector $dir = $aPosVector - $midPoint;
+
+				// Normalize
+				$dir = $dir / mag($dir);
+
+				// Calculate new offset midpoint
+				vector $offMidPoint = $midPoint + ($crackOffset * $dir);
+
+				// Create aim locator
+				string $aimLoc[] = `spaceLocator -p $bPos[0] $bPos[1] $bPos[2]`;
+				xform -cp $aimLoc[0];
+
+				// Position cut block
+				string $cutCube[] = `duplicate -rr $cutBlock`;
+				setAttr ($cutCube[0] + ".visibility") 1;
+				setAttr ($cutCube[0] + ".translateX") ($offMidPoint.x);
+				setAttr ($cutCube[0] + ".translateY") ($offMidPoint.y);
+				setAttr ($cutCube[0] + ".translateZ") ($offMidPoint.z);
+
+				// Aim cut cube
+				string $aimConstraint[] = `aimConstraint
+															-offset 0 0 0
+															-weight 1
+															-aimVector 0 1 0
+															-upVector 0 1 0
+															-worldUpType "vector"
+															-worldUpVector 0 1 0
+															$aimLoc[0]
+															$cutCube[0]
+													`;
+				delete $aimConstraint[0];
+//				for($ac=0;$ac<size($aimConstraint);$ac++) {
+//					if(`objExists $aimConstraint[$ac]`) delete $aimConstraint[$ac];
+//				}
+
+				// Cleanup aim locators
+				delete $aimLoc[0];
+//				for($al=0;$al<size($aimLoc);$al++) {
+//					if(`objExists $aimLoc[$al]`) delete $aimLoc[$al];
+//				}
+				
+				
+//				$timer2 = $timer2 + (`timerX -st $timerStart2`);
+
+//				$timerStart3 = `timerX`;
+
+				// Do Cut procedure
+
+				vector $cutBlockRot = `xform -q -ws -rotation $cutCube[0]`;
+
+				polyCut -ch off 
+							-df 1
+							-pc ($offMidPoint.x) ($offMidPoint.y) ($offMidPoint.z)
+							-ro ($cutBlockRot.x + 90) ($cutBlockRot.y) ($cutBlockRot.z)
+							$activeShard;
+
+				// creating inner geometry and assigning shard material
+				if ($createInnerGeom) {
+					int $numCutFace[] = `polyEvaluate -f $activeShard`;
+					polyCloseBorder -ch 0 $activeShard;
+
+					if ($createShardMat) {
+						int $numNewFace[] = `polyEvaluate -f $activeShard`;
+						sets -e -forceElement voronoiShardMaterialSG ($activeShard + ".f[" + ($numCutFace[0]) + ":" + ($numNewFace[0]) + "]");
+					}
+				
+				}
+				
+//				$timer3 = $timer3 + (`timerX -st $timerStart3`);
+
+				// Cleanup
+				if(`objExists $cutCube[0]`) delete $cutCube[0];
+
+			}
+//			else {
+				//delete $dupMesh[0];
+//			}
+		}
+		
+		// Parent shard under group node
+		parent $activeShard $shardsGRP;
+
+		progressWindow -edit
+			-progress $amount
+			-status ("Voronoi Shatter step " + $amount + " of " + $pCount + " completed . . .");
+
+	}
+  
+	progressWindow -endProgress;
+	delete $cutBlock;
+	delete `listRelatives -p -pa -f $locators[0]`;
+	PreviousViewArrangement; // restoring panel layout
+	undoInfo -state on;
+
+	refresh();
+
+	$timerTotal = `timerX -st $timerTotal`;
+	
+	watchNum($timerTotal, "Shatter Total Time");
+//	watchNum($timerBeginning, "$timerBeginning");
+//	watchNum($timer1, "$timer1");
+//	watchNum($timer2, "$timer2");
+//	watchNum($timer3, "$timer3");
+
+}
+  
+proc fix_vs_initOptionVars ()
+{
+	if (!`optionVar -exists "fix_vs_mode"`)
+		optionVar -intValue "fix_vs_mode" 1;
+
+	if (!`optionVar -exists "fix_vs_pieces"`)
+		optionVar -intValue "fix_vs_pieces" 2;
+
+	if (!`optionVar -exists "fix_vs_crackOffset"`)
+		optionVar -floatValue "fix_vs_crackOffset" 0;
+
+	if (!`optionVar -exists "fix_vs_createInnerGeom"`)
+		optionVar -intValue "fix_vs_createInnerGeom" 1;
+
+	if (!`optionVar -exists "fix_vs_createShardMat"`)
+		optionVar -intValue "fix_vs_createShardMat" 0;
+
+	if (!`optionVar -exists "fix_vs_useSeed"`)
+		optionVar -intValue "fix_vs_useSeed" 0;
+
+		if (!`optionVar -exists "fix_vs_seed"`)
+		optionVar -intValue "fix_vs_seed" 1;
+}
+
+global proc fix_vs_setOptionVars()
+{
+	optionVar -intValue "fix_vs_mode" `radioButtonGrp -q -sl ui_vs_mode`;
+	optionVar -intValue "fix_vs_pieces" `intSliderGrp -q -v ui_vs_pieces`;
+	optionVar -floatValue "fix_vs_crackOffset" `floatSliderGrp -q -v ui_vs_crackOffset`;
+	optionVar -intValue "fix_vs_createInnerGeom" `checkBoxGrp -q -v1 ui_vs_create`;
+	optionVar -intValue "fix_vs_createShardMat" `checkBoxGrp -q -v2 ui_vs_create`;
+	optionVar -intValue "fix_vs_useSeed" `checkBoxGrp -q -v1 ui_vs_useSeed`;
+	optionVar -intValue "fix_vs_seed" `intSliderGrp -q -v ui_vs_seed`;
+}
+
+global proc fix_vshatter()
+{
+
+	fix_vs_initOptionVars ();
+	
+	if (`window -exists vshatterWindow` == 1)
+			deleteUI vshatterWindow;
+
+	int $winWidth = 450;
+	int $separatorWidth = $winWidth - 7;
+	
+	
+	string $vshatterWindow = `window 
+		-t "Voronoi Shatter"
+		-in "Voronoi Shatter"
+		-s 0
+		-mnb 1
+		-mxb 0
+		vshatterWindow`;
+
+	columnLayout -cat "both" 5 -adj 1;
+	
+		separator -style "none" -height 5;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 5;
+
+		radioButtonGrp
+			-numberOfRadioButtons 3
+			-label "Points Generation"
+			-labelArray3 "Random" "Second Mesh" "Particles"
+			-select `optionVar -q "fix_vs_mode"`
+			-changeCommand ("int $modeChanged = `radioButtonGrp -q -sl ui_vs_mode`;" +
+				"intSliderGrp -edit -enable ( ($modeChanged) == 1 ) ui_vs_pieces;" + 
+				"intSliderGrp -edit -enable ( ( ($modeChanged) == 1 ) && ( (`checkBoxGrp -q -v1 ui_vs_useSeed`) == 1 ) ) ui_vs_seed;" +
+				"checkBoxGrp -edit -enable ( ($modeChanged) == 1 ) ui_vs_useSeed;")
+			ui_vs_mode
+		;
+
+		separator -style "in" -height 10 -width $separatorWidth;
+
+		checkBoxGrp
+			-numberOfCheckBoxes 2
+			-label "Create"
+			-labelArray2 "Inner Geometry" "Shard Material"
+			-valueArray2 `optionVar -q "fix_vs_createInnerGeom"` `optionVar -q "fix_vs_createShardMat"`
+			-cc1 ("checkBoxGrp -edit -en2 (`checkBoxGrp -q -v1 ui_vs_create`) ui_vs_create;")
+			-en2 (`optionVar -q "fix_vs_createInnerGeom"`)
+			ui_vs_create;
+
+		separator -style "none" -height 2;
+
+		floatSliderGrp
+			-field on
+			-label "Crack Offset"
+			-minValue 0
+			-maxValue 1
+			-fieldMinValue 0
+			-fieldMaxValue 1000.0
+			-step 0.001
+			-value `optionVar -q "fix_vs_crackOffset"`
+			ui_vs_crackOffset
+		;
+
+		separator -style "in" -height 10 -width $separatorWidth;
+
+		intSliderGrp
+			-field on
+			-label "Pieces"
+			-minValue 2
+			-maxValue 100
+			-fieldMinValue 2
+			-fieldMaxValue 1000
+			-step 1
+			-value `optionVar -q "fix_vs_pieces"`
+			-en (1 == (`optionVar -q "fix_vs_mode"`))
+			ui_vs_pieces
+		;
+
+		separator -style "none" -height 5;
+
+		checkBoxGrp
+			-numberOfCheckBoxes 1
+			-label "Use Seed"
+			-value1 `optionVar -q "fix_vs_useSeed"`
+			-cc1 ("intSliderGrp -edit -en (`checkBoxGrp -q -v1 ui_vs_useSeed`) ui_vs_seed;")
+			-en (1 == (`optionVar -q "fix_vs_mode"`))
+			ui_vs_useSeed;
+
+//		separator -style "none" -height 2;
+		
+		intSliderGrp
+			-field on
+			-label "Seed"
+			-minValue 1
+			-maxValue 9999
+			-fieldMinValue 1
+			-fieldMaxValue 9999
+			-step 1
+			-value `optionVar -q "fix_vs_seed"`
+			-en ( (1 == (`optionVar -q "fix_vs_useSeed"`)) && (1 == (`optionVar -q "fix_vs_mode"`)) )
+			ui_vs_seed
+		;
+
+		separator -style "none" -height 5;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 5;
+
+		rowColumnLayout  -numberOfColumns 3 
+			-columnWidth 1 148 
+			-columnWidth 2 148
+			-columnWidth 3 148;
+
+			button -label "Shatter" 
+				-ann "peform shatter" 
+				-command "fix_vs_setOptionVars(); deleteUI vshatterWindow; do_voronoiShatter;";
+
+			button -label "Apply" 
+				-ann "peform shatter" 
+				-command "fix_vs_setOptionVars(); do_voronoiShatter;";
+
+			button -label "Cancel" 
+				-ann "cancel this operation" 
+				-command "deleteUI vshatterWindow;";
+		
+		setParent ..;
+		
+	showWindow $vshatterWindow;
+
+	window -e -w $winWidth -h 216 $vshatterWindow; // width and height works only after window has been shown		
+
+}
+  
+ 

@@ -1,0 +1,397 @@
+/* ptb_help.mel
+
+This script may be freely distributed. Modify at your own risk.
+
+Author:		Dirk Bialluch (DirkBi@Software2000.de)
+
+Creation Date:	08.05.99
+Last Update:	03.08.99
+
+DESCRIPTION:
+	This script creates the Help UI for the Pivot Toolbox.
+*/
+
+//
+// Create Pivot Toolbox Help UI
+//
+
+global proc ptb_help (int $function)
+{
+string $helpText[];
+string $helpIcon[];
+string $helpTitle[];
+
+//
+// define help icons
+//
+
+string $helpIcon[17] =
+{
+	"ptb_setpivot.xpm",
+	"ptb_centerpivot.xpm",
+	"ptb_fitpivot.xpm",
+	"ptb_averagepivot.xpm",
+	"ptb_centersurfacepoints.xpm",
+	"ptb_centercurvepoints.xpm",
+	"ptb_unifypivots.xpm",
+	"ptb_fitobject.xpm",
+	"ptb_centerobject.xpm",
+	"ptb_setaxis.xpm",
+	"ptb_fitaxis.xpm",
+	"ptb_displaypivot.xpm",
+	"ptb_printpivot.xpm",
+	"ptb_creategeometry.xpm",
+	"ptb_groupatpivots.xpm",
+	"ptb_ui.xpm",
+	"ptb_about.xpm"
+};
+
+
+//
+// define help title
+//
+
+string $helpTitle[17] =
+{
+	"Set Pivot",
+	"Center Pivot to Object",
+	"Fit Pivot",
+	"Average Pivots",
+	"Center Pivot to Surface Points",
+	"Center Pivot to Curve Points",
+	"Unify Pivots",
+	"Fit Object",
+	"Center Object to Pivot",
+	"Set Local Axis",
+	"Fit Local Axis",
+	"Display Pivot",
+	"Print Pivot",
+	"Create Geometry",
+	"Group at Pivots",
+	"User Interface",
+	"About"
+};
+
+//
+// define help text
+//
+
+$helpText[0] =
+	"Set the pivot position of all selected objects to the world space coordinates specified.\n\n" + 
+	"Move\n" + 
+	"    Enable/disable world space axis\n\n" + 
+	"Pivot\n" + 
+	"    Choose affected pivot (scale/rotate)\n\n" +
+	"Coordinates\n" +
+	"    Move pivot absolute or relative";
+
+$helpText[1] =
+	"Center the pivot of all selected objects.\n\n" +
+	"Move\n" +
+	"    Enable/disable world space axis\n\n" +
+	"Pivot\n" +
+	"    Choose affected pivot (scale/rotate)\n\n" +
+	"Bounding Box\n" +
+	"    Choose the center position relative to the world space bounding box\n\n" +
+	"Base\n" +
+	"    ´Individual´ will center the pivot of each selected object to its own bounding box\n" +
+	"    ´Common´ will calculate a bounding box around all selected objects and set their pivot\n" +
+	"    to this position";
+
+$helpText[2] =
+	"Move the pivot of all selected objects to the world space position of the last selected one.\n" +
+	"This function requires at least two objects to be selected.\n\n" +
+	"Move\n" +
+	"    Enable/disable world space axis\n\n" +
+	"Pivot\n" +
+	"    Choose affected pivot (scale/rotate)\n\n\n\n" +
+	"Tips:\n" +
+	"    This function is great for hierachical animations.";
+
+$helpText[3] =
+	"Set the pivot of each selected object to the average position of all pivots.\n\n" +
+	"Move\n" +
+	"    Enable/disable world space axis\n\n" +
+	"Pivot\n" +
+	"    Choose affected pivot (scale/rotate)\n\n" +
+	"Center\n" +
+	"    ´Normal´ will calculate a bounding box around all pivots and set them to its center\n" +
+	"    ´Weighted´ will add all positions and divide the result by the number of pivots.";
+
+$helpText[4] =
+	"Center a nurbs surface pivot to selected control vertices.\n\n" +
+	"Move\n" +
+	"    Enable/disable world space axis\n\n" +
+	"Pivot\n" +
+	"    Choose affected pivot (scale/rotate)\n\n" +
+	"Selection\n" +
+	"    ´Point(s)´ will use selected control vertices and edit points to calculate the center\n" +
+	"    position for the curve pivot.\n" +
+	"    ´Object(s)´ will use the ´Point Number´ and ´Point Type´ to set the pivot to a single\n" +
+	"    fixed control vertice or edit point. This mode requires objects to be selected.\n\n" +
+	"Base\n" +
+	"    ´Individual´ will calculate a single bounding box for the points of each selected curve.\n" +
+	"    ´Common´ will calculate a bounding box around all selected points independent of their\n" +
+	"    curve membership.\n" +
+	"    This parameter is taken into account when 'Selection' is set to 'Point(s)'.\n\n" +
+	"Point Number UV\n" +
+	"    If ´Selection´ is set to ´Objects´ this numbers will define the control vertice or edit\n" +
+	"    point in u and v surface direction to use.";
+
+$helpText[5] =
+	"Center a nurbs curve pivot to selected control vertices or edit points.\n\n" +
+	"Move\n" +
+	"    Enable/disable world space axis\n\n" +
+	"Pivot\n" +
+	"    Choose affected pivot (scale/rotate)\n\n" +
+	"Selection\n" +
+	"    ´Point(s)´ will use selected control vertices and edit points to calculate the center\n" +
+	"    position for the curve pivot.\n" +
+	"    ´Object(s)´ will use the ´Point Number´ and ´Point Type´ to set the pivot to a single\n" +
+	"    fixed control vertice or edit point. This mode requires objects to be selected.\n\n" +
+	"Base\n" +
+	"    ´Individual´ will calculate a single bounding box for the points of each selected curve.\n" +
+	"    ´Common´ will calculate a bounding box around all selected points independent of their\n" +
+	"    curve membership.\n" +
+	"    This parameter is taken into account when 'Selection' is set to 'Point(s)'.\n\n" +
+	"Point Number\n" +
+	"    If ´Selection´ is set to ´Objects´ this number will define the control vertice or edit\n" +
+	"    point to use.\n\n" +
+	"Point Type\n" +
+	"    Define the point type (control vertice or edit point) you want to use.\n\n\n\n" +
+	"Tips:\n" +
+	"    Use this function to set the pivot of several nurbs curves to their first control\n" +
+	"    vertice.";
+
+$helpText[6] =
+	"Modify the relation of the scale and rotate pivot within an object.\n\n" +
+	"Move\n" +
+	"    Enable/disable world space axis\n\n" +
+	"Pivot\n" +
+	"    Scale to Rotate\n" +
+	"        Move the scale pivot to the rotate pivot\n" +
+	"    Rotate to Scale\n" +
+	"        Move the rotate pivot to the scale pivot\n" +
+	"    Average\n" +
+	"        Move both pivots to their average position\n" +
+	"    Swap\n" +
+	"        Exchange the scale and rotate pivot position";
+
+$helpText[7] =
+	"Move and rotate all selected objects to fit the last selected one. This function\n" +
+	"requires at least two objects to be selected.\n\n" +
+	"Source Pivot (affected object)\n" +
+	"    Choose the source object(s) pivot. ´Absolute´ will use the absolute world space\n" +
+	"    translation coordinates. ´Scale´ and ´Rotate´ will move the object relative to the\n" +
+	"    specific pivot point.\n\n" +
+	"Destination Pivot\n" +
+	"    Choose the destination object pivot. See ´Source Pivot´ for settings.\n\n" +
+	"Align Rotation\n" +
+	"    Enable/disable rotation axis. The rotation is always based on the rotate pivot.\n";
+
+$helpText[8] =
+	"Center all selected objects to their rotate/scale pivot.\n\n" +
+	"Move\n" +
+	"    Enable/disable world space axis\n\n" +
+	"Pivot\n" +
+	"    Choose the affected pivot (scale/rotate)\n\n" +
+	"Scale/Rotate Pivot\n" +
+	"    Choose if the other pivot should stay in its world space position (sticky) or move the\n" +
+	"    same distance with the object.\n\n" +
+	"Bounding Box\n" +
+	"    Choose the center position relative to the world space bounding box.";
+
+$helpText[9] =
+	"Set the local axis rotation of all selected objects to the object space values specified.\n\n" +
+	"Rotate\n" +
+	"    Enable/disable rotation axis\n\n" +
+	"Coordinates\n" +
+	"    Rotate local axis absolute or relative";
+
+$helpText[10] =
+	"Rotate the local axis of all selected objects to fit the last selected one. This function\n" +
+	"requires at least two objects to be selected.\n\n" +
+	"Rotate\n" +
+	"    Enable/disable rotation axis";
+
+$helpText[11] =
+	"Show/hide the different pivot types for the selected objects.\n\n" +
+	"Display\n" +
+	"    Choose the operation mode (show/hide/toggle)\n\n" +
+	"Pivot\n" +
+	"    Set the pivot type you want to affect (rotate/scale/local axis)";
+
+$helpText[12] =
+	"Output the pivot values of selected objects to the script editor window.\n\n" +
+	"Pivot\n" +
+	"    ´Absolute´ will print the object translation coordinates.\n" +
+	"    ´Scale´ will print the scale pivot coordinates.\n" +
+	"    ´Rotate´ will print the rotate pivot coordinates.\n" +
+	"    ´Local Axis´ will print the local axis rotation values.\n\n" +
+	"Coordinates\n" +
+	"    Choose between world or object space values. If the pivot type is set to 'Local Axis'\n" +
+	"    this field is disabled and you can only print object space values.";
+
+$helpText[13] =
+	"Create geometry and position/rotate it relative to the destination object´s pivot.\n\n" +
+	"Source Pivot\n" +
+	"    Choose the source object(s) pivot. ´Absolute´ will use the absolute world space\n" +
+	"    translation coordinates. ´Scale´ and ´Rotate´ will move the object relative to the\n" +
+	"    specific pivot point.\n\n" +
+	"Destination Pivot (new geometry)\n" +
+	"    Choose the destination object pivot. See ´Source Pivot´ for settings.\n\n" +
+	"Geometry\n" +
+	"    ´Locator´ will create locator nodes\n" +
+	"    ´User defined´ will use the last selected object (hierachy) and duplicate it\n\n" +
+	"Group\n" +
+	"    ´World´ will create the new geometry under the world root node.\n" +
+	"    ´Parent´ will parent the new geometry to the source object.\n" +
+	"    ´Group´ will group the source and destination object. The group is created at the\n" +
+	"    source object´s level.\n\n" +
+	"Replace\n" +
+	"    If 'replace' is enabled the selected source object(s) will be deleted. The new geometry\n" +
+	"    is placed under the same parent. The deleted object names will be printed to the script\n" +
+	"    editor as a reminder.\n\n" +
+	"Align Rotation\n" +
+	"    Enable/disable rotation axis. The rotation is always based on the rotate pivot.\n";
+
+$helpText[14] =
+	"Group selected objects and place the pivot depending on the 'Center' settings.\n\n" +
+	"Move\n" +
+	"    Enable/disable world space axis\n\n" +
+	"Pivot\n" +
+	"    Choose affected pivot (scale/rotate)\n\n" +
+	"Center\n" +
+	"    ´Normal´ will center the group pivot to a bounding box around the selected pivots.\n" +
+	"    ´Weighted´ will add all positions and divide the result by the number of pivots.\n" +
+	"    ´Last selection´ will use the pivot of the last selected object.";
+
+$helpText[15] =
+	"The image button to the left of each function will execute the tool.\n\n" +
+
+	"A short information about the current function will be displayed in the help line when you\n" +
+	"move the cursor over the image button.\n\n" +
+
+	"The help button at the right of each function will call the help window and automatically\n" +
+	"set the corresponding tab. Pressing the same help button again will close the help window.\n" +
+	"You can choose another help tab while the help window is open by either clicking on a help\n" +
+	"window tab directly or by clicking another help button in the Pivot Toolbox.\n\n" +
+
+	"A double click on a Pivot Toolbox Tab will call this help text (UI).";
+
+$helpText[16] =
+	"Pivot Toolbox V1.2\n\n" +
+	"Programmed by Dirk Bialluch 1998-1999\n\n" +
+	"Compatible with Maya 1.0 and higher\n\n\n" +
+	"To contact me send a mail to <DirkBi@Software2000.de>";
+
+//
+// build help UI
+//
+	// correct help number (keep inside valid range)
+	if ($function < 1)
+		$function = size($helpText);
+	if ($function > size($helpText))
+		$function = 1;
+
+	global int $ptb_helpTopic;
+	$ptb_helpTopic = $function;
+
+	if (`window -exists ui_ptbHelp` == true)
+	{
+		if (`tabLayout -q -sti ui_ptbHelpTab` == $function)
+		{
+			// delete help window, if the same function was called again
+			deleteUI ui_ptbHelp;
+			return;
+		}
+		// select tab (remote controlled by PTB)
+		tabLayout
+			-e
+			-sti $function
+			ui_ptbHelpTab;
+	}
+	else
+	{
+
+	window
+		-menuBar false
+		-maximizeButton false
+		-title "Pivot Toolbox Help"
+		-iconName "Pivot Toolbox Help"
+		-rtf false
+		ui_ptbHelp;
+
+		tabLayout
+			-scr true
+			-cc "ui_ptbHelp_changeTab"
+			-image "ptb24.xpm"
+			-iv true
+			ui_ptbHelpTab;
+
+			int $count;
+			for ($count = 0; $count < size ($helpText); $count++)
+			{
+				columnLayout
+					-adj true
+					-cat "both" 0
+					$helpTitle[$count];
+					separator
+						-height 15
+						-style "in";
+					rowLayout
+						-numberOfColumns 4
+						-columnWidth 1 50
+						-columnWidth 2 420
+						-columnWidth 3 42
+						-columnWidth 4 42
+						-rat 3 "both" 0
+						-rat 4 "both" 0;
+						picture
+							-image $helpIcon[$count];
+						text
+							-al "left"
+							-label $helpTitle[$count];
+						button
+							-align "center"
+							-label "<"
+							-w 40
+							-command "ptb_help ($ptb_helpTopic - 1)";
+						button
+							-align "center"
+							-label ">"
+							-w 40
+							-command "ptb_help ($ptb_helpTopic + 1)";
+						setParent ..;
+					separator
+						-height 15
+						-style "in";
+					columnLayout
+						-cal "left";
+						text -l $helpText[$count];
+						setParent ..;
+					setParent ..;
+			}
+
+	// automatically select tab (remote controlled by PTB)
+	tabLayout
+		-e
+		-sti $function
+		ui_ptbHelpTab;
+
+	showWindow ui_ptbHelp;
+	}
+}
+
+
+//
+// change command for help tab switch
+//
+
+global proc ui_ptbHelp_changeTab ()
+{
+	global int $ptb_helpTopic;
+	$ptb_helpTopic = `tabLayout -q -sti ui_ptbHelpTab`;
+}
+
+// end of script

@@ -1,0 +1,102 @@
+
+global proc fix_renameCleanupAllMaterials( )
+{
+
+	string $SG[];
+	string $tmp;
+
+/////////////////////
+
+	MLdeleteUnused;
+	
+/// files
+
+
+	string $files[] = `ls -tex`;
+	for ($tmp in $files){
+		catch(`rename $tmp "fileTMP"`);
+	}
+	$files = `ls -tex`;
+	for ($tmp in $files){
+		catch(`rename $tmp "file"`);
+	}
+
+/// placements
+
+	string $placements[] = `ls -typ place2dTexture`;
+	for ($tmp in $placements){
+		catch(`rename $tmp "place2dTextureTMP"`);
+	}
+	$placements = `ls -typ place2dTexture`;
+	for ($tmp in $placements){
+		setAttr -l 0 ($tmp+".coverageU");
+		setAttr -l 0 ($tmp+".coverageV");
+		setAttr -l 0 ($tmp+".translateFrameU");
+		setAttr -l 0 ($tmp+".translateFrameV");
+		setAttr -l 0 ($tmp+".rotateFrame");
+		setAttr -l 0 ($tmp+".offsetU");
+		setAttr -l 0 ($tmp+".offsetV");
+		setAttr -l 0 ($tmp+".rotateUV");
+		setAttr -l 0 ($tmp+".noiseU");
+		setAttr -l 0 ($tmp+".noiseV");
+		setAttr -l 0 ($tmp+".mirrorU");
+		setAttr -l 0 ($tmp+".mirrorV");
+		setAttr -l 0 ($tmp+".wrapU");
+		setAttr -l 0 ($tmp+".wrapV");
+		setAttr -l 0 ($tmp+".stagger");
+
+		setAttr -l 1 ($tmp+".coverageU") 1;
+		setAttr -l 1 ($tmp+".coverageV") 1;
+		setAttr -l 1 ($tmp+".translateFrameU") 0;
+		setAttr -l 1 ($tmp+".translateFrameV") 0;
+		setAttr -l 1 ($tmp+".rotateFrame") 0;
+		setAttr -l 1 ($tmp+".offsetU") 0;
+		setAttr -l 1 ($tmp+".offsetV") 0;
+		setAttr -l 1 ($tmp+".rotateUV") 0;
+		setAttr -l 1 ($tmp+".noiseU") 0;
+		setAttr -l 1 ($tmp+".noiseV") 0;
+		setAttr -l 1 ($tmp+".mirrorU") 0;
+		setAttr -l 1 ($tmp+".mirrorV") 0;
+		setAttr -l 1 ($tmp+".wrapU") 1;
+		setAttr -l 1 ($tmp+".wrapV") 1;
+		setAttr -l 1 ($tmp+".stagger") 0;
+
+		catch(`rename $tmp "place2dTexture"`);
+	}
+
+	
+
+/// Materials and ShadingGroups
+
+	string $materials[] = `ls -mat`;
+
+	for ($tmp in $materials)
+		{
+
+		$SG = `listConnections -p 0 -t shadingEngine $tmp`;
+		$err = catch(`rename $tmp "MatTMP"`);
+		if ($err == 0)
+			{
+			catch(`rename $SG[0] "SGTMP"`);
+			}
+		}
+
+	$materials = `ls -mat`;
+
+	for ($tmp in $materials)
+		{
+
+		$SG = `listConnections -p 0 -t shadingEngine $tmp`;
+		$err = catch(`rename $tmp "Mat"`);
+		if ($err == 0)
+			{
+			catch(`rename $SG[0] "SG"`);
+			}
+		}
+
+	print ("Done.\n");
+
+
+
+
+}

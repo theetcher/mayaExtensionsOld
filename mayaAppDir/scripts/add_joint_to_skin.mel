@@ -1,0 +1,38 @@
+// created by Kustaa Vuori
+// vuori_k@hotmail.com
+
+// with this script you can add a joint to an existing SkinCluster. Wohoouu!
+// for some reason component editor doesnt show the added joints, 
+// you have to reload the scene and youll see them in there.
+
+// first select mesh and then joints that should be added.
+
+global proc add_joint_to_skin()
+{
+	//defining selection
+	$size = (size(`ls -sl`)-1);
+	$first = `ls -sl -head 1`;
+	$last = `ls -sl -tail $size`;
+
+	//unlocking skinweights
+	select $first;
+	$joints = `skinCluster -q -wi`;
+	for($i=0; $i<(size($joints)); $i++)
+	{
+  		setAttr ($joints[$i] + ".lockInfluenceWeights") 1;
+	}
+
+	//adding joint to skinCluster
+	skinCluster -e -ai $last skinCluster1;
+	for($i=0; $i<(size($joints)); $i++)
+	{
+  		setAttr ($joints[$i] + ".lockInfluenceWeights") 0;
+	}
+
+	//fixing normalization
+	select $first;
+	skinCluster -e -ubk;
+	select -add $joints;
+	select -add $last;
+	newSkinCluster "-toSelectedBones -mi 5 -dr 4";
+}

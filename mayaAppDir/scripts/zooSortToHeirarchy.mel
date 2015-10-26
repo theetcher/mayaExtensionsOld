@@ -1,0 +1,76 @@
+//
+// Sort To Heirarchy
+//
+// Created by Hamish McKenzie mel@mel.macaronikazoo.com
+// Created : 17 August 2003
+//
+// Description:
+// given a list of objects, will return an array ordered by heirarchy, from
+// highest to lowest.
+//
+// Hamish McKenzie ©2003...
+// Macaroni Kazoo Productions ©2003...
+
+
+//returns a list of objects sorted by heirarchy, highest to lowest
+global proc string[] zooSortToHeirarchy( string $objectList[] ) {
+	string $transforms[] = `ls -type transform $objectList`;
+	string $remaining[] = $transforms;
+	string $sorted[];
+
+	while( `size $remaining` > 0 ){
+		string $newRoots[] = `zooSortToListRoots $remaining`;
+		$sorted = `zooSortToAddArray $sorted $newRoots`;
+		$remaining = `zooSortToSubtractArray $remaining $newRoots`;
+		}
+
+	return $sorted;
+	}
+
+
+//lists root level objects.  ie objects that have no parents in the objectList
+global proc string[] zooSortToListRoots( string $objectList[] ) {
+	string $roots[];
+	for( $obj in $objectList ) {
+		string $objParents[] = `listRelatives -ap -pa -type transform $obj`;
+		int $isRootLevel = 1;
+		for( $parent in $objParents ){
+			for( $isInList in $objectList ){
+				if( $parent == $isInList ) $isRootLevel = 0;
+				}
+			}
+		if( $isRootLevel ) $roots[( `size $roots` )] = $obj;
+		}
+	return $roots;
+	}
+
+
+//adds array2 to the end of array1
+global proc string[] zooSortToAddArray( string $array1[], string $array2[] ) {
+	for( $entry in $array2 ) $array1[( `size $array1` )] = $entry;
+	return $array1;
+	}
+
+
+//subtracts array 2 from array 1
+global proc string[] zooSortToSubtractArray( string $array1[], string $array2[] ) {
+	string $returnArray[];
+	for( $entry1 in $array1 ){
+		int $isInArray = 0;
+		for( $entry2 in $array2 ){
+			if( $entry1 == $entry2 ) $isInArray = 1;
+			}
+		if( !$isInArray ) $returnArray[( `size $returnArray` )] = $entry1;
+		}
+	return $returnArray;
+	}
+
+
+//reverses the order of an array
+global proc string[] zooSortToReverseArray( string $array[] ){
+	string $reversedArray[];
+	int $arraySize = `size $array`;
+
+	for( $n = 0; $n < $arraySize; $n++ ) $reversedArray[( $arraySize - 1 - $n )] = $array[$n];
+	return $reversedArray;
+	}

@@ -1,0 +1,39 @@
+/* XPM */
+static char *pasteU[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #040204",
+". c #848684",
+"# c #d4d5d4",
+"a c #243e9c",
+"b c #fafbfa",
+"c c #676967",
+"d c #193074",
+"e c #c2c0c2",
+/* pixels */
+"eeeeeeeee#eeeeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"eeeeeeeeeeadaeeeeeeeeeee",
+"eeeeeeee..ada.eeeeeeeeee",
+"eeee....cbada`.c.c#eeeee",
+"eee.bbbcbeddd.`eee`eeeee",
+"eee.bbcb##aad..`e.deeeee",
+"eee.b#````ada```ee`#eeee",
+"eee.b#bbb#addeee.edeeeee",
+"eee.#bb###adaeeeee`eeeee",
+"eee.b#b#b#adde.e.e`eeeee",
+"eee.#b####dad......eeeee",
+"eee.bb#be#dddbbbbb.deeee",
+"eee.b##e#edadbbbbb.#deee",
+"eee.##be#eddacccbb.``dee",
+"eee.###ee.addbbbbbb##`#e",
+"eee.eeeeeedadccccccc#dee",
+"eeeed`````ddabbbbbbb#`ee",
+"eeeeee#eeeaddccccccc#dee",
+"eeeeeeeeeeadae#e#e#e#`ee",
+"eeeeeeeeeedad````d`d`dee",
+"eeeeeeeeeeadaeeeeeee#eee",
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeeeeee#"
+};

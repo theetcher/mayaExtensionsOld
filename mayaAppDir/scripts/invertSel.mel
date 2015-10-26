@@ -1,0 +1,138 @@
+// invertSel.mel ------------------------------------------------- //
+//                                                                 //
+// Script Name:   invertSel                                        //
+//                                                                 //
+// Creation Date: 02/10/00                                         //
+//                                                                 //
+// Last Updated:  11/29/00                                         //
+//                                                                 //
+// Author:        Morris Olmsted                                   //
+//                                                                 //
+// Description:   This procedure was created to give a quicker way //
+//                to invert your current selection on any given    //
+//                selected surface.                                //
+//                                                                 //
+// --------------------------------------------------------------- //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply determines what kind of component is      //
+// currently selected and inverts the current selection of the same//
+// type of components.                                             //
+// --------------------------------------------------------------- //
+global proc invertSel()
+{
+    string $SelectedObj[0] = `ls -sl -fl`;
+    string $array1[];
+    string $array2[];
+
+    tokenize $SelectedObj[0] "." $array1;
+    tokenize $array1[1] "[" $array2;
+
+    if ($array2[0] == "cv")             // Nurbs CVs are selected //
+    {
+        string $sel[0] = `filterExpand -ex 1 -sm 28`;
+        string $par[0] = `listRelatives -p $sel[0]`;
+        string $nSel[0] = `ls ($par[0] + ".cv[*][*]")`;
+
+        select -r $nSel[0];
+
+        string $all[0] = `filterExpand -ex 1 -sm 28`;
+
+        select -r $all;
+        select -d $sel;
+
+        clear $sel;
+        clear $par;
+        clear $nSel;
+        clear $all;
+    }
+
+    else if ($array2[0] == "vtx")       // Poly Vertexes are selected //
+    {
+        string $sel[0] = `filterExpand -ex 1 -sm 31`;
+        string $par[0] = `listRelatives -p $sel[0]`;
+        string $nSel[0] = `ls ($par[0] + ".vtx[*]")`;
+
+        select -r $nSel[0];
+
+        string $all[0] = `filterExpand -ex 1 -sm 31`;
+
+        select -r $all;
+        select -d $sel;
+
+        clear $sel;
+        clear $par;
+        clear $nSel;
+        clear $all;
+
+    }
+
+    else if ($array2[0] == "f")       // Poly Faces are selected //
+    {
+        string $sel[0] = `filterExpand -ex 1 -sm 34`;
+        string $par[0] = `listRelatives -p $sel[0]`;
+        string $nSel[0] = `ls ($par[0] + ".f[*]")`;
+
+        select -r $nSel[0];
+
+        string $all[0] = `filterExpand -ex 1 -sm 34`;
+
+        select -r $all;
+        select -d $sel;
+
+        clear $sel;
+        clear $par;
+        clear $nSel;
+        clear $all;
+
+    }
+
+    else if ($array2[0] == "pt")       // Lattice points are selected //
+    {
+        string $sel[0] = `filterExpand -ex 1 -sm 46`;
+        string $par[0] = `listRelatives -p $sel[0]`;
+        string $nSel[0] = `ls ($par[0] + ".pt[*][*][*]")`;
+
+        select -r $nSel;
+
+        string $all[0] = `filterExpand -ex 1 -sm 46`;
+
+        select -r $all;
+        select -d $sel;
+
+        clear $sel;
+        clear $par;
+        clear $nSel;
+        clear $all;
+
+    }
+
+    else if ($array2[0] == "e")       // Poly Vertexes are selected //
+    {
+        string $sel[0] = `filterExpand -ex 1 -sm 32`;
+        string $par[0] = `listRelatives -p $sel[0]`;
+        string $nSel[0] = `ls ($par[0] + ".e[*]")`;
+
+        select -r $nSel[0];
+
+        string $all[0] = `filterExpand -ex 1 -sm 32`;
+
+        select -r $all;
+        select -d $sel;
+
+        clear $sel;
+        clear $par;
+        clear $nSel;
+        clear $all;
+
+    }
+
+    else  print ("\nWARNING:  I can't invert this type of component.\n");
+
+    clear $SelectedObj;
+    clear $array1;
+    clear $array2;
+
+} // end of invertSel //
+

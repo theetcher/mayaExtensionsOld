@@ -1,0 +1,62 @@
+global proc fix_findShader(){
+
+	string $currentSelection[] = `ls -sl -l`;
+	
+	PolySelectConvert 1;
+
+	string $comps[] = `ls -sl -fl -l`;
+	if (size($comps)) {
+
+		// find the shape node
+		string $shape[] = `listRelatives -f -parent $comps[0]`;
+		
+		// find the shading engine
+		string $connections[] = `listConnections -s 0 -type "shadingEngine" $shape[0]`;
+		
+		if (size($connections)) {
+
+			// there may be more than one shading group connected to the
+			// geometry so find the exact one
+			$connections = `stringArrayRemoveDuplicates $connections`;
+			string $shadingGroup;
+
+			for ($connection in $connections){
+				int $result = `sets -isMember $connection $comps[0]`;
+				if ($result == 1) {$shadingGroup = $connection;}
+			}
+			
+			// if no shading group has been found, the components must not be
+			// mapped - this means the shape is mapped
+			if ($shadingGroup == ""){
+				for ($connection in $connections){
+					int $result = `sets -isMember $connection $shape[0]`;
+					if ($result == 1) {$shadingGroup = $connection;}
+				}
+			}
+			
+			if ($shadingGroup == "") {
+				$shadingGroup = $connections[0];
+			}
+
+			if ($shadingGroup != "") {
+				// find the shader connected to the shading group
+				string $shaderConnection = `connectionInfo -sourceFromDestination ($shadingGroup + ".surfaceShader")`;
+				if (!size($shaderConnection)) $shaderConnection = `connectionInfo -sourceFromDestination ($shadingGroup + ".miMaterialShader")`;
+
+				string $shader[];
+				tokenize $shaderConnection "." $shader;
+
+                select -replace $shader[0];
+                showEditor $shader[0];
+
+			}
+		} else {
+			error ("Can't find any Shading Groups.");
+			select $currentSelection;
+		}
+
+	} else {
+		error ("No component selected: Select a component to see its material attributes.");
+		select $currentSelection;
+	}	
+}

@@ -1,0 +1,17 @@
+
+// Combines objects, parents it to the first selected object's parent and deletes history //
+
+global proc freezeRotToWorld( )
+{
+
+	string $tmp1[];
+	string $parent[];
+	string $target[];
+	$target = `ls -sl -l`;
+	$parent = `listRelatives -p -pa $target[0]`;
+	select $target[0];
+	if ($parent[0] != "") $tmp1 = `parent -w $target[0]`;
+	makeIdentity -apply true -t 0 -r 1 -s 0;
+	if ($parent[0] != "") parent $tmp1[0] $parent[0];
+	
+}

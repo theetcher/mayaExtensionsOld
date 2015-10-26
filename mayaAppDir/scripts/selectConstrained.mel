@@ -1,0 +1,12 @@
+
+// selects all constrained objects in scene. Valid constraint types are - "pointConstraint", "orientConstraint", "aimConstraint"
+
+global proc selectConstrained( string $constrType )
+{
+//	string $allConstraints[];
+	string $allConstraints[] = `ls -typ $constrType`;
+	select -cl;
+	for ($constr in $allConstraints) {
+		select -add (`listConnections -s 0 -d 1 -et 1 -type "transform" $constr`);
+	}
+}

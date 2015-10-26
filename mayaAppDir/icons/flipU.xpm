@@ -1,0 +1,39 @@
+/* XPM */
+static char *flipU[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #12308f",
+". c #7480aa",
+"# c #f10d0e",
+"a c #c1bfc3",
+"b c #3a4f96",
+"c c #e94344",
+"d c #c48c8c",
+"e c #5c1e1c",
+/* pixels */
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaa.aaaaaaaaaaaaaaa",
+"aaaaaaab`aaaaaaaaaaaaaaa",
+"aaaaaab``.aaaaaaaaaaaaaa",
+"aaaaab`a`aaaaaaaaaaaaaaa",
+"aaaab`aa`aaaaaaaaaaaaaaa",
+"aaaa`````aaaaaaaaaaaaaaa",
+"aaaa`baa`aaaaaaaaaaaaaaa",
+"aaaa.`.a`.aaaab.aaaaaaaa",
+"aaaaa.`.`aaaaa``.aaaaaaa",
+"aaaaaab``aaaaa`.`aaaaaaa",
+"aaacdaa``aaaaa`a.`aaaaaa",
+"aa###aaa.aaaaa`aab`aaaaa",
+"aad###aacaaaa.`aaab`aaaa",
+"aaa`##c##daaaa`aaaab`aaa",
+"aaa.b####caaaa```````aaa",
+"aaaaae####aaa.`a.a.`.aaa",
+"aaaaae#####aaa`aaa`baaaa",
+"aaaaaee####aaa`aa`baaaaa",
+"aaaaaabe###aa.`ab`aaaaaa",
+"aaaaaaaaaaaaaa`b`aaaaaaa",
+"aaaaaaaaaaaaaa``.aaaaaaa",
+"aaaaaaaaaaaaaa`.aaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa"
+};

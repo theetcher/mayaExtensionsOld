@@ -1,0 +1,21 @@
+global proc fix_selectPolyShell ()
+{
+	
+	int $prevVertices[];
+	int $prevEdges[];
+	int $prevFace[];
+	int $crntVertices[] = `polyEvaluate -vc`;
+	int $crntEdges[] = `polyEvaluate -ec`;
+	int $crntFace[] = `polyEvaluate -fc`;
+
+	do { 
+	   $prevVertices = $crntVertices;
+	   $prevEdges = $crntEdges;
+	   $prevFace = $crntFace;
+		growSelection();
+		$crntVertices = `polyEvaluate -vc`;
+		$crntEdges = `polyEvaluate -ec`;
+		$crntFace = `polyEvaluate -fc`;
+	} while (($crntVertices[0] != $prevVertices[0])||($crntEdges[0] != $prevEdges[0])||($crntFace[0] != $prevFace[0]));
+
+}

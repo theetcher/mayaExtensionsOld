@@ -1,0 +1,18 @@
+global proc fx_deleteMultiSG()
+{
+
+	string $materials[] = `ls -mat`;
+	string $SGs[];
+	string $assignedObjects[];
+	
+	$materials = stringArrayRemove( { "particleCloud1", "lambert1" }, $materials );
+	
+	for ($mat in $materials) {
+		$SGs = `listConnections -s 0 -d 1 -type shadingEngine $mat`;
+		$assignedObjects = `sets -q $SGs`;
+		for ($SG in $SGs) sets -clear $SG;
+		sets -add $SGs[0] $assignedObjects;
+		MLdeleteUnused();
+	}
+
+}

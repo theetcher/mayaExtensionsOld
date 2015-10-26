@@ -1,0 +1,593 @@
+
+//--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
+//
+//		MEL Script: f3dDuplicatorX
+//
+//		Description:
+//				Duplicate objects onto the 
+//						surface CV,
+//						mesh components(vertex,edge,facet),
+// 						particles, 
+// 						lacttice points; 
+//				a little like the custom effect "Duplicator+" in SOFTIMAGE|3D
+//		
+//		Usage:
+//			1) Copy this MEL script into :
+//
+//				UNIX 
+//				[~username]/maya/scripts
+//
+//				Windows 2000 Professional 
+//				c:\Documents and Settings\[my-login-name]\maya\scripts
+//	
+//				Windows NT 
+//				C:/WINNT/Profiles/[my-login-name]/maya/scripts"
+//
+//			2) Start maya,
+//
+//			3) Type "f3dDuplicatorX" in maya command line or drag it into selves
+//
+//			4) Just follow the instruction....
+//		
+//		Written by fake3d
+//				Any question and suggestions, welcome to drop me a line!!
+//			fake3d@seed.net.tw
+//			http://go.to/fake3d
+//--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
+global proc f3dDuplicatorX()
+{
+	if(`window -ex f3dWindow01`) 
+		deleteUI -window f3dWindow01;
+		
+	window -widthHeight 440 360 -menuBar true -title "f3dDuplicatorX" f3dWindow01;
+    	menu -label "Help" -helpMenu true;
+    		menuItem -label "About f3dDuplicatorX" -en false;
+
+		string $form01=`formLayout -numberOfDivisions 100`;
+    	
+    	string $column01 = `columnLayout `;
+
+        	    text -label "Step 1:";
+            	rowColumnLayout -numberOfColumns 2 
+            				-columnWidth 1 220 -columnWidth 2 120;
+                	global string $button1, $status01;
+                	text -label "Pick Components of Surf./Mesh Then  " -align "right";
+	                $button1 = `button -label "Get" -w 80`;
+    	            text -label "The components would be " -align "right";
+        	        $status01 = `text -label "Nothing"`;
+            	    setParent ..;
+
+	            text -label "Step 2:";
+    	        rowColumnLayout -numberOfColumns 2 
+        	    			-columnWidth 1 220 -columnWidth 2 120;
+            	    global string $button2, $status02;
+                	text -label "Pick Object for Duplicate Then  " -align "right";
+	                $button2 = `button -label "Get" -w 80`;
+    	            text -label "The object for duplication would be " -align "right";
+        	        $status02 = `text -label "Nothing"`;
+            	    setParent ..;
+                
+            	text -label "Step 3:";
+	            rowColumnLayout -numberOfColumns 2 
+    	            		-columnWidth 1 220 -columnWidth 2 120;
+        	        text -label "Toggle Align Surface/Mesh Normal :  " -align "right";
+            	    global string $checkBox1;
+                	$checkBox1 = `checkBox -label "Align"`;
+	                setParent ..;
+	            
+	            text -label "Step 4:";
+	            rowColumnLayout -numberOfColumns 2 
+    	            		-columnWidth 1 140 -columnWidth 2 240;
+        	        text -label "Jittering : " -align "right";
+        	        	rowColumnLayout -numberOfColumns 5
+                			-columnWidth 1 80 
+                			-columnWidth 2 40 
+                			-columnWidth 3 40
+                			-columnWidth 4 40
+                			-columnWidth 5 40;
+                			
+                			text -label "Amplitude : " -align "right";
+                			text -label "X" -align "center";
+                			text -label "Y" -align "center";
+                			text -label "Z" -align "center";
+                			text -label "Seed" -align "center";
+                		setParent ..;
+                		text -label " ";
+                		rowColumnLayout -numberOfColumns 5
+                			-columnWidth 1 80 
+                			-columnWidth 2 40 
+                			-columnWidth 3 40
+                			-columnWidth 4 40
+                			-columnWidth 5 40;
+                			
+                			global string $checkBoxS1, $checkBoxR1, $checkBoxT1, $checkBoxShape1;
+                			global string $textFieldSX, $textFieldSY, $textFieldSZ; 
+                			global string $textFieldRX, $textFieldRY, $textFieldRZ; 
+                			global string $textFieldTX, $textFieldTY, $textFieldTZ; 
+                			global string $textFieldShapeX, $textFieldShapeY, $textFieldShapeZ; 
+                			global string $textFieldSeedS, $textFieldSeedR, $textFieldSeedT, $textFieldSeedShape;
+                			global float	$pAmp[12];
+                			global int		$seedX[4];
+                			
+                			$seedX[0]=17;
+                			$seedX[1]=17;
+                			$seedX[2]=17;
+                			$seedX[3]=17;
+                			$pAmp[0]=0.1; $pAmp[1]=0.1; $pAmp[2]=0.1;
+                			$pAmp[3]=10; $pAmp[4]=10; $pAmp[5]=10;
+                			$pAmp[6]=0.1; $pAmp[7]=0.1; $pAmp[8]=0.1;
+                			$pAmp[9]=0.1; $pAmp[10]=0.1; $pAmp[11]=0.1;
+                			
+                			$checkBoxS1 = `checkBox -label "Scale:" -value false`; 
+                			$textFieldSX = `textField -text $pAmp[0]`; 
+                			$textFieldSY = `textField -text $pAmp[1]`; 
+                			$textFieldSZ = `textField -text $pAmp[2]`; 
+                			$textFieldSeedS = `textField -text $seedX[0]`; 
+                			
+                			$checkBoxR1 = `checkBox -label "Rotate:" -value false`; 
+                			$textFieldRX = `textField -text $pAmp[3]`; 
+                			$textFieldRY = `textField -text $pAmp[4]`; 
+                			$textFieldRZ = `textField -text $pAmp[5]`; 
+                			$textFieldSeedR = `textField -text $seedX[1]`; 
+                			
+                			$checkBoxT1 = `checkBox -label "Translate:" -value false`;
+                			$textFieldTX = `textField -text $pAmp[6]`; 
+                			$textFieldTY = `textField -text $pAmp[7]`; 
+                			$textFieldTZ = `textField -text $pAmp[8]`; 
+                			$textFieldSeedT = `textField -text $seedX[2]`; 
+                			
+                			$checkBoxShape1 = `checkBox -label "Shape:" -value false`;
+                			$textFieldShapeX = `textField -text $pAmp[9]`; 
+                			$textFieldShapeY = `textField -text $pAmp[10]`; 
+                			$textFieldShapeZ = `textField -text $pAmp[11]`; 
+                			$textFieldSeedShape = `textField -text $seedX[3]`; 
+    	
+    	global string $button3, $button4;
+		setParent f3dWindow01;
+    	$button3 = `button -label "Go" -h 28 -enable false`;
+		setParent f3dWindow01;
+    	$button4 = `button -label "Close" -h 28`;
+               
+		formLayout -edit
+    		-attachForm     $column01	"top"	5
+	    	-attachForm     $column01	"left" 	5
+    		-attachForm		$column01	"right"	5 
+    		
+	    	-attachForm     $button3	"bottom"	5
+    		-attachForm     $button3	"left" 	5
+    		-attachPosition  $button3    "right" 3 60 
+    
+    		-attachForm     $button4	"bottom"	5
+	    	-attachForm     $button4	"right" 	5
+    		-attachControl  $button4    "left" 2 $button3
+    	 	
+    		$form01;
+    		
+		//
+    	//  Add function
+    	//
+    	string	$tmpName[];
+    	string 	$pCom[], $dupOO[];
+    	global int $bNor=0, $tglJitterX[4];
+    	
+    	$tglJitterX[0]=0;
+    	$tglJitterX[1]=0;
+    	$tglJitterX[2]=0;    	
+    	$tglJitterX[3]=0;
+    	
+    	button -edit -command (
+    			"	$pCom = `ls -sl -fl`;																				"+
+    			"	$tmpName = `ls -sl -fl -showType`;																	"+
+    			"	if( ($tmpName[1] == \"float3\") || ($tmpName[1] == \"double3\") )									"+
+    			"	{																									"+
+    			"		$tmpName[0] = \"< \" + $tmpName[0] + \" ... >\";												"+
+    			"		text -edit -label $tmpName[0] $status01;														"+
+    			"	}																									"+
+    			"	else																								"+
+    			"	text -edit -label \"Nothing\" $status01;															"+
+    			"	if( (`text -q -label $status01` != \"Nothing\") && (`text -q -label $status02` != \"Nothing\") )	"+
+    			"		button -edit -enable true $button3;																"+
+    			"	else																								"+
+    			"		button -edit -enable false $button3;															"
+    							) $button1;
+    							
+    	button -edit -command (
+				"	$dupOO = `ls -sl -o`;																				"+
+				"	if( $dupOO[0] != \"\" )																				"+
+    			"	{																									"+
+				"		select $dupOO[0];																				"+
+    			"		$tmpName = `ls -sl -s`;																			"+
+    			"		if($tmpName[0]!=\"\")																			"+
+    			"		{																								"+
+    			"			pickWalk -d up;																				"+
+    			"			$dupOO = `ls -sl -o`;																		"+
+    			"		}																								"+
+    			"		$tmpName[0] = \"< \" + $dupOO[0] + \" >\";														"+
+    			"		text -edit -label $tmpName[0] $status02;														"+
+    			"	}																									"+
+    			"	else																								"+
+    			"	text -edit -label \"Nothing\" $status02;															"+
+    			"	if( (`text -q -label $status01` != \"Nothing\") && (`text -q -label $status02` != \"Nothing\") )	"+
+				"		button -edit -enable true $button3;																"+
+	    		"	else																								"+
+    			"		button -edit -enable false $button3;															"
+    							)	$button2;
+    							
+    	checkBox -edit 
+    				-onCommand "$bNor=1"
+    				-offCommand "$bNor=0"    				
+    				$checkBox1;
+    				
+    	checkBox -edit
+    				-onCommand "$tglJitterX[0]=1; "
+    				-offCommand "$tglJitterX[0]=0; "
+    				$checkBoxS1;
+    	
+    	checkBox -edit
+    				-onCommand "$tglJitterX[1]=1; "
+    				-offCommand "$tglJitterX[1]=0; "
+    				$checkBoxR1;
+    				
+		checkBox -edit
+    				-onCommand "$tglJitterX[2]=1; "
+    				-offCommand "$tglJitterX[2]=0; "
+       				$checkBoxT1;
+       				
+       	checkBox -edit
+    				-onCommand "$tglJitterX[3]=1; "
+    				-offCommand "$tglJitterX[3]=0; "
+       				$checkBoxShape1;
+    				    				
+    	button -edit -command (
+    						"		if((`checkBox -q -value $checkBox1`==true))					"+
+    						"		{															"+
+    						"			$bNor=1;												"+
+    						"		}															"+
+    						"		else														"+
+    						"		{															"+
+    						"			$bNor=0;												"+
+    						"		}															"+
+    						"		if((`checkBox -q -value $checkBoxS1`==true))				"+
+    						"		{															"+
+    						"			$pAmp[0] = `textField -q -text $textFieldSX`;			"+
+    						"			$pAmp[1] = `textField -q -text $textFieldSY`;			"+
+    						"			$pAmp[2] = `textField -q -text $textFieldSZ`;			"+
+    						"			$seedX[0] = `textField -q -text $textFieldSeedS`;		"+
+    						"		}															"+
+    						"		else														"+
+    						"		{															"+
+    						"			$pAmp[0] = 0;											"+
+    						"			$pAmp[1] = 0;											"+
+    						"			$pAmp[2] = 0;											"+
+    						"		}															"+
+    						"		if((`checkBox -q -value $checkBoxR1`==true))				"+
+    						"		{															"+
+    						"			$pAmp[3] = `textField -q -text $textFieldRX`;			"+
+    						"			$pAmp[4] = `textField -q -text $textFieldRY`;			"+
+    						"			$pAmp[5] = `textField -q -text $textFieldRZ`;			"+
+    						"			$seedX[1] = `textField -q -text $textFieldSeedR`;		"+
+    						"		}															"+
+    						"		else														"+
+    						"		{															"+
+    						"			$pAmp[3] = 0;											"+
+    						"			$pAmp[4] = 0;											"+
+    						"			$pAmp[5] = 0;											"+
+    						"		}															"+
+    						"		if((`checkBox -q -value $checkBoxT1`==true))				"+
+    						"		{															"+
+    						"			$pAmp[6] = `textField -q -text $textFieldTX`;			"+
+    						"			$pAmp[7] = `textField -q -text $textFieldTY`;			"+
+    						"			$pAmp[8] = `textField -q -text $textFieldTZ`;			"+
+    						"			$seedX[2] = `textField -q -text $textFieldSeedT`;		"+
+    						"		}															"+
+    						"		else														"+
+    						"		{															"+
+    						"			$pAmp[6] = 0;											"+
+    						"			$pAmp[7] = 0;											"+
+    						"			$pAmp[8] = 0;											"+
+    						"		}															"+
+    						"		if((`checkBox -q -value $checkBoxShape1`==true))			"+
+    						"		{															"+
+    						"			$pAmp[9] = `textField -q -text $textFieldShapeX`;		"+
+    						"			$pAmp[10] = `textField -q -text $textFieldShapeY`;		"+
+    						"			$pAmp[11] = `textField -q -text $textFieldShapeZ`;		"+
+    						"			$seedX[3] = `textField -q -text $textFieldSeedShape`;	"+
+    						"		}															"+
+    						"		else														"+
+    						"		{															"+
+    						"			$pAmp[9] = 0;											"+
+    						"			$pAmp[10] = 0;											"+
+    						"			$pAmp[11] = 0;											"+
+    						"		}    														"+
+    						"		f3dDuplicator $pCom $dupOO[0] $bNor 						"+
+    						"						$tglJitterX $pAmp $seedX;					"		
+    							) $button3;
+    	button -edit -command "deleteUI -window f3dWindow01" $button4;
+
+	showWindow f3dWindow01;
+}
+
+
+
+//--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
+//		MEL Script: f3dDuplicator
+//		Syntax: 
+//				f3dDuplicator [picked_component] [object_for_dup] [tgl_normal]
+//								[tgl_jitter] [jitter_amplitude] [jitter_random_seed]
+//
+//		Description:
+//				Duplicate objects onto the 
+//						surface CV,
+//						mesh components(vertex,edge,facet),
+// 						particles, 
+// 						lacttice points; 
+//				a little like the custom effect "Duplicator+" in SOFTIMAGE|3D
+//
+//		Parameters:
+//				[picked_component]
+//					picked component array,
+//				[object_for_dup]
+//					the object name for duplicated,
+//				[tgl_normal]
+//					toggle if making duplicated objects align surface normal (with local y-axis),
+//					[1] for on, [0] for off
+//				[tgl_jitter]
+//					array 4 (int) for toggle x/y/z transformation and shape jitter
+//					[1] for on, [0] for off
+//				[jitter_amplitude]
+//					array 12 (float) for amplitudes of SX, SY, SZ, RX, RY, RZ, TX, TY, TZ, ShapeX, ShapeY, ShapeZ
+//				[jitter_random_seed]
+//					array 4 (int) for random seed of jitter scale, rotate ,translate and shape
+//				
+//		Example: 
+//				
+//		Written by fake3d
+//				Any question and suggestions, welcome to drop me a line!!
+//			fake3d@seed.net.tw
+//			http://go.to/fake3d
+//--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
+global proc f3dDuplicator(string  $pComponent[], string $dupObj, int $bNormal, 
+							int $tglJitter[], float $jitterAmp[], int $jitterSeed[])
+{
+	string  $pTmpPoints[];
+    string  $pCurrent;
+    string	$objNow[1], $objTmp[2], $dupObjArray[]; 
+    float   $pp[3], $tt[3];
+    int		$vCnt, $dupCnt=0;
+    int		$ii, $jj;
+
+    //$pComponent = `ls -sl -fl`;
+
+    for ( $pCurrent in $pComponent ) 
+    {
+		//
+		//check if it's facet or edge
+		//
+		select $pCurrent;
+		select `polyListComponentConversion -tv`;
+		$pTmpPoints = `ls -sl -fl`;
+		if( ($vCnt=`size($pTmpPoints)`)>1 ) // this means, it's not a single vertex
+		{
+			$pp[0]=0; $pp[1]=0; $pp[2]=0;
+			for( $ii=0; $ii<$vCnt; $ii++ )
+			{
+				$tt = `pointPosition -w $pTmpPoints[$ii]`;
+				$pp[0] += $tt[0];
+				$pp[1] += $tt[1];
+				$pp[2] += $tt[2];
+			}
+			$pp[0]/=$vCnt; $pp[1]/=$vCnt; $pp[2]/=$vCnt; // doing average
+		}
+		else
+			$pp = `pointPosition -w $pCurrent`;
+		select -r $dupObj;
+		duplicate -rr; 
+		move -a -ws $pp[0] $pp[1] $pp[2];
+		$objNow = `ls -sl`;
+		$dupObjArray[$dupCnt] = $objNow[0];
+		
+		$dupCnt++;
+    }
+    
+	//
+	// jitter
+	// we do 4 loop koz we want each jitter got its own random seed!
+	//
+	float $min[3], $max[3];
+	float $jitterValue[];
+	
+	if($tglJitter[0]==1)
+	{		
+		seed($jitterSeed[0]);		
+		for( $ii=0; $ii<$dupCnt; $ii++  )
+		{
+			select -r $dupObjArray[$ii];
+			f3dJitter($jitterAmp[0], $jitterAmp[1], $jitterAmp[2], 0, 0, 0, 0, 0, 0);
+		}
+	}
+	if($tglJitter[1]==1)
+	{		
+		seed($jitterSeed[1]);
+		for( $ii=0; $ii<$dupCnt; $ii++  )
+		{
+			select -r $dupObjArray[$ii];
+			f3dJitter(0, 0, 0, $jitterAmp[3], $jitterAmp[4], $jitterAmp[5], 0, 0, 0);
+		}
+	}
+	if($tglJitter[2]==1)
+	{		
+		seed($jitterSeed[2]);		
+		for( $ii=0; $ii<$dupCnt; $ii++  )
+		{
+			select -r $dupObjArray[$ii];
+			f3dJitter(0, 0, 0, 0, 0, 0, $jitterAmp[6], $jitterAmp[7], $jitterAmp[8]);
+		}
+	}      
+	if($tglJitter[3]==1)
+	{		
+		seed($jitterSeed[3]);
+		for( $ii=0; $ii<$dupCnt; $ii++  )
+		{
+			select -r $dupObjArray[$ii];
+			f3dShapeJitter( $jitterAmp[9], $jitterAmp[10], $jitterAmp[11]);
+		}
+	}
+		
+	//
+	// align surface normal
+	//
+	select -r $pComponent[0];
+	$objTmp = `ls -sl -o -s -dag -showType`; //check if it's neither lattice object or particle
+	if(($bNormal == 1) && ($objTmp[1]!="lattice") && ($objTmp[1]!="particle"))
+	{				
+		for( $ii=0; $ii<$dupCnt; $ii++  )
+		{
+			select -r $pComponent[0];
+			select -r `ls -sl -o`;
+			select -tgl $dupObjArray[$ii];
+			
+			$tt[0]=`getAttr ($dupObjArray[$ii]+".rotateX")`;
+			$tt[1]=`getAttr ($dupObjArray[$ii]+".rotateY")`;
+			$tt[2]=`getAttr ($dupObjArray[$ii]+".rotateZ")`;
+			
+			//using normal constraint making objest align surface normal!!
+			normalConstraint -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0;
+			$tt[0]+=`getAttr ($dupObjArray[$ii]+".rotateX")`;
+			$tt[1]+=`getAttr ($dupObjArray[$ii]+".rotateY")`;
+			$tt[2]+=`getAttr ($dupObjArray[$ii]+".rotateZ")`;
+			
+			select -r $pComponent[0];
+			select -r `ls -sl -o`;
+			select -tgl $dupObjArray[$ii];
+			
+			normalConstraint -rm ;
+			setAttr ($dupObjArray[$ii]+".rotateX") $tt[0];
+			setAttr ($dupObjArray[$ii]+".rotateY") $tt[1];
+			setAttr ($dupObjArray[$ii]+".rotateZ") $tt[2];
+		}
+	}  		
+	
+    select -cl;
+}
+
+
+
+//--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
+//		MEL Script: f3dJitter
+//		Syntax: 
+//				f3dJitter [amp_scale_x] [amp_scale_y] [amp_scale_z]
+//							[amp_rotate_x] [amp_rotate_y] [amp_rotate_z]
+//							   [amp_translate_x] [amp_translate_y] [amp_translate_z]
+//		Description:
+//				Jitter the transformation of objects
+//		Parameters:
+//				Amplitudes of scale x/y/z, rotate x/y/z and translate x/y/z
+//		Example: 
+//				f3dJitter 0.2 0.2 0.2 30 30 30 0.5 0.5 0.5;
+//		Written by fake3d
+//				Any question and suggestions, welcome to drop me a line!!
+//			fake3d@seed.net.tw
+//			http://go.to/fake3d
+//--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
+global proc f3dJitter( float $jSAmpX, float $jSAmpY, float $jSAmpZ,
+					   float $jRAmpX, float $jRAmpY, float $jRAmpZ,
+					   float $jTAmpX, float $jTAmpY, float $jTAmpZ	)
+{
+	int $ii;
+	string $pick[];
+	
+	$pick = `ls -sl`;
+	if( $pick[0] =="")
+	{
+		error "Pick something before jittering!";
+		return;
+	}
+	
+	for( $ii=0; $ii<size($pick); $ii++ )
+	{
+		select $pick[$ii];
+	
+		scale -r (1+rand(-$jSAmpX,$jSAmpX)) (1+rand(-$jSAmpY,$jSAmpY)) (1+rand(-$jSAmpZ,$jSAmpZ));	
+	
+		rotate -r -os (rand(-$jRAmpX,$jRAmpX)) (rand(-$jRAmpY,$jRAmpY)) (rand(-$jRAmpZ,$jRAmpZ));
+	
+		move -r -os -wd (rand(-$jTAmpX,$jTAmpX)) (rand(-$jTAmpY,$jTAmpY)) (rand(-$jTAmpZ,$jTAmpZ));	
+	}
+}
+
+
+
+//--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
+//		MEL Script: f3dShapeJitter
+//		Syntax: 
+//				f3dShapeJitter [amp_x] [amp_y] [amp_z]
+//		Description:
+//				Jittering object geometry or lattice points
+//		Parameters:
+//				[amp_x] [amp_y] [amp_z]
+//				Amplitudes of x, y, z
+//		Example: 
+//				f3dShapeJitter 0.1 0.1 0.1;
+//		Written by fake3d
+//				Any question and suggestions, welcome to drop me a line!!
+//			fake3d@seed.net.tw
+//			http://go.to/fake3d
+//--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
+global proc f3dShapeJitter(float $sjAmpX, float $sjAmpY, float $sjAmpZ)
+{
+	int $ii;
+	string $pick[];
+	
+	// check if it's some sort of shape: nurbs, mesh, lattice
+	$pick = `ls -sl -s -dag -showType`;
+	if($pick[0]!="")
+	{
+		select -clear;
+		for( $ii=0; $ii<size($pick); $ii+=2 )
+		{
+			if($pick[$ii+1]=="nurbsSurface")
+				select -tgl ($pick[$ii]+".cv[0:65536][0:65536]");
+			if($pick[$ii+1]=="mesh")
+				select -tgl ($pick[$ii]+".vtx[0:16777216]");
+			if($pick[$ii+1]=="lattice")
+				select -tgl ($pick[$ii]+".pt[0:65536][0:65536][0:65536]");
+		}
+	}
+	else
+	{
+		// check if it's some sort of component
+		$pick = `ls -sl -fl -showType`;
+		if ($pick[0]!="")
+		{
+			if( ($pick[1]=="double3") || ($pick[1]=="float3") ) 
+				select `ls -sl`;
+			else
+			{
+				error "Pick \"nurbs\", \"mesh\", \"lattice\" or their components before jittering!";
+				return;
+			}
+		}
+		else
+		{
+			error "Pick \"nurbs\", \"mesh\", \"lattice\" or their components before jittering!";
+			return;
+		}
+	}
+	
+	$pick = `ls -sl -fl`;
+	for( $ii=0; $ii<size($pick); $ii++ )
+	{
+		select -r $pick[$ii];
+		move -r -os -wd (rand(-$sjAmpX,$sjAmpX)) (rand(-$sjAmpY,$sjAmpY)) (rand(-$sjAmpZ,$sjAmpZ));	
+	}
+	
+	select -cl;
+}

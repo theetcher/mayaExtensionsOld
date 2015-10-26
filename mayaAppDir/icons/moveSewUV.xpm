@@ -1,0 +1,39 @@
+/* XPM */
+static char *moveSewUV[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #71706f",
+". c #acac57",
+"# c #f7f712",
+"a c #f4370e",
+"b c #e1ba82",
+"c c #d67e66",
+"d c #e0e1da",
+"e c #bebcbd",
+/* pixels */
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"eee.`eeded#dedededededee",
+"eee..`..e###e..`.`e.e.ee",
+"ee`e.e```###b`.`.e````ee",
+"e````.e.b####e```edd``ee",
+"e``````e..#.``eee`.e`eee",
+"e``.eb````#..e`e`````dee",
+"ee.`cdd```#..ee.````eeee",
+"eeeeedb.`.#.`.ee.e``eeee",
+"eeeeee```e#.````.eeeeeee",
+"edeeeedeee#d````e`aceeed",
+"eeeeeeee.###```ddbaaacee",
+"eeeedee``#a#aaaaaaaaaaee",
+"eedeee```b#bccaaaaaaabee",
+"eeeee````.dddb````aaeeee",
+"edee`..``dddd`````eeeeee",
+"eeeeeddde`ede`````eeedee",
+"ee```ee`````ddee`eeeeeee",
+"eeee````````ddde`eeeeeee",
+"eeeeeeee````dde`eeeeedee",
+"edeeeeeee.``````eeeeeeee",
+"eeeeeeeeeeee```eedeedeee",
+"eeeedeeeeedeeeedeeeeeeee"
+};

@@ -1,0 +1,39 @@
+/* XPM */
+static char *imageDisplay[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #26251d",
+". c #8c796f",
+"# c #ada9a3",
+"a c #6f5b4f",
+"b c #a98b73",
+"c c #453f34",
+"d c #8d625a",
+"e c #c3c2c3",
+/* pixels */
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"eeeeeeeee#.acabeeeeeeeee",
+"eeeeeee#.``c``c.eeeeeeee",
+"eeeeeeea````cc``.eeeeeee",
+"eeeeee.a`ccccc``ceeeeeee",
+"eeeeeea`abbb.ac``.eeeeee",
+"eeeee#cc####b.a``ceeeeee",
+"eeeee#c.bbb#b.a```eeeeee",
+"eeeee#a.bd.b.ada`ceeeeee",
+"eeeee#db.cdbdccda.eeee#e",
+"eeeeeebbbbbbdd..a#eeeeee",
+"eeeeeeebbbbbd.bdbeeeeeee",
+"eeeeeee#b#b.db..#eeeeeee",
+"eeeeeee#bbbdd...eeeeeeee",
+"eeeeeeeebb.dddd#eeeeeeee",
+"eeeeeeee#.bbda.eeeeeeeee",
+"eeeeeeeebbdddda.eeeeeeee",
+"eeeeee#a.bbbb.aaeeeeeeee",
+"eee###ccabbbb.ac`.##eeee",
+"eeecc`````cccc``````b#ee",
+"eec```````````````````ee",
+"ee``````c`````````````ee",
+"eeeeeeeeeeeeeeeeee#eeeee"
+};

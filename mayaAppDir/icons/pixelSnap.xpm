@@ -1,0 +1,39 @@
+/* XPM */
+static char *pixelSnap[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #140706",
+". c #968c8a",
+"# c #ada5a0",
+"a c #c3c1c3",
+"b c #c1a7a1",
+"c c #9c0204",
+"d c #cf4543",
+"e c #fa0d0d",
+/* pixels */
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaa##.##aaaaaaaaa",
+"aaaabbeee......#aaaaaaaa",
+"aaabeeeeeed.....#aaaaaaa",
+"aaaeeed#eeed.....aaaaaaa",
+"aaaeeb#..eee.#...aaaaaaa",
+"aaaeeb..abeee##...aaaaaa",
+"aabeed.bbbbeed#...aaaaaa",
+"aabeedda###bc`.#..aaaaaa",
+"aaaeeeeb#.#b``.#.#aaaaaa",
+"aaadeeeebbbb#####aaaaaaa",
+"aaaabeeed.#b#####aaaaaaa",
+"aaaaaad``####b#aaaaaaaaa",
+"aaaaaaa``#b#####aaaaaaaa",
+"aaaaaaaa#######aaaaaaaaa",
+"aaaaaaaaa#bb###aaaaaaaaa",
+"aaaaaaaa#bb#####aaaaaaaa",
+"aaaaaaa##a#a####aaaaaaaa",
+"aaaaa#..##b#a#...#a#aaaa",
+"aaa.......#.........aaaa",
+"aa....................aa",
+"aa.........#..........aa",
+"aaaaaaaaaaaaaaaaaaaaaaaa"
+};

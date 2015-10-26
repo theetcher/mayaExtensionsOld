@@ -1,0 +1,10 @@
+global proc fix_deleteSIShit ()
+{
+
+	print ("found "+size (`ls -type "script"`)+" animationScriptNodes \n");
+	delete (`ls -type "script"`);
+	print ("found "+size (`ls -type "polyCylinder"`)+" polyCylinders \n");
+	delete (`ls -type "polyCylinder"`);
+	print ("found "+size (`ls -type "brush"`)+" brushes \n");
+	delete (`ls -type "brush"`);
+}

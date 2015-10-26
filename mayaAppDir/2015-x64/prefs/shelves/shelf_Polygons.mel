@@ -1,0 +1,893 @@
+global proc shelf_Polygons () {
+    global string $gBuffStr;
+    global string $gBuffStr0;
+    global string $gBuffStr1;
+
+
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Create Polygons Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Create Polygons Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polyAppendFacetDD.png" 
+        -image1 "polyAppendFacetDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - -" ( "print(\"User defined menuItem\");" )
+        -mi "Append to Polygon Tool" ( "setToolTo polyAppendFacetContext; \npolyAppendFacetCtx -e -pc `optionVar -q polyKeepFacetsPlanar` polyAppendFacetContext;" )
+        -mi "Create Polygon Tool" ( "setToolTo polyCreateFacetContext; \npolyCreateFacetCtx -e -pc `optionVar -q polyKeepFacetsPlanar` polyCreateFacetContext;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Select a point on an edge to start cutting the face" 
+        -enableBackground 0
+        -align "center" 
+        -label "Interactive Split Tool" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polySplitFacet.png" 
+        -image1 "polySplitFacet.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "SplitPolygonTool" 
+        -sourceType "mel" 
+        -doubleClickCommand "InteractiveSplitToolOptions" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Cut Faces: Select faces to be cut by a plane" 
+        -enableBackground 0
+        -align "center" 
+        -label "Cut Faces" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyCut.xpm" 
+        -image1 "polyCut.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performPolyCut 0" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Connect Verts/Edges/Faces Slide" 
+        -enableBackground 0
+        -align "center" 
+        -label "Connect Verts/Edges/Faces Slide" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polySplitEdgeRing.png" 
+        -image1 "polySplitEdgeRing.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "connectVertsEdgesFacesSlide" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Find Textures Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Find Textures Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "texSearch.png" 
+        -image1 "texSearch.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - -" ( "print(\"User defined menuItem\");" )
+        -mi "Find Polys Shaded" ( "source findPolysShaded;\nfindPolysShaded;" )
+        -mi "Find Objects Shaded" ( "source findObjectsShaded;\nfindObjectsShaded;" )
+        -mi "Find Objects with Texture" ( "source fix_findObjectsWithTexture;\nfix_findObjectsWithTexture;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Combine Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Combine Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polyUniteDD.png" 
+        -image1 "polyUniteDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - " ( "print(\"User defined menuItem\");" )
+        -mi "Combine and Merge" ( "fix_combine;\nstring $sel[] = `ls -sl -l`;\npolyMergeVertex -d 0.001 -ch 1 $sel;\nselect $sel;\npolyOptions -sb 4;" )
+        -mi "Combine" ( "fix_combine;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Border Edges: Toggle the Poly Border visibility" 
+        -enableBackground 0
+        -align "center" 
+        -label "Border Edges" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyBorderEdges.png" 
+        -image1 "polyBorderEdges.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyOptions -sb 4;\r\npolyOptions -r -displayBorder true;\r\n\r\n\r\n" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Merge Vertices Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Merge Vertices Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polyMergeDD.png" 
+        -image1 "polyMergeDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - - " ( "print(\"User defined menuItem\");" )
+        -mi "Merge All Selected Vertices" ( "polyPerformAction \"polyMergeVertex -d 200\" v 0" )
+        -mi "Merge Vertices" ( "string $selection[] = `ls -sl -l -fl`; \npolyPerformAction \"polyMergeVertex -d 0.001\" v 0;\nselect $selection;" )
+        -mi "ReMerge Vertices" ( "SplitVertex;\nstring $selection[] = `ls -sl -l -fl`; \npolyPerformAction \"polyMergeVertex -d 0.001\" v 0;\nselect $selection;" )
+        -mi "Snap All Selected Vertices" ( "float $bbox[];\n$bbox = `polyEvaluate -bc`;\nscale -p (($bbox[0]+$bbox[1])/2) (($bbox[2]+$bbox[3])/2) (($bbox[4]+$bbox[5])/2) -r 0 0 0;" )
+        -mi "Multipoint Snap" ( "source fix_multiPointSnap;\nfix_multiPointSnap;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Collapse: Collapse the selected edges or faces" 
+        -enableBackground 0
+        -align "center" 
+        -label "Collapse" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyCollapseEdge.xpm" 
+        -image1 "polyCollapseEdge.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performPolyCollapse 0" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Custom Polygon Display Option Box" 
+        -enableBackground 0
+        -align "center" 
+        -label "Custom Polygon Display Option Box" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyCustomDisplay.png" 
+        -image1 "polyCustomDisplay.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "CustomPolygonDisplayOptions" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Poly Extract Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Poly Extract Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polyChipOffDD.png" 
+        -image1 "polyChipOffDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - -" ( "" )
+        -mi "Extract" ( "polyChipOff -kft 1 -dup 0;\n$separateObj = `listRelatives -p -f`;\npolySeparate $separateObj;" )
+        -mi "Duplicate Extract" ( "source fix_duplicateExtract;\nfix_duplicateExtract;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Duplicate Face: Duplicate the currently selected faces in a new shell and shows a manipulator to adjust their offset" 
+        -enableBackground 0
+        -align "center" 
+        -label "Duplicate Face" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyDuplicateFacet.xpm" 
+        -image1 "polyDuplicateFacet.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyChipOff -kft 1 -dup 1;\r\n$separateObj = `listRelatives -p`;\r\npolySeparate $separateObj;" 
+        -sourceType "mel" 
+        -doubleClickCommand "DuplicateFaceOptions" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Delete Edge: Delete non-border edges and cleanup their vertices" 
+        -enableBackground 0
+        -align "center" 
+        -label "Delete Edge " 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyDelEdge.xpm" 
+        -image1 "polyDelEdge.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyPerformAction \"polyDelEdge -cv true\" e 0" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Extrude: Extrude the currently selected faces and control the extrusion using the manipulators" 
+        -enableBackground 0
+        -align "center" 
+        -label "Extrude Face" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyExtrudeFacet.xpm" 
+        -image1 "polyExtrudeFacet.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performPolyChipOff 0 2" 
+        -sourceType "mel" 
+        -doubleClickCommand "performPolyChipOff 1 2" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Mirror Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Mirror Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "mirror.png" 
+        -image1 "mirror.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - -" ( "print(\"User defined menuItem\");" )
+        -mi "Mirror X" ( "print(\"User defined menuItem\");" )
+        -mi "Mirror Y" ( "source fix_mirror;\nfix_mirror ({1,-1,1});" )
+        -mi "Mirror Z" ( "source fix_mirror;\nfix_mirror ({1,1,-1});" )
+        -mi "Opposite Flag Eraser" ( "source fix_oppositeEraser;\nfix_oppositeEraser;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Extrude Edge Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Extrude Edge Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polyExtrudeEdgeDD.png" 
+        -image1 "polyExtrudeEdgeDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - -" ( "print(\"User defined menuItem\");" )
+        -mi "Extrude Edge" ( "performPolyChipOff 0 4" )
+        -mi "Edge Roll" ( "source fix_edgeRoll;\nfix_edgeRoll;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Triangulate: Change the selected faces into triangles" 
+        -enableBackground 0
+        -align "center" 
+        -label "Triangulate" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyTriangulate.xpm" 
+        -image1 "polyTriangulate.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyPerformAction polyTriangulate f 0" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Subdivide Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Subdivide Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polySubdFacetDD.png" 
+        -image1 "polySubdFacetDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - -" ( "print(\"User defined menuItem\");" )
+        -mi "Subdivide" ( "performPolySubdivide \"\" 0;" )
+        -mi "Axis Subdivide" ( "fix_axisSubdivide;" )
+        -mi "Dice Mesh" ( "mtDiceMesh;" )
+        -mi "Interactive Edge Subdivide" ( "source fix_interEdgeSubdivide;\nfix_interEdgeSubdivide();" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Move Normal Tool: Select any NURBS control vertices, mesh vertices" 
+        -enableBackground 0
+        -align "center" 
+        -label "Move Normal Tool" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "moveNormal.xpm" 
+        -image1 "moveNormal.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "MoveNormalTool" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Move Component: Transform (Scale, Rotate, Translate...) the selected components (Vertices, Edges or Faces). UVs are moved in the UV Texture Editor" 
+        -enableBackground 0
+        -align "center" 
+        -label "Move Component" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyMoveVertex.xpm" 
+        -image1 "polyMoveVertex.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performPolyMove \"\" 0" 
+        -sourceType "mel" 
+        -doubleClickCommand "MovePolygonComponentOptions" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Boolean Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Boolean Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polyBooleansUnionDD.png" 
+        -image1 "polyBooleansUnionDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - -" ( "" )
+        -mi "Union" ( "polyPerformAction \"polyBoolOp -op 1\" o 0" )
+        -mi "Difference" ( "polyPerformAction \"polyBoolOp -op 2\" o 0" )
+        -mi "Intersection" ( "polyPerformAction \"polyBoolOp -op 3\" o 0" )
+        -mi "- - - - - - - - - - - - -" ( "" )
+        -mi "Slice" ( "source slice_geom" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Fill Hole: Create a face filling the hole around the selected border edge(s)" 
+        -enableBackground 0
+        -align "center" 
+        -label "Fill Hole" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyCloseBorder.xpm" 
+        -image1 "polyCloseBorder.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "FillHole" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Bevel: Create a bevel along the selected edges" 
+        -enableBackground 0
+        -align "center" 
+        -label "Bevel" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyBevel.xpm" 
+        -image1 "polyBevel.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyPerformAction \"polyBevel -offset 0.5 -offsetAsFraction 1 -autoFit 1 -segments 1 -worldSpace 1\" e 0" 
+        -sourceType "mel" 
+        -doubleClickCommand "BevelPolygonOptions" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Reverse: Reverse the normals of the selected faces." 
+        -enableBackground 0
+        -align "center" 
+        -label "Reverse" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyNormal.xpm" 
+        -image1 "polyNormal.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "ReversePolygonNormals" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Soften Harden Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Soften Harden Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polySoftEdgeDD.png" 
+        -image1 "polySoftEdgeDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Smooth []" ( "PolygonSoftenHardenOptions" )
+        -mi "Harden" ( "polyPerformAction \"polySoftEdge -a 0\" e 0;" )
+        -mi "Soften" ( "polyPerformAction \"polySoftEdge -a 180\" e 0;" )
+        -mi "- - - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Lock Normals" ( "polyNormalPerVertex -fn true" )
+        -mi "Unlock Normals" ( "polyNormalPerVertex -ufn true" )
+        -mi "Set Normal To Face []" ( "SetToFaceNormalsOptions" )
+        -mi "- - - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Blend Normal to Neighbours" ( "source fix_vertNormalBlendToNeighbours;\nfix_vertNormalBlendToNeighbours();" )
+        -mi "Blow Normals" ( "source fix_blowNormals;\nfix_blowNormals();" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Average Vertices: Move selected vertices to smooth shape" 
+        -enableBackground 0
+        -align "center" 
+        -label "Average Vertices" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyAverageVertex.xpm" 
+        -image1 "polyAverageVertex.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performPolyAverageVertex 0" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Soft Modification Tool: Select objects or components to modify with a curve based falloff" 
+        -enableBackground 0
+        -align "center" 
+        -label "Soft Modification Tool" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "softMod.xpm" 
+        -image1 "softMod.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "SoftModTool" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Sculpt Polygons Tool: Sculpt a polygonal surface" 
+        -enableBackground 0
+        -align "center" 
+        -label "Sculpt Polygons Tool" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "puttyPoly.xpm" 
+        -image1 "puttyPoly.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "SculptPolygonsTool" 
+        -sourceType "mel" 
+        -doubleClickCommand "SculptPolygonsToolOptions" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "User Script" 
+        -enableBackground 0
+        -align "center" 
+        -label "Vertex Colors Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polyApplyColourDD.png" 
+        -image1 "polyApplyColourDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "RED" ( "PolySelectConvert 3;\npolyColorPerVertex -r 1 -g 0 -b 0;" )
+        -mi "GREEN" ( "PolySelectConvert 3;\npolyColorPerVertex -r 0 -g 1 -b 0;" )
+        -mi "BLUE" ( "PolySelectConvert 3;\npolyColorPerVertex -r 0 -g 0 -b 1;" )
+        -mi "BLACK" ( "PolySelectConvert 3;\npolyColorPerVertex -r 0 -g 0 -b 0;" )
+        -mi "WHITE" ( "PolySelectConvert 3;\npolyColorPerVertex -r 1 -g 1 -b 1;" )
+        -mi "Alpha -> BLACK" ( "PolySelectConvert 3;\npolyColorPerVertex -a 0;" )
+        -mi "Alpha -> WHITE" ( "PolySelectConvert 3;\npolyColorPerVertex -a 1;" )
+        -mi "- - - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Toggle Vertex Color Display" ( "polyOptions -r -colorShadedDisplay true;\npolyOptions -gl -colorMaterialChannel \"NONE\";" )
+        -mi "Paint Vertex Color Tool" ( "PaintVertexColorTool" )
+        -mi "Apply Vertex Color []" ( "PolygonApplyColorOptions;" )
+        -mi "Select By Vertex Color" ( "source fix_selectByVertexColor;\nfix_selectByVertexColor;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Misc Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Misc Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "miscDD.png" 
+        -image1 "miscDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - -" ( "print(\"User defined menuItem\");" )
+        -mi "Multiple Edges Ring Split" ( "string $selectedEdges[] = `ls -sl -l -fl`;\nselect -cl;\nfor ($e in $selectedEdges) {\n\tselect $e;\n\tringSelect;\n\tconnectVertsEdgesFacesSlide;\n}" )
+        -mi "Oposite Flag Eraser" ( "source fix_oppositeEraser;\nfix_oppositeEraser;" )
+        -mi "Planarize Points" ( "source mPlanarPoints;" )
+        -mi "Polygon Selection Constraints" ( "PolygonSelectionConstraints" )
+        -mi "Randomize Points" ( "source rndPoints;\nrndPoints;" )
+        -mi "Reassign Shading Groups" ( "source fix_reassignShadingGroups;\nfix_reassignShadingGroups;\n" )
+        -mi "Snap Objects to Polymesh" ( "source fix_snapObjectsToPolymesh;\nfix_snapObjectsToPolymesh;" )
+        -mi "Transform Component Type In" ( "source transformCompTypeIn;\ntransformCompTypeIn;" )
+        -mi "Voronoi Shatter" ( "source fix_vshatter;\nfix_vshatter();" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Subdivide the selected edges or faces" 
+        -enableBackground 0
+        -align "center" 
+        -label "Add Divisions" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polySubdFacet.png" 
+        -image1 "polySubdFacet.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performPolySubdivide \"\" 0" 
+        -sourceType "mel" 
+        -doubleClickCommand "SubdividePolygonOptions" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+
+} 

@@ -1,0 +1,23 @@
+//
+//			           noiseDeformer.mel
+//
+// Usage : Select one or many surfaces/curves you wish to deform.
+// Source this script and run it.
+// A noiseDeformer node will be created and connected to the selected geometry. 
+// 
+// Copyright (c)2002 Adam Martinez, Mantron Corporation
+///////////////////////////////////////////////////////////////////////////////////
+
+global proc noiseDeformer() {
+
+	int $i;
+	string $surfit;
+	string $sel[]=`ls -sl`, $name[];
+
+	if (!`pluginInfo -q -loaded am_noiseDeform`) {
+		catch(`error "\nError. The noiseDeform plugin cannot be found. Please load it and try again."`);
+		return;
+	}
+
+	deformer -type turbDeformer;
+}

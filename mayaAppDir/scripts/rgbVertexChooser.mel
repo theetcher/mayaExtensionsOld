@@ -1,0 +1,510 @@
+// rgbVertexChooser ---------------------------------------------- //
+//                                                                 //
+// Script Name:   rgbVertexChooser.mel                             //
+//                                                                 //
+// Creation Date: 11/01/01                                         //
+//                                                                 //
+// Last Updated:  11/14/01                                         //
+//                                                                 //
+// Author:        Morris Olmsted                                   //
+//                                                                 //
+// --------------------------------------------------------------- //
+global string $polyVertRGBWin;    // define a variable to hold the name of the window object //
+global float $VRGBValues[];    // global float to hold the values between procedures //
+global int $SCScriptJob;    // global variable to hold the scriptJob number for later killing
+
+
+// --------------------------------------------------------------- //
+// This procedure simply calls a procedure that builds the GUI     //
+// after checking to see if the window already exists.             //
+// --------------------------------------------------------------- //
+global proc polyVertRGBGUI()
+{
+    global string $polyVertRGBWin = "polyVertRGBGUIWin";    // define a variable to hold the name of the window object //
+    global int $SCScriptJob;    // global variable to hold the scriptJob number for later killing
+
+    waitCursor -st 1;
+
+    if (!`window -ex $polyVertRGBWin`)    // simple check to make sure $CPUVSWin doesn't already egsist //
+        PVRGBGUIWin();    // call procedure PVRGBGUIWin which runs the guts of this MEL script //
+
+    // create a scriptJob to capture when a Window is closed to kill the another scriptJob
+    scriptJob -uid $polyVertRGBWin "scriptJob -kill $SCScriptJob -force;";
+
+    showWindow $polyVertRGBWin;    // call to display the window //
+    waitCursor -st 0;
+
+}    // end of procedure  polyVertRGBGUI //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply makes it easy for the user to define a    //
+// color by way of the color dropper tool to select and place that //
+// color int the global variable $VRGBValues and our slider grps.  //
+// --------------------------------------------------------------- //
+global proc goUpdateMyVertRGBColorSliderGroup()
+{
+    global float $VRGBValues[];
+
+    // capture and filter to only selected polygon verts
+    string $currSelectedVerts[0] = `ls -sl`;
+    $currSelectedVerts = `filterExpand -ex 1 -sm 31 $currSelectedVerts`;
+
+    $VRGBValues = `grabColor -rgb`;    // use the dropper tool and capture a new color value //
+    colorSliderButtonGrp -e -rgb $VRGBValues[0] $VRGBValues[1] $VRGBValues[2] myVertRGBColorSliderGroup;    // update the colorSliderButtonGrp //
+
+    for ($vertname in $currSelectedVerts)
+        polyColorPerVertex -r $VRGBValues[0] -g $VRGBValues[1] -b $VRGBValues[2] $vertname;
+
+    clear $currSelectedVerts;    // clear array of last selected vertexes //
+
+}    // end of procedure goUpdateMyVertRGBColorSliderGroup //
+
+
+// --------------------------------------------------------------- //
+// `description`                                                   //
+// --------------------------------------------------------------- //
+global proc goChangeMyRGBColor()
+{
+    global float $VRGBValues[];
+
+    // capture and filter to only selected polygon verts
+    string $currSelectedVerts[0] = `ls -sl`;
+    $currSelectedVerts = `filterExpand -ex 1 -sm 31 $currSelectedVerts`;
+
+    $VRGBValues = `colorSliderButtonGrp -q -rgb myVertRGBColorSliderGroup`;
+
+    for ($vertname in $currSelectedVerts)
+        polyColorPerVertex -r $VRGBValues[0] -g $VRGBValues[1] -b $VRGBValues[2] $vertname;
+
+    clear $currSelectedVerts;    // clear array of last selected vertexes //
+
+}    // end of procedure goChangeMyRGBColor //
+
+
+
+// --------------------------------------------------------------- //
+// `description`                                                   //
+// --------------------------------------------------------------- //
+global proc goChangeMyAlphaColor()
+{
+    // capture and filter to only selected polygon verts
+    string $currSelectedVerts[0] = `ls -sl`;
+    $currSelectedVerts = `filterExpand -ex 1 -sm 31 $currSelectedVerts`;
+
+    float $AValues = `floatSliderGrp -q -v myVertAFieldSliderGroup`;
+
+    for ($vertname in $currSelectedVerts)
+        polyColorPerVertex -a $AValues $vertname;
+
+    clear $currSelectedVerts;    // clear array of last selected vertexes //
+
+}    // end of procedure goChangeMyAlphaColor //
+
+
+// --------------------------------------------------------------- //
+// `description`                                                   //
+// --------------------------------------------------------------- //
+global proc captureTheAverageRGB()
+{
+    global float $VRGBValues[];    // global float to hold the values between procedures //
+
+    // capture and filter to only selected polygon verts
+    string $currSelectedVerts[0] = `ls -sl`;
+    $currSelectedVerts = `filterExpand -ex 1 -sm 31 $currSelectedVerts`;
+    int $intTempNum = `size $currSelectedVerts`;
+
+    if ($intTempNum > 0)
+    {
+        float $Added_R, $Added_G, $Added_B, $Added_A;   // define four floats
+
+        // add up all of the R, G, B, and A values
+        for ($vertname in $currSelectedVerts)
+        {
+            $VRGBValues = `polyColorPerVertex -q -r -g -b -a $vertname`;
+
+            $Added_R = ($Added_R + $VRGBValues[0]);
+            $Added_G = ($Added_G + $VRGBValues[1]);
+            $Added_B = ($Added_B + $VRGBValues[2]);
+
+        }    // end of for loop //
+
+        // devide by number of entries to get the average of the values
+        $VRGBValues[0] = ($Added_R/$intTempNum);
+        $VRGBValues[1] = ($Added_G/$intTempNum);
+        $VRGBValues[2] = ($Added_B/$intTempNum);
+
+    }    // end of if loop //
+
+    // update the colorSliderButtonGrp
+    colorSliderButtonGrp -e -rgb $VRGBValues[0] $VRGBValues[1] $VRGBValues[2] myVertRGBColorSliderGroup;
+
+    clear $currSelectedVerts;    // clear array of last selected vertexes //
+
+}    // end of procedure captureTheAverageRGB //
+
+
+// --------------------------------------------------------------- //
+// This function simply makes use of the colorEditor to capture    //
+// a user chosen RGB color and Alphs value to set for any selected //
+// vertexes.  On subsequent opens of the clorEditor the last set   //
+// RGBA color values will be available in the editor.              //
+// --------------------------------------------------------------- //
+global proc rgbVertexChooser()
+{
+    global float $VRGBValues[];
+    string $selVertexs[0] = `ls -sl -fl`;    // get the names of the currently selected node //
+
+    if (`size $VRGBValues` > 0)
+        colorEditor -rgb $VRGBValues[0] $VRGBValues[1] $VRGBValues[2] -a $VRGBValues[3];
+    else
+        colorEditor;
+
+    if ((`colorEditor -q -r`) && (`size $selVertexs` != 0))
+    {
+        $VRGBValues = `colorEditor -q -rgb`;    // capture the RGB values //
+        $VRGBValues[3] = `colorEditor -q -a`;    // capture the alpha value //
+
+        for ($Vx=0; $Vx<`size $selVertexs`; $Vx++)
+            polyColorPerVertex -r $VRGBValues[0] -g $VRGBValues[1] -b $VRGBValues[2] -a $VRGBValues[3] $selVertexs[$Vx];
+
+        clear $selVertexs;    // clear array of last selected vertexes //
+
+    }    // end of if loop //
+
+}    // end of procedure rgbVertexChooser //
+
+
+// --------------------------------------------------------------- //
+// `description`                                                   //
+// --------------------------------------------------------------- //
+global proc getCurrentVertexRGBA()
+{
+    global float $VRGBValues[];
+    string $selVertexs[0] = `ls -sl -fl`;    // get the names of the currently selected node //
+
+    int $goEsc = `keyInterrupt`;    // this is a call to the plugin keyInterrupt that tests if the ESC key had been hit //
+    print ("\n\n");
+
+    if (`size $selVertexs` == 1)
+    {
+        for ($tmpVtxName in $selVertexs)
+        {
+            if (!$goEsc)
+            {
+                $VRGBValues = `polyColorPerVertex -q -r -g -b -a $tmpVtxName`;
+                colorEditor -rgb $VRGBValues[0] $VRGBValues[1] $VRGBValues[2] -a $VRGBValues[3];
+
+                print ($tmpVtxName + " are:  R- " + $VRGBValues[0] + "  G- " + $VRGBValues[1] + "  B- " + $VRGBValues[2] + "  A- " + $VRGBValues[3] + "\n");
+                $goEsc = `keyInterrupt`;    // check to see if user pressed ESC to exit this function loop //
+
+            }    // end of while loop //
+
+            else
+                break;
+
+        }    // end of for loop //
+
+    }    // end of if loop //
+
+    else if (`size $selVertexs` > 1)
+    {
+        for ($tmpVtxName in $selVertexs)
+        {
+            $VRGBValues = `polyColorPerVertex -q -r -g -b -a $tmpVtxName`;
+            print ($tmpVtxName + " are:  R- " + $VRGBValues[0] + "  G- " + $VRGBValues[1] + "  B- " + $VRGBValues[2] + "  A- " + $VRGBValues[3] + "\n");
+
+        }    // end of for loop //
+
+    }    // end of else if loop //
+
+    print ("\n\n");
+    clear $selVertexs;    // clear array of last selected vertexes //
+
+}    // end of procedure getCurrentVertexRGBA //
+
+
+// --------------------------------------------------------------- //
+// `description`                                                   //
+// --------------------------------------------------------------- //
+global proc goSelectColoredVerts()
+{
+    string $selectedVertsList[];
+    int $selVertsListNumber = 0;
+
+    string $allMeshes[0] = `ls -sl -typ transform`;
+    $allMeshes = `filterExpand -ex 1 -sm 12 $allMeshes`;
+
+    if (!`size $allMeshes` > 0)
+    {
+        $allMeshes = `ls -typ transform`;
+        $allMeshes = `filterExpand -ex 1 -sm 12 $allMeshes`;
+
+    }    // end of if loop //
+
+    if (`size $allMeshes` > 0)
+    {
+        for ($mesh in $allMeshes)
+        {
+            string $vert;
+            string $allVerts[0] = `ls -fl ($mesh + ".vtx[*]")`;
+
+            for ($vert in $allVerts)
+            {
+                int $matchedColor = 1;
+
+                float $compColor[3] = `colorSliderButtonGrp -q -rgb myVertRGBColorSliderGroup`;
+                float $vertColor[3] = `polyColorPerVertex -q -rgb $vert`;
+
+                // compare the R component of the vert to the swatch color //
+                if ($vertColor[0] != $compColor[0])
+                    $matchedColor = 0;
+
+                // compare the R component of the vert to the swatch color //
+                if ($vertColor[1] != $compColor[1])
+                    $matchedColor = 0;
+
+                // compare the R component of the vert to the swatch color //
+                if ($vertColor[2] != $compColor[2])
+                    $matchedColor = 0;
+
+                if ($matchedColor == 1)
+                {
+                    $selectedVertsList[$selVertsListNumber] = $vert;
+                    $selVertsListNumber++;
+
+                }    // end of if loop //
+
+            }    // end of for loop //
+
+        }    // end of for loop //
+
+        select -r $selectedVertsList;
+        refresh;
+
+    }    // end of if loop //
+
+    else
+        warning ("There was no polygon meshes found in your scene!");
+
+}    // end of procedure goSelectColoredVerts //
+
+
+// --------------------------------------------------------------- //
+// `description`                                                   //
+// --------------------------------------------------------------- //
+global proc goSelectAlphaVerts()
+{
+    string $selectedVertsList[];
+    int $selVertsListNumber = 0;
+
+    string $allMeshes[0] = `ls -sl -typ transform`;
+    $allMeshes = `filterExpand -ex 1 -sm 12 $allMeshes`;
+
+    if (!`size $allMeshes` > 0)
+    {
+        $allMeshes = `ls -typ transform`;
+        $allMeshes = `filterExpand -ex 1 -sm 12 $allMeshes`;
+
+    }    // end of if loop //
+
+    if (`size $allMeshes` > 0)
+    {
+        for ($mesh in $allMeshes)
+        {
+            string $vert;
+            string $allVerts[0] = `ls -fl ($mesh + ".vtx[*]")`;
+
+            for ($vert in $allVerts)
+            {
+                int $matchedColor = 1;
+
+                float $compColor = `floatSliderGrp -q -v myVertAFieldSliderGroup`;
+                float $vertColor[0] = `polyColorPerVertex -q -a $vert`;
+
+                // compare the R component of the vert to the swatch color //
+                if ($vertColor[0] != $compColor)
+                    $matchedColor = 0;
+
+                if ($matchedColor == 1)
+                {
+                    $selectedVertsList[$selVertsListNumber] = $vert;
+                    $selVertsListNumber++;
+
+                }    // end of if loop //
+
+            }    // end of for loop //
+
+        }    // end of for loop //
+
+        select -r $selectedVertsList;
+        refresh;
+
+    }    // end of if loop //
+
+    else
+        warning ("There was no polygon meshes found in your scene!");
+
+}    // end of procedure goSelectAlphaVerts //
+
+
+// --------------------------------------------------------------- //
+// `description`                                                   //
+// --------------------------------------------------------------- //
+global proc PVRGBGUIWin()
+{
+    global string $polyVertRGBWin;    // define a variable to hold the name of the window object //
+    global float $VRGBValues[];    // global float to hold the values between procedures //
+    global int $SCScriptJob;    // global variable to hold the scriptJob number for later killing
+
+    polyOptions -activeObjects -ae -cs 1 -cm ambientDiffuse;
+
+    window    // call to create a GUI window //
+        -w 400
+        -h 275
+        -t "Vert RGBA Editor"
+        -in "Vert RGBA Editor"
+        -mb 1
+        -tb 1
+        -mnb 1
+        -mxb 0
+        -rtf 0
+        -s 1
+      $polyVertRGBWin;
+
+        columnLayout;
+           button
+                -l "Artisan Paint Vertex Color Tool"
+                -w 300
+                -c "PaintVertexColorToolOptions;";
+
+           text -l " " -h 5;
+
+           colorSliderButtonGrp
+                -l "RGB Color  "
+                -bl "Grab RGB"
+                -cw 1 75
+                -cw 2 75
+                -cw 3 150
+                -cw 4 100
+                -rgb $VRGBValues[0] $VRGBValues[1] $VRGBValues[2]
+                -sbd 0
+                -sbc "goUpdateMyVertRGBColorSliderGroup;"
+                -cc "goChangeMyRGBColor"
+                -bc "goUpdateMyVertRGBColorSliderGroup;"
+              myVertRGBColorSliderGroup;
+
+            text -l " " -h 5;
+
+            floatSliderGrp
+                -l "Alpha Value"
+                -v 1.0
+                -cw 1 75
+                -cw 2 75
+                -cw 3 135
+                -f 1
+                -s 0.01
+                -pre 2
+                -min 0.00
+                -max 1.00
+                -cc "goChangeMyAlphaColor;"
+                -dc "goChangeMyAlphaColor;"
+              myVertAFieldSliderGroup;
+
+            text -l " " -h 5;
+
+            button
+                -l "Select verts matching the RGB Color Swatch"
+                -w 300
+                -c "goSelectColoredVerts;";
+
+            text -l " " -h 5;
+
+            button
+                -l "Select verts matching the Alpha Value Swatch"
+                -w 300
+                -c "goSelectAlphaVerts;";
+
+            text -l " " -h 5;
+
+            // create a scriptJob to run whenever the user changes selections
+            $SCScriptJob = `scriptJob -e "SelectionChanged" "captureTheAverageRGB" -pro`;
+
+            button
+                -l "Close"
+                -w 100
+                -c "deleteUI $polyVertRGBWin; source rgbVertexChooser;";
+
+    setParent $polyVertRGBWin;
+
+}    // end of procedure PVRGBGUIWin //
+
+
+global proc forceAllBlack2White()
+{
+    string $selectedVertsList[];
+    float $DValue[3] = {1,1,1};
+    int $selVertsListNumber = 0;
+
+    string $allMeshes[0] = `ls -sl -typ transform`;
+    $allMeshes = `filterExpand -ex 1 -sm 12 $allMeshes`;
+
+    if (!`size $allMeshes` > 0)
+    {
+        $allMeshes = `ls -typ transform`;
+        $allMeshes = `filterExpand -ex 1 -sm 12 $allMeshes`;
+
+    }    // end of if loop //
+
+    if (`size $allMeshes` > 0)
+    {
+        for ($mesh in $allMeshes)
+        {
+            string $vert;
+            string $allVerts[0] = `ls -fl ($mesh + ".vtx[*]")`;
+
+            for ($vert in $allVerts)
+            {
+                int $matchedColor = 1;
+
+                float $compColor[3] = {0,0,0};
+                float $vertColor[3] = `polyColorPerVertex -q -rgb $vert`;
+
+                // compare the R component of the vert to the swatch color //
+                if ($vertColor[0] != $compColor[0])
+                    $matchedColor = 0;
+
+                // compare the R component of the vert to the swatch color //
+                if ($vertColor[1] != $compColor[1])
+                    $matchedColor = 0;
+
+                // compare the R component of the vert to the swatch color //
+                if ($vertColor[2] != $compColor[2])
+                    $matchedColor = 0;
+
+                if ($matchedColor == 1)
+                {
+                    $selectedVertsList[$selVertsListNumber] = $vert;
+                    $selVertsListNumber++;
+
+                }    // end of if loop //
+
+            }    // end of for loop //
+
+        }    // end of for loop //
+
+        if (`size $selectedVertsList` > 0)
+        {
+            for ($vertname in $selectedVertsList)
+                polyColorPerVertex -r $DValue[0] -g $DValue[1] -b $DValue[2] -a 1 $vertname;
+
+        }    // end of if loop //
+
+        refresh;
+
+    }    // end of if loop //
+
+    else
+        warning ("There was no polygon meshes found in your scene!");
+
+}    // end of procedure forceAllBlack2White //

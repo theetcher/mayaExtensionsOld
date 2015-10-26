@@ -1,0 +1,25 @@
+//	mcStringCleaning		by Milo D. Cooper
+//
+//	Removes all characters from a string that are not underscores, optionally
+//	retaining alphabetical and/or numerical characters.
+
+global proc string mcStringCleaning(string $sDirty, string $sAllowed) {
+	// $sAllowed may be "A" or "a" for alphabetical characters, and/or "N" or "n" for numerals.
+	string $saMatches[] = {
+		("[^" + (`gmatch $sAllowed "*[Aa]*"` ? "A-Za-z" : "") + (`gmatch $sAllowed "*[Nn]*"` ? "0-9" : "") + "_]+"),
+		"^[0-9]+"
+	};
+
+	string $sClean;
+	for ($sMatch in $saMatches) {
+		int $bDirty = yes;
+		while ($bDirty) {
+			$sClean = `substitute $sMatch $sDirty ""`;
+			$bDirty = (! ($sDirty == $sClean));
+			$sDirty = $sClean;
+		}
+	}
+
+	return $sClean;
+}
+

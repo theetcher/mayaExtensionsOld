@@ -1,0 +1,169 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: Alignment v1.0
+''    Author: Shanmuga Raja
+''    Last Updated: September 24, 2001
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=animation#1268
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+global proc doalign()
+{
+	string $nodes[];
+	$nodes = `ls -sl`;
+
+	int $i, $cnt;
+	for($i = 0; size($nodes[$i]) > 0; $i++);
+	$cnt = $i - 1;
+	if ( $cnt < 1 )
+	{
+		print "error! Incorrect Selection\n";
+		return;
+	}
+
+	float $val;
+	if(`checkBox -query -value rxAxis` == true)
+	{
+		$val = `getAttr ($nodes[$cnt] + ".rotateX")`;
+		for($i = 0; $i < $cnt; $i++)
+			setAttr ($nodes[$i] + ".rotateX") $val;
+	}
+	if(`checkBox -query -value ryAxis` == true)
+	{
+		$val = `getAttr ($nodes[$cnt] + ".rotateY")`;
+		for($i = 0; $i < $cnt; $i++)
+			setAttr ($nodes[$i] + ".rotateY") $val;
+	}
+	if(`checkBox -query -value rzAxis` == true)
+	{
+		$val = `getAttr ($nodes[$cnt] + ".rotateZ")`;
+		for($i = 0; $i < $cnt; $i++)
+			setAttr ($nodes[$i] + ".rotateZ") $val;
+	}
+	if(`checkBox -query -value sxAxis` == true)
+	{
+		$val = `getAttr ($nodes[$cnt] + ".scaleX")`;
+		for($i = 0; $i < $cnt; $i++)
+			setAttr ($nodes[$i] + ".scaleX") $val;
+	}
+	if(`checkBox -query -value syAxis` == true)
+	{
+		$val = `getAttr ($nodes[$cnt] + ".scaleY")`;
+		for($i = 0; $i < $cnt; $i++)
+			setAttr ($nodes[$i] + ".scaleY") $val;
+	}
+	if(`checkBox -query -value szAxis` == true)
+	{
+		$val = `getAttr ($nodes[$cnt] + ".scaleZ")`;
+		for($i = 0; $i < $cnt; $i++)
+			setAttr ($nodes[$i] + ".scaleZ") $val;
+	}
+
+	string $aType = `radioCollection -q -sl rc`;
+	if( `strcmp $aType "pivot"` == 0 )
+	{
+		if(`checkBox -query -value txAxis` == true)
+		{
+			$val = `getAttr ($nodes[$cnt] + ".translateX")`;
+			for($i = 0; $i < $cnt; $i++)
+				setAttr ($nodes[$i] + ".translateX") $val;
+		}
+		if(`checkBox -query -value tyAxis` == true)
+		{
+			$val = `getAttr ($nodes[$cnt] + ".translateY")`;
+			for($i = 0; $i < $cnt; $i++)
+				setAttr ($nodes[$i] + ".translateY") $val;
+		}
+		if(`checkBox -query -value tzAxis` == true)
+		{
+			$val = `getAttr ($nodes[$cnt] + ".translateZ")`;
+			for($i = 0; $i < $cnt; $i++)
+				setAttr ($nodes[$i] + ".translateZ") $val;
+		}
+	}
+	else
+	{
+		if(`checkBox -query -value txAxis` == true)
+			align -x $aType -atl;
+		if(`checkBox -query -value tyAxis` == true)
+			align -y $aType -atl;
+		if(`checkBox -query -value tzAxis` == true)
+			align -z $aType -atl;
+ 	}
+}
+
+global proc alignwin()
+{
+	if (`window -ex alignwin` == true) deleteUI alignwin;
+	window -w 180 -h 250 -title Alignments -s false alignwin;
+
+	string $form = `formLayout`;
+	string $framet = `frameLayout -label "Align Translation"`;
+		columnLayout;
+
+		frameLayout -label "Axis" -borderStyle etchedOut;
+			rowLayout -numberOfColumns 3 -cw3 50 50 50;
+				checkBox -label "X" -value false -align left txAxis;
+				checkBox -label "Y" -value false -align left tyAxis;
+				checkBox -label "Z" -value false -align left tzAxis;
+			setParent ..;
+		setParent ..;
+		radioCollection rc;
+			radioButton -label Minimum min;
+			radioButton -label Center -select mid;
+			radioButton -label Maximum max;
+			radioButton -label Pivot pivot;
+		setParent ..;
+	setParent ..;
+
+	string $framer = `frameLayout -label "Align Rotation"  -borderStyle etchedOut`;
+		rowLayout -numberOfColumns 3 -cw3 50 50 50;
+			checkBox -label "X" -value false -align left rxAxis;
+			checkBox -label "Y" -value false -align left ryAxis;
+			checkBox -label "Z" -value false -align left rzAxis;
+		setParent ..;
+	setParent ..;
+
+	string $frames = `frameLayout -label "Match Scale" -borderStyle etchedOut`;
+		rowLayout -numberOfColumns 3 -cw3 50 50 50;
+			checkBox -label "X" -value false -align left sxAxis;
+			checkBox -label "Y" -value false -align left syAxis;
+			checkBox -label "Z" -value false -align left szAxis;
+		setParent ..;
+	setParent ..;
+
+	string $frameb = `rowLayout -numberOfColumns 3 -cw3 50 50 50`;
+	button -label "  Align  " -command ("doalign; deleteUI alignwin");
+	button -label " Apply " -command ("doalign");
+	button -label "Cancel" -command ("deleteUI alignwin");
+
+	formLayout -edit
+    		-attachForm	$framet "top" 5
+    		-attachForm	$framet "left" 5
+		-attachControl	$framet "bottom" 5 $framer
+		-attachForm	$framet "right" 5
+
+		-attachNone 	$framer "top"
+		-attachForm 	$framer "left" 5
+		-attachControl 	$framer "bottom" 5 $frames
+		-attachForm	$framer "right"  5
+
+		-attachNone 	$frames "top"
+		-attachForm 	$frames "left" 5
+		-attachControl 	$frames "bottom" 5 $frameb
+		-attachForm	$frames "right"  5
+				
+		-attachNone 	$frameb "top"
+		-attachForm 	$frameb "left" 5
+		-attachForm 	$frameb "bottom" 5
+		-attachForm	$frameb "right"  5		
+
+	$form;
+	showWindow alignwin;
+}

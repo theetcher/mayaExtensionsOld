@@ -1,0 +1,482 @@
+/*
+					GuilsDome v.1.0 
+				  -- Dome Light Generator --
+				
+						by Guillaume ROCHERON    rch@clubinternet.fr
+						Created on july 2002
+						
+						
+
+
+DESCRIPTION : 	This is just a little & simple script to create dome lights.
+		
+		The first particularity of this script is that you can manage separately the
+		attributes of the top $ bottom dome lights.
+		
+		The second is that it creates 2 control lights that are used to ajust all the others
+		lights.
+		
+		There is 3 quality parameters that you can adjust with the UI.
+		They are based on the lights number.
+		
+
+
+USE :		To install the script, source or run it then type GuilsDomeInstall.
+		An icon is added to your current shelf.
+
+
+---------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
+
+*/
+
+global proc GuilsDomeCreate () {
+
+
+	// VARIABLES
+
+	int $DivideSphere;
+	int $TotalLights; 
+
+	string $QualityCheck = `optionMenuGrp -q -v DOMEQUALITY`;
+	print ( "Dome Quality : " + $QualityCheck + "\n");
+	
+		if ($QualityCheck == "Low" ) {
+			$DivideSphere = 6;
+			$TotalLights = 32; 
+		}
+		if ($QualityCheck == "Medium" ) {
+			$DivideSphere = 10;  
+			$TotalLights = 92; 
+		}
+		if ($QualityCheck == "High" ) {
+			$DivideSphere = 14;  
+			$TotalLights = 184; 
+		}
+
+
+	float $DomeRadius = `floatSliderGrp -q -v RADIUSSLD`; 
+	
+	float $TopIntensity = `floatSliderGrp -q -v TOPLIGHTSINTSLD`; 
+	float $BottomIntensity = `floatSliderGrp -q -v BOTTOMLIGHTSINTSLD`;
+	
+	float $LightIntensitySingleTop = $TopIntensity / ($TotalLights/2);
+	float $LightIntensitySingleBas = $BottomIntensity / ($TotalLights/2);
+
+	int $ShadowActivate = `checkBox -q -v CHECKSHADOW` ;
+	int $ShadowDiff = `intSliderGrp -q -v FILTERSIZESLD`; 
+	int $ShadowRes = `intSliderGrp -q -v FILTERRESSLD`;
+
+	float $ShadowColorTop [] = `colorSliderGrp -q -rgb SHADOWCOLSLDTOP`;
+	float $ShadowColorBottom [] = `colorSliderGrp -q -rgb SHADOWCOLSLDBOTTOM`;
+	
+
+	
+	float $LightTopColor []= `colorSliderGrp -q -rgb TOPLIGHTSCOLSLD`;
+	float $LightBottomColor []= `colorSliderGrp -q -rgb BOTTOMLIGHTCOLSLD`;
+	
+	
+	// CREATION DU DOME
+
+	polySphere -sx $DivideSphere -sy $DivideSphere -r $DomeRadius;
+	rename DomeLightHaut1;
+	
+	string $DomeHautName [] = `ls -sl`;
+
+	print ( "Generated Lights : " + $TotalLights + "\n");
+
+	if ( $TotalLights == "32" ) {
+		select -r ($DomeHautName [0] + ".f[0:11]");
+		select -tgl ($DomeHautName [0] + ".f[24:29]") ;
+	}
+
+	if ( $TotalLights == "92" ) {
+		select -r ($DomeHautName [0] + ".f[0:39]");
+		select -tgl ($DomeHautName [0] + ".f[80:89]") ;
+	}
+
+	if ( $TotalLights == "184" ) {
+		select -r ($DomeHautName [0] + ".f[0:83]");
+		select -tgl ($DomeHautName [0] + ".f[168:181]") ;
+	}
+	
+	
+	delete;
+
+	select -r $DomeHautName [0];
+	duplicate;
+	scale 1 -1 1;
+
+	rename DomeLightBas1;
+	string $DomeBasName [] = `ls -sl`;
+	
+	int $TopVtx []= `polyEvaluate -v $DomeHautName [0]`;
+	int $BottomVtx []= `polyEvaluate -v $DomeBasName [0]`;
+
+
+	delete -ch $DomeHautName [0];
+	delete -ch $DomeBasName [0];
+	
+	string $GlobalGroup = `group -em -n DomeLight01`;
+	string $GroupHaut = `group -em -n ( $DomeHautName [0] + "_Grp" )`;
+	string $GroupBas = `group -em -n ( $DomeBasName [0] + "_Grp" )`;
+	
+
+	
+	// LUMIERES
+	
+	directionalLight	-rgb $LightTopColor [0] $LightTopColor [1] $LightTopColor [2]
+				-i $LightIntensitySingleTop;
+	rename BaseTopLight;
+			
+	directionalLight 	-rgb $LightBottomColor [0] $LightBottomColor [1] $LightBottomColor [2]
+				-i $LightIntensitySingleBas;
+	rename BaseBottomLight;
+	
+	spaceLocator;
+	rename LightDir;
+	
+	
+		// --> TOP CONTROL LIGHT
+		
+	string $Topcontrol [] = `duplicate -un -ic -n ( $DomeHautName [0] + "_Control_Light" ) BaseTopLight`;
+	float $FirstLightPos []= `pointPosition ( $DomeHautName [0] + ".vtx[0]" )`;
+
+	select -r $Topcontrol [0];
+	move  $FirstLightPos [0] $FirstLightPos [1] $FirstLightPos [2];
+	aimConstraint -weight 1 -aimVector 0 0 -1 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 LightDir $Topcontrol [0];
+	delete -constraints;
+	
+	string $TopShape [] = `ls -sl`;
+	setAttr ( $TopShape [0] + ".dmapResolution"  ) $ShadowRes;
+	setAttr ( $TopShape [0] + ".useDepthMapShadows"  ) $ShadowActivate;
+	setAttr ( $TopShape [0] + ".dmapFilterSize" ) $ShadowDiff;
+	setAttr ( $TopShape [0] + ".shadowColor" ) -type double3 $ShadowColorTop [0] $ShadowColorTop [1] $ShadowColorTop [2];
+	setAttr ( $TopShape [0] + ".dmapBias" ) 0.1;
+
+	parent $Topcontrol [0] $GlobalGroup;
+	
+
+		// --> TOP LIGHTS
+
+	for ( $i = 1; $i <= $TopVtx [0]; $i++ ) { 		// CREATION DES LUMIERES DU HAUT
+		
+		string $CurrentLight []= `duplicate -un -ic -n ( $DomeHautName [0] + "_light1" ) BaseTopLight `;
+		float $LightPos []= `pointPosition ( $DomeHautName [0] + ".vtx["+$i+"]" )`;
+		
+		select -r $CurrentLight [0];
+		move  $LightPos [0] $LightPos [1] $LightPos [2];
+		
+		aimConstraint -weight 1 -aimVector 0 0 -1 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 LightDir $CurrentLight [0];
+		delete -constraints;
+		
+		string $LightShape [] = `ls -sl`;
+	
+		connectAttr -f ( $Topcontrol [0] + ".color" ) ( $LightShape [0] + ".color" );
+		connectAttr -f ( $Topcontrol [0] + ".intensity" ) ( $LightShape [0] + ".intensity" );
+		connectAttr -f ( $Topcontrol [0] + ".useDepthMapShadows" ) ( $LightShape [0] + ".useDepthMapShadows" );
+		connectAttr -f ( $Topcontrol [0] + ".dmapFilterSize" ) ( $LightShape [0] + ".dmapFilterSize" );
+		connectAttr -f ( $Topcontrol [0] + ".shadowColor" ) ( $LightShape [0] + ".shadowColor" );
+		connectAttr -f ( $Topcontrol [0] + ".dmapBias" ) ( $LightShape [0] + ".dmapBias" );
+		connectAttr -f ( $Topcontrol [0] + ".dmapResolution" ) ( $LightShape [0] + ".dmapResolution" );
+
+		
+		parent $CurrentLight [0] $GroupHaut;
+		
+				
+		$CurrentLight [0]= "";
+		
+	}
+	
+		int $SkipVtx;
+	
+		if ( $TotalLights == 32 )
+			$SkipVtx = 6;
+
+		if ( $TotalLights == 92 )
+			$SkipVtx = 10;
+			
+		if ( $TotalLights == 184 )
+			$SkipVtx = 14;
+
+	
+			// --> BOTTOM CONTROL LIGHT
+		
+		string $Bottomcontrol [] = `duplicate -un -ic -n ( $DomeBasName [0] + "_Control_Light" ) BaseBottomLight`;
+		float $FirstLightPosBot []= `pointPosition ( $DomeBasName [0] + ".vtx[ " + $SkipVtx + "]" )`;
+	
+		select -r $Bottomcontrol [0];
+		move  $FirstLightPosBot [0] $FirstLightPosBot [1] $FirstLightPosBot [2];
+		aimConstraint -weight 1 -aimVector 0 0 -1 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 LightDir $Bottomcontrol [0];
+		delete -constraints;
+		
+		string $BottomShape [] = `ls -sl`;
+		setAttr ( $BottomShape [0] + ".dmapResolution"  ) $ShadowRes;
+		setAttr ( $BottomShape [0] + ".useDepthMapShadows"  ) $ShadowActivate;
+		setAttr ( $BottomShape [0] + ".dmapFilterSize" ) $ShadowDiff;
+		setAttr ( $BottomShape [0] + ".shadowColor" ) -type double3 $ShadowColorBottom[0] $ShadowColorBottom [1] $ShadowColorBottom[2];
+		setAttr ( $BottomShape [0] + ".dmapBias" ) 0.1;
+	
+		parent $Bottomcontrol [0] $GlobalGroup;	
+	
+	
+	
+	for ( $i = $SkipVtx + 1 ; $i <= $BottomVtx [0] ; $i++ ) {		// CREATION DES LUMIERES DU BAS
+		
+		string $CurrentLight []= `duplicate -un -ic -n ( $DomeBasName [0] + "_light1" ) BaseBottomLight `;
+		float $LightPos []= `pointPosition ( $DomeBasName [0] + ".vtx["+$i+"]" )`;
+		
+		select -r $CurrentLight [0];
+		move  $LightPos [0] $LightPos [1] $LightPos [2];
+		
+		aimConstraint -weight 1 -aimVector 0 0 -1 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 LightDir $CurrentLight [0];
+		delete -constraints;
+		
+		pickWalk -d down;
+		
+		string $LightShape [] = `ls -sl`;
+
+		connectAttr -f ( $Bottomcontrol [0] + ".color" ) ( $LightShape [0] + ".color" );
+		connectAttr -f ( $Bottomcontrol [0] + ".intensity" ) ( $LightShape [0] + ".intensity" );
+		connectAttr -f ( $Bottomcontrol [0] + ".useDepthMapShadows" ) ( $LightShape [0] + ".useDepthMapShadows" );
+		connectAttr -f ( $Bottomcontrol [0] + ".dmapFilterSize" ) ( $LightShape [0] + ".dmapFilterSize" );
+		connectAttr -f ( $Bottomcontrol [0] + ".shadowColor" ) ( $LightShape [0] + ".shadowColor" );
+		connectAttr -f ( $Bottomcontrol [0] + ".dmapBias" ) ( $LightShape [0] + ".dmapBias" );
+		connectAttr -f ( $Bottomcontrol [0] + ".dmapResolution" ) ( $LightShape [0] + ".dmapResolution" );
+
+
+		parent $CurrentLight [0] $GroupBas;
+	
+		$CurrentLight [0]= "";
+		
+	}
+
+	// CLEAN
+
+	delete BaseTopLight;
+	delete BaseBottomLight;
+	delete LightDir;
+
+	// ATTRIBUTS DU MESHES DU DOME
+	
+	setAttr ( $DomeHautName [0] + ".overrideEnabled " ) 1;
+	setAttr ( $DomeBasName [0] + ".overrideEnabled ") 1;
+
+	setAttr ( $DomeHautName [0] + ".overrideShading ")0;
+	setAttr ( $DomeBasName [0] + ".overrideShading ") 0;
+	
+	setAttr ( $DomeHautName [0] + ".castsShadows ")0;
+	setAttr ( $DomeHautName [0] + ".receiveShadows ")0;
+	setAttr ( $DomeHautName [0] + ".motionBlur ") 0;
+	setAttr ( $DomeHautName [0] + ".primaryVisibility ") 0;
+	setAttr ( $DomeHautName [0] + ".smoothShading ") 0;
+	setAttr ( $DomeHautName [0] + ".visibleInReflections ") 0;
+	setAttr ( $DomeHautName [0] + ".visibleInRefractions ") 0;
+	setAttr ( $DomeHautName [0] + ".doubleSided ") 0;
+
+	setAttr ( $DomeBasName [0] + ".castsShadows ")0;
+	setAttr ( $DomeBasName [0] + ".receiveShadows ")0;
+	setAttr ( $DomeBasName [0] + ".motionBlur ") 0;
+	setAttr ( $DomeBasName [0] + ".primaryVisibility ") 0;
+	setAttr ( $DomeBasName [0] + ".smoothShading ") 0;
+	setAttr ( $DomeBasName [0] + ".visibleInReflections ") 0;
+	setAttr ( $DomeBasName [0] + ".visibleInRefractions ") 0;
+	setAttr ( $DomeBasName [0] + ".doubleSided ") 0;
+
+
+	// ORGANISATION
+	
+	parent $GroupBas $GlobalGroup;
+	parent $GroupHaut $GlobalGroup;
+	parent $DomeHautName [0] $GroupHaut;
+	parent $DomeBasName [0] $GroupBas;
+	
+	
+
+	
+	select -cl;
+	print ( " DomeLight Created : " + $GlobalGroup + "\n");
+
+
+	
+
+
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+global proc GuilsDome () {
+	
+if ( `window -exists GuilsDomeWindo`) 
+	deleteUI GuilsDomeWindo;
+		
+
+window -w 420 -h 600 -title " GuilsDome v.1.0" GuilsDomeWindo;
+
+scrollLayout;
+columnLayout GENERAL;
+	
+	columnLayout -adjustableColumn true ;
+	
+	separator -st none -h 15;
+	
+	text -align center -l " GUILS DOME v1.0 ";
+	text -align center -l "-- DomeLights Generator --";
+	
+	separator -st none -h 6;
+	
+	text -align right -l " by Guillaume ROCHERON   rch@clubinternet.fr";
+
+	separator -st none -h 15;
+
+
+	frameLayout -collapse off -collapsable on -l "Dome Parameters" DomePara;
+		columnLayout -adjustableColumn true DomeParaCOL;
+		
+			separator -st none -h 10;
+			
+
+			floatSliderGrp	-l "Dome Radius"
+					-min 0.1 -max 100 -step 3
+					-v 10
+					-field true 
+					RADIUSSLD;
+					
+			separator -h 10;
+
+  		  	optionMenuGrp -label "                      Quality" -cw2 140 80 DOMEQUALITY;
+    				menuItem -label "Low";
+    				menuItem -label "Medium";
+    				menuItem -label "High";
+    			optionMenuGrp -e -v Low DOMEQUALITY;
+
+
+			separator -st none -h 5;
+
+			
+	setParent GENERAL;
+	
+	
+
+
+	frameLayout -collapse off -collapsable on  -l "Lights Parameters" LightPara;
+		columnLayout -adjustableColumn true LightParaCOL;
+
+			separator -st none -h 5;
+
+		
+			floatSliderGrp	-l "Top Dome Intensity" 
+					-min 0 -max 10 -step 3
+					-value 2
+					-field true 
+					TOPLIGHTSINTSLD;
+
+			floatSliderGrp	-l "Bottom Dome Intensity"
+					-min 0 -max 10 -step 3
+					-value 1.4
+					-field true 
+					BOTTOMLIGHTSINTSLD;
+
+			colorSliderGrp 	-l "Top Lights Color"
+					-rgb 1 1 1
+					TOPLIGHTSCOLSLD;
+					
+			colorSliderGrp	-l "Bottom Lights Color"
+					-rgb 1 1 1
+					BOTTOMLIGHTCOLSLD;
+					
+			separator -st none -h 5;
+
+					
+			setParent GENERAL;
+
+					
+
+	frameLayout -collapse off -collapsable on -l "Shadows Parameters" ShadowsPara;
+		columnLayout -adjustableColumn true ShadowsParaCOL;
+
+			separator -h 5 -st none;
+					
+			checkBox	-l "Cast Shadows"
+					-v 1
+					-align left
+					-ofc ( "colorSliderGrp -e -en off SHADOWCOLSLDTOP ; colorSliderGrp -e -en off SHADOWCOLSLDBOTTOM ; intSliderGrp -e -en off FILTERRESSLD; intSliderGrp -e -en off FILTERSIZESLD;	" )
+					-onc ( "colorSliderGrp -e -en on SHADOWCOLSLDTOP ;colorSliderGrp -e -en on SHADOWCOLSLDBOTTOM ; intSliderGrp -e -en on FILTERRESSLD; intSliderGrp -e -en on FILTERSIZESLD;" )
+
+					CHECKSHADOW;
+			
+			colorSliderGrp	-l "Top Shadow Color"
+					-rgb 0 0 0
+					SHADOWCOLSLDTOP;
+
+			colorSliderGrp	-l "Bottom Shadow Color"
+					-rgb 0 0 0
+					SHADOWCOLSLDBOTTOM;
+
+			intSliderGrp	-l "Dmap Resolution"
+					-min 256 -max 2048
+					-v 512
+					-field true 
+					FILTERRESSLD;
+		
+			intSliderGrp	-l "Dmap Filter Size"
+					-min 1 -max 30
+					-v 1
+					-field true 
+					FILTERSIZESLD;
+
+			separator -st none -h 5;
+			
+	setParent GENERAL;
+		
+
+			
+	frameLayout -collapse off -collapsable on -w 384 -l "Dome Generation" DomeGener;
+		columnLayout -adjustableColumn true DomeGenerCOL;
+		
+			separator -st none -h 5;
+			button 	-l "Generate Dome"
+				-c "GuilsDomeCreate";
+
+			separator -h 20;
+			
+			button	-l "Help"
+				-c "GuilsDomeHelp";
+			
+	setParent GENERAL;
+
+showWindow;	
+	
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+global proc GuilsDomeInstall () {
+	
+	
+global string $gShelfTopLevel;
+string $selTab = ( $gShelfTopLevel + "|" + `tabLayout -q -selectTab $gShelfTopLevel` );
+
+
+shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 34
+        -height 34
+        -manage 1
+        -visible 1
+        -label "GuilsDome" 
+        -image1 "GuilsDome.xpm" 
+        -style "iconOnly" 
+	 -parent $selTab
+ 	 -command "GuilsDome";
+ 	 
+}

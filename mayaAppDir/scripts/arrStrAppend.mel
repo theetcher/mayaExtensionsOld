@@ -1,0 +1,8 @@
+global proc arrStrAppend( string $arr[], string $element)
+{
+	$arr[size($arr)] = $element;
+}   
+
+
+
+

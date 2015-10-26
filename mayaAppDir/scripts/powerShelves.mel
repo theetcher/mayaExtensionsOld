@@ -1,0 +1,509 @@
+/*
+ 	Power Shelves   v1	by Archimedes
+
+ 	-add RMB menus to shelf buttons
+ 	-the workflow is similar to building a marking menu, bring items to the shelf,
+ 	  then drag them to the interface.
+ 	  
+ 	> written for the windows version of maya 5 
+ 	> this might work [not tested] with other OSs if you take out the -bgc flags... [only windows supports background color]
+ 	
+ 	useage:
+ 	1> put this in this scripts directory
+ 		> in your userSetup.mel add the following lines:
+ 			source powerShelves;
+			powerShSpawnMenus;
+		> back up your shelves ["there is no such thing as bug proof software..."]
+		> start maya
+ 	2> type "powerShelves", [brings up the interface]
+ 	3> hit "new menu" button
+ 	4> right click on the shelf button you want to add a menu to
+ 		> select "add menu..." option
+ 		> the shelf button will be outlined in red
+ 	5> hit "add item" button
+ 	6> drag and drop a shelf button to the scroll field [command will appear]
+ 	7> without changing focus, hit numeric "enter" to adopt the item name
+ 	8> repeat steps 5-7 to build the menu
+ 	9> hit "update menu", the menu will be saved and ready to use
+ 	10> hit "close" to exit the interface
+ 	
+ 	> drag and drop the area between the item name and "divider" button to reorder the menus.
+ 		> the dropped item pushes the others down, so to move an item to the bottom you 
+ 		   will need to drag and drop twice.
+ 	> hit "X" to delete an item
+ 	> "divider" toggles the item into a divider. [it does not insert a divider]
+ 	> "delete menu" does what you think...
+ 	> read the help line at the bottom for instructions
+ 	> "add menu" works on the current shelf tab, switch to the desired tab before hitting the button.
+ 	> your brain has been wired to think a shelfButton does one thing.  give the idea of power shelves a few
+	   days to sink in.
+	> you will only need to type in "powerShelves" the first time.  after that, use "+" at the bottom
+	   of each menu to bring up the interface.
+
+ */
+
+global proc powerShelves()	
+{
+	if ( `window -exists powerShelvesWin` ) deleteUI -window powerShelvesWin;
+	window -t "Power Shelves   rc1.0      by Archimedes" -tb 1 -s 1 -mnb 1 -mxb 1 -rtf 1 -wh 500 500 -tlc 100 150 powerShelvesWin;
+
+	string $form = `formLayout -w 500`;
+	string $middle = `scrollLayout -cr 1 -mcw 200 -w 500`;
+	columnLayout -adj 1 theBigColumn;
+	setParent..;
+	setParent..;
+	string $topBar = `rowLayout -nc 6 -cw6 110 110 80 110 90 1 -ad6 3 -ct6 left left left left left both -co6 1 1 1 1 1 1
+			-cl6 center center center center center center`;
+	button -w 110 -l "new menu" -bgc .79 .78 .84 -c "powerShNewMenu" newMenuBut;
+	button -w 110 -l "add item" -bgc .83 .85 .84 -c "powerShAddMenuItem" sddMenuItemBut;
+	button -w 80 -l "update menu" -bgc .83 .85 .84 -c "powerShUpdateMenu" updateMenuBut;
+	button -w 110 -l "close" -bgc .83 .85 .84 -c "powerShCloseShop" saveMenusBut;
+	button -w 90 -l "delete menu" -bgc .82 .75 .75 -c "powerShDeleteMenu" deleteMenuBut;
+	intField -w 1 -vis 0 powerShWhatButton;
+	setParent..;
+	setParent..;
+	string $help = `columnLayout -adj 1`;
+	textField -tx " Welcome to powerShelves.  hit 'new menu' to begin" 
+		-cc "textField -e -tx \" you just had to do it...;)\" powerShHelpLine" powerShHelpLine;
+
+	formLayout -e -ac $middle bottom 2 $help -af $middle right 2 -af $middle left 2 -ac $middle top 2 $topBar 
+	-af $topBar top 2 -af $topBar right 2 -af $topBar left 2 
+	-af $help bottom 2 -af $help left 2 -af $help right 2 $form;
+
+	showWindow;
+}
+
+
+
+global proc powerShAddMenuItem()		
+{
+	textField -e -tx " Hit 'add item', then drag and drop a shelf button to the large field.   Hit keypad 'enter' to adopt the name for the menu  [or type in a new name]" powerShHelpLine;
+	
+	setParent theBigColumn;
+	int $i = 1;
+	while (`textField -q -ex ("menuName" + $i)`) $i++;
+	
+	rowLayout -w 600 -nc 4 -cw4 220 130 50 20 -ad4 2 -ct4 left left left both -co4 1 1 1 1
+			-cl4 left left center center ("powerShItemRow" + $i);
+			
+	textField -w 220 -fn "boldLabelFont"  ("menuName" + $i);
+	eval ("text -l \"\" -dgc dndGive -dpc dndTake -w 180 -vis 1 psDragDropBar" + $i);
+	eval ("button -w 50 -l \"divider\" -c \"powerShTglDivider(" + $i + ")\" powerShDividerBut" + $i + ";");
+	eval ("button -l \"X\" -bgc .82 .75 .75 -c \"{deleteUI -lay powerShItemRow" + $i + ";deleteUI -ctl menuComm" + $i + ";}\"");
+	setParent..;
+
+	eval ("scrollField -fn \"plainLabelFont\" -h 40 -w 600 -ww true -ec \"powerShAdoptName(" + $i + ")\" menuComm" + $i);
+}
+
+
+global proc string[] dndGive ( string $dragged, int $x, int $y, int $mods ) 
+{ 
+	string $result[1];
+	$result[0] = "mr hankey";
+	//$result[0] = $dragged; 
+	return $result; 
+} 
+ 
+
+global proc dndTake ( string $dragged, string $drop, string $msgs[], int $x, int $y, int $type )
+{ 
+	if (!`gmatch $dragged "*psDragDropBar*"`) return;
+
+	int $to = `match "[0-9]+$" $drop`;
+	int $from = `match "[0-9]+$" $dragged`;
+	
+	string $fmn = `textField -q -tx ("menuName" + $from)`;
+	string $fmc = `scrollField -q -tx ("menuComm" + $from)`;
+	
+	string $tmn = `textField -q -tx ("menuName" + $to)`;
+	string $tmc = `scrollField -q -tx ("menuComm" + $to)`;
+	
+	string $nmn[4];
+	string $nmc[4];
+	int $x;
+	int $c = 0;
+	string $co[] = `columnLayout -q -ca theBigColumn`;
+	for ($du in $co)
+	{
+		if (`gmatch $du "*menuComm*"`) continue;
+		$x = `match "[0-9]+$" $du`;
+		if ($x == $from) continue;
+		if ($x == $to)
+		{
+			$nmn[$c] = $fmn;
+			$nmc[$c] = $fmc;
+			$c++;
+			$nmn[$c] = $tmn;
+			$nmc[$c] = $tmc;
+			$c++;
+			continue;
+		}
+		$nmn[$c] = `textField -q -tx ("menuName" + $x)`;
+		$nmc[$c] = `scrollField -q -tx ("menuComm" + $x)`;
+		$c++;
+	}
+	
+	//for ($p in $nmn) print ($p + "\n");
+	
+	$c = 0;
+	for ($du in $co)
+	{
+		if (`gmatch $du "*menuComm*"`) continue;
+		$x = `match "[0-9]+$" $du`;
+		
+		if (((`textField -q -tx ("menuName" + $x)`) == "divider") && ($nmn[$c] != "divider"))
+		{
+			rowLayout -e -bgc .88 .87 .89 ("powerShItemRow" + $x);
+			textField -e -vis 1 ("menuName" + $x);
+			scrollField -e -vis 1  ("menuComm" + $x);
+			text -e -bgc .88 .87 .89 ("psDragDropBar" + $x);
+		}
+		if (($nmn[$c] == "divider") && ((`textField -q -tx ("menuName" + $x)`) != "divider"))
+		{
+			rowLayout -e -bgc .7 .7 .7 ("powerShItemRow" + $x);
+			textField -e -vis 0 ("menuName" + $x);
+			scrollField -e -vis 0 ("menuComm" + $x);
+			text -e -bgc .7 .7 .7 ("psDragDropBar" + $x);
+		}
+		//string $ol = `textField -q -tx ("menuName" + $x)`;
+		//print ($ol + " to " + $nmn[$c] + "\n");
+		
+		textField -e -tx $nmn[$c] ("menuName" + $x);
+		scrollField -e -tx $nmc[$c] ("menuComm" + $x);
+		$c++;
+	}
+}
+
+
+global proc powerShAdoptName(int $mn)
+{
+	textField -e -tx " When you are done building this menu, hit 'update menu'. " powerShHelpLine;
+	if ((`textField -q -tx ("menuName" + $mn)`) != "") return;
+	
+	string $tabs[3] = `shelfTabLayout -q -ca ShelfLayout`;
+	
+	for ($t in $tabs)
+	{
+		if (!`shelfLayout -q -io $t`)
+		{
+			string $buts[4] = `shelfLayout -q -ca $t`;
+			for ($b in $buts)
+			{
+				string $bc = `shelfButton -q -c $b`;
+				string $mc = `scrollField -q -tx ("menuComm" + $mn)`;
+				if ($bc == $mc)	
+				{	
+					string $bl = `shelfButton -q -l $b`;
+					textField -e -tx $bl ("menuName" + $mn);
+					return;
+				}
+			}
+		}
+	}		
+}
+
+
+
+global proc powerShCloseShop()
+{
+	int $sb = `intField -q -v powerShWhatButton`;
+	if ($sb != 0) {shelfButton -e -vis 0 ("shelfButton" + $sb);shelfButton -e -vis 1 -bgc .88 .87 .89 ("shelfButton" + $sb);}
+	deleteUI -window powerShelvesWin;
+}
+
+global proc powerShTglDivider(int $mn)
+{
+	if (`scrollField -q -vis ("menuComm" + $mn)`)
+	{
+		rowLayout -e -bgc .7 .7 .7 ("powerShItemRow" + $mn);
+		textField -e -tx "divider" -vis 0 ("menuName" + $mn);
+		scrollField -e -vis 0 ("menuComm" + $mn);
+		text -e -bgc .7 .7 .7 ("psDragDropBar" + $mn);
+	}
+	else
+	{
+		rowLayout -e -bgc .88 .87 .89 ("powerShItemRow" + $mn);
+		textField -e -tx "" -vis 1 ("menuName" + $mn);
+		scrollField -e -vis 1 -clear ("menuComm" + $mn);
+		text -e -bgc .88 .87 .89 ("psDragDropBar" + $mn);
+	}
+}
+
+global proc powerShDeleteMenu()
+{
+	int $sb = `intField -q -v powerShWhatButton`;
+	if ($sb == 0) return;
+	shelfButton -e -vis 0 ("shelfButton" + $sb);
+	shelfButton -e -vis 1 -bgc .88 .87 .89 ("shelfButton" + $sb);
+	
+	// remove menus
+	string $oc = `shelfButton -q -c ("shelfButton" + $sb)`;
+	if (!`gmatch $oc "*powerShelfStart*"`) return;		//if it's a new menu
+	$oc = (`substitute "/\\*\r\n@powerShelfStart.*" $oc ""`);
+	$oc = match( ".*[^(\r\n)]", $oc);		// remove extra \r\n
+	shelfButton -e -c $oc ("shelfButton" + $sb);
+
+	
+	string $pu[3] = `shelfButton -q -pma ("shelfButton" + $sb)`;
+	if ($pu[0] != "") deleteUI $pu[0];
+	
+	string $co[] = `columnLayout -q -ca theBigColumn`;
+	for ($dui in $co) deleteUI $dui;
+	textField -e -tx " that bad boy is gone..." powerShHelpLine;
+
+}
+
+
+global proc powerShNewMenu()		
+{
+	int $sb = `intField -q -v powerShWhatButton`;
+	if ($sb != 0) {shelfButton -e -vis 0 ("shelfButton" + $sb);shelfButton -e -vis 1 -bgc .88 .87 .89 ("shelfButton" + $sb);}
+	
+	string $col[] = `columnLayout -q -ca theBigColumn`;
+	for ($dui in $col) deleteUI $dui;
+	
+	textField -e -tx " Right click on the shelf button you want to add a new menu to >> new menu..." powerShHelpLine;
+	button -e -en 0 newMenuBut;
+	button -e -en 0 sddMenuItemBut;
+	button -e -en 0 updateMenuBut;
+	button -e -en 0 deleteMenuBut;
+	button -e -en 0 saveMenusBut;
+	
+	string $tabs[3] = `shelfTabLayout -q -ca ShelfLayout`;
+	
+	for ($t in $tabs)
+	{
+		if (!`shelfLayout -q -io $t`)
+		{
+			string $buts[4] = `shelfLayout -q -ca $t`;
+			for ($b in $buts)
+			{
+				if (`gmatch $b "*shelfItem*"`) continue;	// ignore shelfItems
+				string $bc = `shelfButton -q -c $b`;
+				if (!`gmatch $bc "*powerShelfStart*"`)
+				{
+					if (`gmatch $bc "*/\\**"`) continue;	// do not allow buttons with /* comments
+					string $i = `substitute "shelfButton" $b ""`;
+					if (`popupMenu -q -ex  ("powerShInitMenu" + $i)`) deleteUI ("powerShInitMenu" + $i);
+					popupMenu -p $b  ("powerShInitMenu" + $i);
+					eval ("menuItem -l \"new menu...\" -c \"powerShActivate(" + $i + ")\"");
+				}
+			}
+		}
+	}	
+}
+
+
+
+global proc powerShActivate(int $sb)
+{
+	string $tabs[3] = `shelfTabLayout -q -ca ShelfLayout`;	// delete temp menus
+	for ($t in $tabs)
+	{
+		if (!`shelfLayout -q -io $t`)
+		{
+			string $buts[4] = `shelfLayout -q -ca $t`;
+			for ($b in $buts)
+			{
+				string $pu[] = `shelfButton -q -pma $b`;
+				if (`gmatch $pu[0] "*powerShInitMenu*"` ) deleteUI $pu[0];
+			}
+		}
+	}
+	button -e -en 1 newMenuBut;
+	button -e -en 1 sddMenuItemBut;
+	button -e -en 1 updateMenuBut;
+	button -e -en 1 deleteMenuBut;
+	button -e -en 1 saveMenusBut;
+	powerShEditingMode($sb);
+}
+
+
+global proc powerShEditingMode(int $sb)	
+{
+	if ( `window -exists powerShelvesWin` )
+	{
+		int $i = `intField -q -v powerShWhatButton`;
+		if ($i != 0) {shelfButton -e -vis 0 ("shelfButton" + $i);shelfButton -e -vis 1 -bgc .88 .87 .89 ("shelfButton" + $i);}
+		string $col[] = `columnLayout -q -ca theBigColumn`;
+		for ($dui in $col) deleteUI $dui;
+	}
+	else powerShelves;
+	
+	textField -e -tx " Hit 'add item', then drag and drop a shelf button to the large field. Hit keypad 'enter' to adopt the name for the menu [or type in a new name]" powerShHelpLine;
+	
+	intField -e -v $sb powerShWhatButton;		
+	shelfButton -e -bgc 1 0 0 ("shelfButton" + $sb);
+	
+	if ((`shelfButton -q -npm ("shelfButton" + $sb)`) == 0) return;
+	
+	// fill in items
+	string $om[] = `popupMenu -q -ia ("powerSh_" + $sb)`;
+	int $c = 1;
+	for ($mi in $om)
+	{
+		if (!`menuItem -q -d $mi`)
+		{
+			string $mn = `menuItem -q -l $mi`;
+			string $mc = `menuItem -q -c $mi`;
+			if ($mn == "+") 
+			{ 
+				deleteUI -lay ("powerShItemRow" + ($c-1) );
+				deleteUI -ctl ("menuComm" + ($c-1) );
+				break;
+			}
+			powerShAddMenuItem;
+			textField -e -tx $mn ("menuName" + $c);
+			scrollField -e -tx $mc ("menuComm" + $c);
+		}
+		else
+		{
+			powerShAddMenuItem;
+			rowLayout -e  -vis 1 -bgc .7 .7 .7 ("powerShItemRow" + $c);
+			textField -e -tx "divider" -vis 0 ("menuName" + $c);
+			scrollField -e -vis 0 ("menuComm" + $c);
+			text -e -bgc .7 .7 .7 ("psDragDropBar" + $c);
+		}
+		$c++;
+	}
+}
+
+
+global proc powerShUpdateMenu()
+{
+	textField -e -tx " After you are finished hit 'close'.  " powerShHelpLine;
+	
+	int $yo = `columnLayout -q -nch theBigColumn`;
+	if ($yo == 0) 
+	{
+		textField -e -tx " nothing to update... add menu items and try again " powerShHelpLine;
+		return;
+	}
+	
+	int $sb = `intField -q -v powerShWhatButton`;
+	if ($sb == 0)
+	{
+		textField -e -tx " ...no menu selected to update  " powerShHelpLine;
+		return;
+	}
+
+	if (`popupMenu -q -ex  ("powerSh_" + $sb)`) deleteUI ("powerSh_" + $sb);
+	popupMenu -p ("shelfButton" + $sb)  ("powerSh_" + $sb);
+		
+	string $cc[] = `columnLayout -q -ca theBigColumn`;
+	int $nc = `columnLayout -q -nch theBigColumn`;
+	for ($i=0;$i<$nc;$i+=2)
+	{
+		string $nn = `substitute "powerShItemRow" $cc[$i] "menuName"`;
+		string $mn = `textField -q -tx $nn`;
+		string $mc = `scrollField -q -tx $cc[($i+1)]`;
+		if ($mn == "divider") menuItem -divider true;
+		else
+		{
+			if (($mn == "") || ($mc == "")) 
+			{
+				textField -e -tx " *** items with empty fields are ignored *** " powerShHelpLine;
+				continue;
+			}
+			if (`gmatch $mc "*@*"`)	// do not allow @ in command
+			{
+				textField -e -tx " *** commands containing '@' are not allowed :( *** " powerShHelpLine;
+				continue;
+			}
+			if (`gmatch $mn "+"`)
+			{
+				textField -e -tx " *** '+' is not a valid item name... *** " powerShHelpLine;
+				continue;
+			}
+			menuItem -l $mn -c $mc;
+		}
+	}
+	menuItem -divider true;
+	eval ("menuItem -l \"+\" -c (\"powerShEditingMode(" + $sb + ")\");");
+	
+	powerShSaveMenu;
+}
+
+
+global proc powerShSaveMenu()
+{
+	int $sb = `intField -q -v powerShWhatButton`;
+	
+	// build a string for the new menu
+	// maya is very particular with the \r\n stuff. it wouldn't update shelf correctly...
+	string $ps = "/*\r\n@powerShelfStart\r\n";
+	
+	string $pu[] = `shelfButton -q -pma ("shelfButton" + $sb)`;
+	
+	string $me[] = `popupMenu -q -ia $pu[0]`;			
+	for ($w in $me)				
+	{
+		if (`menuItem -q -d $w`) $ps = ($ps + "@divider\r\n");
+		else					
+		{
+			string $mn = `menuItem -q -l $w`;
+			string $mc = `menuItem -q -c $w`;
+			$mc = match( ".*[^(\r\n)]", $mc);	
+			if ($mn == "+") $ps = ($ps + "@powerShelfEnd\r\n" + "*/");
+			else $ps = ($ps + "@" + $mn + "\r\n@" + $mc +"\r\n");				
+		}
+	}
+	
+	string $oc = `shelfButton -q -c ("shelfButton" + $sb)`;
+	string $new = "";
+	if (!`gmatch $oc "*powerShelfStart*"`) $new = "\n\n\n";
+	
+	string $sc = (`substitute "/\\*.*powerShelfStart.*" $oc ""`);	//command stripper
+	$nc = ($sc + $new + $ps);
+	
+	shelfButton -e -c $nc ("shelfButton" + $sb);
+}
+
+
+global proc powerShSpawnMenus()
+{
+	string $tabs[] = `shelfTabLayout -q -ca ShelfLayout`;
+	
+	//in Maya 2009 we need to activate all the shelf tabs
+	//if we dont - query for the buttons on shelves that is not activated will return empty array
+	for ($i = 1; $i <= size($tabs); $i++) {
+		shelfTabLayout -e -sti $i ShelfLayout;
+	}
+	shelfTabLayout -e -sti 1 ShelfLayout;
+	
+	for ($t in $tabs)
+	{
+		string $buts[] = `shelfLayout -q -ca $t`;
+		for ($b in $buts)
+		{
+			string $gc = `shelfButton -q -c $b`;
+			if (!`gmatch $gc "*@powerShelfStart*"`) continue;
+			int $sb =(`substitute "shelfButton" $b ""`);
+			if (`popupMenu -q -ex  ("powerSh_" + $sb)`) deleteUI ("powerSh_" + $sb);
+			popupMenu -p $b  ("powerSh_" + $sb);
+			
+			$gc = (`substitute ".*@powerShelfStart\r\n" $gc ""`);	//chop off original command
+			$gc = (`substitute "\r\n@powerShelfEnd.*" $gc ""`);	// chop off tail
+			
+			string $w[];
+			tokenize $gc "@" $w;
+			int $x = `size($w)`;
+		
+			for ($i=0;$i<$x;$i++)
+			{
+				if (`gmatch $w[$i] "*divider*"`) menuItem -divider true;
+				else 
+				{
+					$w[$i] = match( "^[^(\r\n)]*", $w[$i]);
+					string $mn = $w[$i];
+					$i++;
+					
+					$w[$i] = match( ".*[^(\r\n)]", $w[$i]);	// chop end
+					string $mc = $w[$i];
+					menuItem -l $mn -c $mc;
+				}
+			} 
+			eval ("menuItem -l \"+\" -c (\"powerShEditingMode(" + $sb + ")\");");
+		}
+	}
+}

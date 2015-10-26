@@ -1,0 +1,6 @@
+global proc ptConvertString()
+{
+	ptsave -exporter_file_type "bdf" "d:/output.bdf";
+	quit -f;
+
+}

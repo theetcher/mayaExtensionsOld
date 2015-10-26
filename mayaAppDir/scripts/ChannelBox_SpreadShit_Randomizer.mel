@@ -1,0 +1,108 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: ChannelBox_SpreadShit_Randomizer v1.0
+''    Author: Sebastian Woldanski
+''    Last Updated: February 12, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=modeling#1524
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+/*
+ChannelBox_SpreadShit_Randomizer.mel
+version: 1.0
+
+author : Sebastian Woldanski with help of Roland Rayer THANX!!!!!!!!!!!!
+	http://woold.w.interia.pl
+	bug reports, comments, please mail to woold@interia.pl or woold@polbox.com or fwold@acn.waw.pl
+
+Description:
+randomize cells in spreadshit editor or highlited attrs in channel box
+
+
+Usage:
+	use script to show window
+	select object(s) to work on
+	block columns of spredshit and / or with pressed shift select single cells
+	and/or
+	highlited attrs in channel box
+	work in relative (it adds values generated between min max) or
+	absolute (it replaces values generated between min max) modes
+
+*/
+
+global proc RandomizeShits (int $tryb, float $min, float $max)
+{
+if (  $tryb == 1  )
+	{
+	catch (`spreadSheetEditor -e -execute ("setAttr #N.#A ( rand ( " + $min + "," +  $max + ") );") SSEd`);
+	catch (`channelBox -e -exe ("setAttr #P.#A ( rand ( " + $min + "," +  $max + ") );") true mainChannelBox`);
+	}
+else
+	{
+	catch (`spreadSheetEditor -e -execute ("setAttr #N.#A ((`getAttr #N.#A`) + ( rand ( " + $min + "," +  $max + ") ));") SSEd`);
+	catch (`channelBox -e -exe ("setAttr #P.#A ((`getAttr #P.#A`) + ( rand ( " + $min + "," +  $max + ") ));") true mainChannelBox`);
+	}
+}
+
+global proc ChannelBox_SpreadShit_Randomizer ()
+{
+string $NazwaOkienka = "spredSHITRandomizer";
+if ((`window -ex $NazwaOkienka`) == true) deleteUI $NazwaOkienka;
+
+window -t "CB_S_Rand"
+	 -w 199
+	 -h 115
+	 -s 1
+	 $NazwaOkienka;
+
+columnLayout -adj 1;
+
+
+		separator -style "none";
+			radioCollection;
+				radioButtonGrp
+					-l "mode"
+					-l1 "abs"
+					-l2 "rel"
+					-nrb 2
+					-sl 1
+					-cw3 50 50 50
+					radioButtonGrpSprRand
+					;
+		rowLayout
+				-numberOfColumns 4
+				-columnAttach 1 "left" 1
+				//-cl4 left left left left
+				-cw4 80 50 50 100
+				-adj 4
+
+				;
+
+				text -label "Min/Max Value";
+				floatField
+					-v 0
+					-w 50
+					-precision 4
+					-editable 1
+					minSCRand;
+				floatField
+					-v 1
+					-w 50
+					-precision 4
+					-editable 1
+					maxSCRand;
+				setParent ..;
+
+		button -width 100-label  "do it man!" -c " RandomizeShits `radioButtonGrp -q -sl radioButtonGrpSprRand` `floatField -q -v minSCRand`  `floatField -q -v maxSCRand`" ;
+		button  - width 100 -label "Close" -command "deleteUI spredSHITRandomizer";
+
+
+showWindow $NazwaOkienka;
+
+}

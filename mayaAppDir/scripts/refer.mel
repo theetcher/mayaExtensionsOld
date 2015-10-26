@@ -1,0 +1,7 @@
+global proc refer() {
+	string $rAllFiles[] = `ls -type file`;
+
+	for ($i=0; $i<size($rAllFiles); $i++) {
+		setAttr -type "string" ( $rAllFiles[$i] + ".ftn" ) `getAttr ( $rAllFiles[$i] + ".ftn" )`;
+	}	
+}

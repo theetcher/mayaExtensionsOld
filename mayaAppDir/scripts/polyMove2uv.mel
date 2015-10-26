@@ -1,0 +1,138 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: polyMove2uv v1.0
+''    Author: Daniel Kramer
+''    Last Updated: December 30, 2000
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=polygon#444
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//
+//  polyMove2uv	Ver 1.0
+//  Daniel Kramer - daniel@visionart.com 
+//  http://www.visionart.com/~daniel/
+//  Jan 20 1999
+//   
+//  Moves verticies of selected polygonal objects
+//  to their respective texture UV locations.
+//  Handy to visulize you object "UnWrapped"
+//  to create textures.
+//
+//  Script also creates a new camera called
+//  "TextureView" which is lined up to render
+//  this new object for texture reference.
+//  You must change your aspect ratio in the
+//  Render Globals to 1.0 (like 100x100) to
+//  Render out an image correctly.
+//
+//  Works on selected Polygonal Objects only.
+//  To visulize a Nurbs object unwrapped you will
+//  first have to convert it to polygons (the texture
+//  UV locations will be preserved in the conversion)
+//    
+//  Warning:  This script can take a long time to complete
+//  I'd suggest running it on fairly light objects to test it
+//  out before running on a big object.  As the script completes
+//  every 10% of the whole job it will tell you its status so you 
+//  know about how long it will take to finish.
+//
+//  USAGE: polyMove2uv()
+//
+
+global proc polyMove2uv() 
+{ 
+string $percent2;
+float $percent;
+string $selList[] = `ls -sl`;
+int $loop;
+int $loop2;
+string $cmd;
+string $buffer[];
+float $uv[];
+string $select[] = `ls -sl`;
+string $test[];
+
+
+
+//Loop though all selected objects (Must be polygonal)
+for($loop = 0 ;$loop < size($selList);$loop++)
+    {
+    
+	//Test if Object is Polygonal
+	$cmd = ("ls " + $selList[$loop] + ".vtx[0]");
+	$test = eval($cmd);
+	
+	$percent = .1;
+
+	if($test[0] != "")
+	    {
+	    //Copy current object to a new object and delete its 
+	    //construction history.
+	    $cmd = ("duplicate -n \"" + $selList[$loop] + "_polyMove2uv\" " + $selList[$loop]);
+	    eval $cmd;
+	    $selList[$loop] = ($selList[$loop] + "_polyMove2uv");
+	    delete -ch $selList[$loop];
+	
+	    //Break up facets to create unique verticies
+	    $cmd = ("select -r " + $selList[$loop] + ".f[\"*\"]");
+	    eval($cmd);
+	    polyChipOff -dup 0 -ch 0 -kft 0;
+	
+	
+	    //Select all points in current object and store the resulting list
+	    $cmd = ("select -r " + $selList[$loop] + ".map[\"*\"]");
+	    eval $cmd;
+	    string $map[] = `E_selectCV`;
+	
+	    //Loop though all points and transform them to thier respective
+	    //Texutre UV positions
+	  		
+	    for($loop2 = 0 ;$loop2 < size($map);$loop2++)
+		{
+	 	
+		//Output Percent of Job Finished
+		if($loop2 == trunc((size($map)*$percent)))
+			{
+			$percent2 = ($percent + "0");
+			tokenize ($percent2,".",$buffer);
+			if ($buffer[1] == "")
+				$buffer[1] = "100";
+			print ($buffer[1] + "% Done with " + $select[$loop] + "...\n");
+			$percent = $percent + .1;	
+			}
+		
+		//Store Current UV values of Current point	
+		tokenize ($map[$loop2], "[", $buffer);
+		tokenize ($buffer[1], "]", $buffer);
+		$cmd = ("getAttr " + $selList[$loop] + ".uv[" + $buffer[0] + "]");
+		$uv = eval($cmd);
+	    
+		//Preform vertex move
+		move -a -wd $uv[0] $uv[1] 0 $map[$loop2];
+
+		}
+	    }
+	    else
+		print ("\n" + $selList[$loop] + " is not a Polygonal Object\n");
+    }
+    
+    
+    
+    //Re-Select Base Objects
+    select -cl;
+    for($loop = 0 ;$loop < size($select);$loop++)
+	select -add $select[$loop];
+	
+    //Create Camera To View Texture Space	
+    if(!`objExists TextureView`)
+	{		
+	camera -overscan 2.0  -displayResolution 1 -ar 1 -o 0 -hfa 1 -vfa 1 -fl 500  -p .5 .5 19.7 -wci .5 .5 0 -wup 0 1 0 -n TextureView;
+	print ("Camera \"TextureView\" Created\nMake sure to set RenderGlobals resolution to a square aspect (eg. 512x512)\nto view \"TextureView\" camera correctly.");
+	}
+}

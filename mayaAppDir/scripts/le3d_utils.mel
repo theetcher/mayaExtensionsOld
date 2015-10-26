@@ -1,0 +1,221 @@
+/*
+MEL SCRIPT FILE
+---------------
+
+SCRIPT NAME: le3d_utils.mel
+VERSION: 1.0
+(C) 2001-2002 Light Engine 3d
+
+AUTHOR: Mark Davies
+lightengine3d@hotmail.com
+
+MODIFIED: 10.31.02
+
+DESCRIPTION: utilities for various le3d operations
+
+USAGE:
+    
+INPUTS:
+
+RETURN: none
+
+NOTES:
+*/
+
+
+
+global proc le3d_setupRGlobals()
+{
+print ("lightEngine3d: Setting Render Globals...\n");
+
+print ("	enabling Raytracing...\n");
+setAttr "defaultRenderQuality.enableRaytracing" 1;
+print ("	setting 'Raytracing Quality > Reflections' to 1...\n");
+setAttr "defaultRenderQuality.reflections" 1;
+print ("	setting 'Raytracing Quality > Refractions' to 0...\n");
+setAttr "defaultRenderQuality.refractions" 0;
+print ("	setting 'Raytracing Quality > Shadows' to 0...\n");
+setAttr "defaultRenderQuality.shadows" 0;
+print ("	setting 'Raytracing Quality > RayTraceBias' to 0...\n");
+setAttr "defaultRenderQuality.rayTraceBias" 0;
+
+print ("lightEngine3d: Render Globals set\n");
+}
+
+
+global proc le3d_prepareSurfaces()
+{
+string $surfList[] = `ls -sl`;
+	if (`size $surfList` == 0)
+	error ("lightEngine3d: No surfaces selected to prepare");
+
+int $edited = 0;
+	for ($surf in $surfList)
+	{
+	int $inValid = 0;
+	string $shape[] = `listRelatives -s $surf`;
+	string $type = `objectType $shape[0]`;
+		if ($shape[0] != "" && $type != "")
+		{
+      		if ($type == "mesh" || $type == "nurbsSurface")
+      		{
+      			if (!`getAttr ($shape[0]+".visibleInReflections")`)
+      			{
+      			$edited++;
+      				if ($edited == 1)
+      				print ("lightEngine3d: Preparing Surfaces...\n");
+
+      			print ("	Enabling '"+$shape[0]+".visibleInReflections'\n");
+      			setAttr ($shape[0]+".visibleInReflections") 1;
+      			}
+      		}
+      		else
+			$inValid++;
+		}
+		else
+		$inValid++;
+
+      	if ($inValid > 0)
+      	{
+      	warning ("lightEngine3d: Selected object '"+$surf+"' is not a valid surface. Skipping...");
+      	continue;
+      	}
+	}
+print ("lightEngine3d: "+$edited+" Surface(s) Required Preparing\n");
+}
+
+
+global proc le3d_managePlugins(int $mode)
+{
+waitCursor -state on;
+string $plugList[] = `pluginInfo -q -ls`;
+int $loaded = 0, $unloaded = 0;
+string $op;
+	for ( $plug in $plugList )
+	{
+	string $vendor = `pluginInfo -q -vd $plug`;
+		if ( $vendor == "Mark Davies : LightEngine3d" || $vendor == "nozon" )
+		{
+		$loaded++;
+			if ($mode == 0)
+			{
+			$op = "unloading";
+      			if ( `pluginInfo -q -uo $plug` )
+      			{
+      			$unloaded++;
+      				if ($unloaded == 1)
+      				print ("lightEngine3d: Unloading plug-ins...\n");
+      			unloadPlugin $plug;
+      			print ("	Plug-in '"+$plug+"' unloaded\n");
+      			}
+      			else
+      			warning ("lightEngine3d: Plug-in '"+$plug+"' cannot be unloaded because it is still in use");
+      		}
+			else if ($mode == 1)
+			{
+			$op = "listing";
+				if ($loaded == 1)
+				print ("lightEngine3d: Listing plug-in data...\n");
+			print ("	Name: "+$plug+"\n");
+			print ("	Path: "+`pluginInfo -q -p $plug`+"\n");
+			print ("	Vendor: "+$vendor+"\n");
+			print ("	Version: "+`pluginInfo -q -v $plug`+"\n\n");
+			}
+		}
+	}
+
+	if (($mode == 0 && $unloaded > 0) || ($mode == 1 && $loaded > 0))
+	print ("lightEngine3d: Finished "+$op+" plug-ins\n");
+	else if ($loaded == 0)
+	print ("lightEngine3d: No loaded plug-ins found\n");
+
+waitCursor -state off;
+}
+
+
+global proc le3d_createShading(string $nodeType, string $nodeName, string $plugName)
+{
+	if (!`pluginInfo -query -loaded $plugName`)
+	loadPlugin $plugName;
+
+string $node;
+	if ($nodeType == "utility")
+	$node = `shadingNode -asTexture -asUtility $nodeName`;
+	else if ($nodeType == "light")
+	$node = `shadingNode -asLight $nodeName`;
+	else if ($nodeType == "shader")
+	{
+	$node = `shadingNode -asShader $nodeName`;
+	string $sg = `sets -renderable true -noSurfaceShader true -empty -name ($node+"SG")`;
+	connectAttr -f ($node+".outColor") ($sg+".surfaceShader");
+	}
+
+print ("lightEngine3d: Created '"+$node+"'\n");
+}
+
+
+global proc le3d_RayMarcherUtils(int $mode)
+{
+string $node;
+
+	//create volume manipulators
+	if ($mode == 0 || $mode == 1)
+	{
+	string $type;
+		if ($mode == 0)
+		{
+		$type = "sphere";
+		$node = `createNode renderSphere`;
+		setAttr -l 1 ($node+".radius");
+		}
+		else
+		{
+		$type = "cube";
+		$node = `createNode renderBox`;
+		setAttr ($node+".size") 1 1 1;
+		setAttr -l 1 ($node+".size");
+		setAttr -e -k 0 ($node+".sizeX");
+		setAttr -e -k 0 ($node+".sizeY");
+		setAttr -e -k 0 ($node+".sizeZ");
+
+		le3d_displayUtils $node 11;
+		}
+	addAttr -ln "rayMarcherVM" -dt "matrix" $node;
+	addAttr -ln "active" -at bool -dv 1 $node;
+	setAttr -e -k 1 ($node+".active");
+	addAttr -ln "magnitude" -at double -dv 1 $node;
+	setAttr -e -k 1 ($node+".magnitude");
+		if ($mode == 0)
+		{
+		addAttr -ln "decay" -at long -dv 2 -min 0 -max 3 $node;
+		setAttr -e -k 1 ($node+".decay");
+
+		//addAttr -ln "useAsForce" -at bool -dv 0 $node;
+		//setAttr -e -k 1 ($node+".useAsForce");
+		}
+	string $parent[] = `listRelatives -p $node`;
+	$node = `rename $parent[0] ("rm_"+$type+"Manip#")`;
+	}
+
+	if ($mode < 3)
+	{
+	connectAttr -f ($node+".message") defaultTextureList1.textures[0];
+	select -r $node;
+	}
+
+print ("lightEngine3d: Created '"+$node+"'\n");
+}
+
+
+global proc le3d_displayUtils(string $node, int $overrideColorId)
+{
+delete -ch $node;
+string $shape[] = `listRelatives -s $node`;
+string $attrDisableList[] = {"castsShadows","receiveShadows","motionBlur","primaryVisibility",
+					"visibleInReflections","visibleInRefractions"};
+	for ($i=0; $i<`size $attrDisableList`; $i++)
+	setAttr ($shape[0]+"."+$attrDisableList[$i]) 0;
+setAttr ($shape[0]+".overrideEnabled") 1;
+setAttr ($shape[0]+".overrideLevelOfDetail") 1;
+setAttr ($shape[0]+".overrideColor") $overrideColorId;
+}

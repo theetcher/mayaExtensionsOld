@@ -1,0 +1,39 @@
+global proc string whatIsSel ()
+{
+string $allSel[] = `ls -sl -fl`;
+string $sel = $allSel[0];
+
+if (`size $sel` == 0)
+	return "0";
+int $counter = 1;
+for ($counter = 1; $counter < `size $sel`; $counter++)
+	{
+
+	if (`substring $sel $counter $counter` == "[")
+		{
+		break;
+		}
+	}
+
+if (`size $sel` == $counter)
+	{
+	if (`objectType $sel` == "transform")
+		return "o";
+	if (`objectType $sel` == "joint")
+		return "j";
+	}
+else
+	{
+	if (`substring $sel ($counter - 1) ($counter - 1)` == "x")
+		return "v";
+	else if (`substring $sel ($counter - 1) ($counter - 1)` == "e")
+		return "e";
+	else if (`substring $sel ($counter - 1) ($counter - 1)` == "f")
+		return "f";
+	else if (`substring $sel ($counter - 1) ($counter - 1)` == "p")
+		return "u";
+	else
+		return "";
+	}
+return "";
+}

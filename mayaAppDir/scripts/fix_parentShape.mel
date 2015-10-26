@@ -1,0 +1,61 @@
+proc fix_convAnimObjToGroup2()
+{
+string $fullObjNames[] = `ls -sl -l`;
+string $objShape[];
+string $tempTransform;
+string $objShapeNewTrans[];
+string $objShortName[];
+string $objNewShortName;
+
+	for ($obj in $fullObjNames) {
+		$objShape = `listRelatives -f -s $obj`;
+		$tempTransform  = `createNode "transform" -n "tempTrans"`;
+		$objShape = `parent -s $objShape[0] $tempTransform`;
+		$objShortName = `ls $obj`;
+	//	$obj = `rename $obj ($objShortName[0]+"_animGroup")`;
+		$objShape = `parent -s $objShape[0] $obj`;
+		$objShapeNewTrans = `listRelatives -p -f`;
+		$objNewShortName = `rename $objShapeNewTrans $objShortName`;
+		delete $tempTransform;
+
+	}
+
+select $objNewShortName;
+
+}
+
+
+
+global proc fix_parentShape(int $leaveShape)
+{
+	string $crntParent[];
+	string $child[];
+	string $expandedParent[];
+
+	string $fullObjNames[] = `ls -sl -l`;
+	$crntParent = `listRelatives -f -p $fullObjNames[0]`;
+	string $crntParentShapes[] = `listRelatives -f -s $fullObjNames[1]`;
+
+	if ($crntParent[0] != $fullObjNames[1]) $child = `parent $fullObjNames[0] $fullObjNames[1]`;
+		else $child[0] = $fullObjNames[0];
+	
+
+	if ($crntParentShapes[0] != "") {
+		select $fullObjNames[1];
+		fix_convAnimObjToGroup2;
+		if ($leaveShape) {
+			select -add $child[0];
+			fix_combine();
+			$child = `ls -sl -l`;
+		} else delete;
+	}
+	
+	makeIdentity -apply true -t 1 -r 1 -s 1 $child[0];
+	$childShape = `listRelatives -f -s $child[0]`;
+	$childShape = `parent -add -s $childShape[0] $fullObjNames[1]`;
+	delete $child[0];
+	select $fullObjNames[1];
+	
+}
+
+

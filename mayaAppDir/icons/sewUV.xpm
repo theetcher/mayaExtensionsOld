@@ -1,0 +1,39 @@
+/* XPM */
+static char *sewUV[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #0c0a0a",
+". c #989796",
+"# c #51504f",
+"a c #c4c2c4",
+"b c #31302f",
+"c c #ccaf87",
+"d c #74716e",
+"e c #f8f9f6",
+/* pixels */
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaa##daaaaaaaaaaaaaaaaaa",
+"a.d..#d.aaaaa.ddddd....a",
+"a.d.d.db#aaab###d.dbbb.a",
+"a#b`ddd.ddb`.ab``aeed#aa",
+"ab`bbbdddd#b`baaa#d.`aaa",
+"a#bdccbb`#ddd.#.d```.aaa",
+"a.d#cee##bbd....#```aaaa",
+"aaadcacdbd.bd.....dbaaaa",
+"aaaaaad##a.d```#....aaaa",
+"aaaaaaaac.ae``bd.##aaaaa",
+"aaaaaaac#eee``#eeedaaaaa",
+"aaaaaa.`daa#b`eeeebaaaaa",
+"aaaaaa#```deeeb###baaaaa",
+"aaaaab```.eeea````aaaaaa",
+"aaaabd.bbeeee#````aaaaaa",
+"aaa..eeead.ea````#aaaaaa",
+"aa``da.`````eeea`aaaaaaa",
+"aaa.b``````.eee.`aaaaaaa",
+"aaaaaaaa#`b#ee.`aaaaaaaa",
+"aaaaaaaaa.#b`#`.aaaaaaaa",
+"aaaaaaaaaaaa#`baaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa"
+};

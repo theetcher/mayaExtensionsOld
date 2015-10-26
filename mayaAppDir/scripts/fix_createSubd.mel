@@ -1,0 +1,136 @@
+global proc fix_createSubd()
+{
+//print ("\n\n\n----------- Create Subdiv STARTED -----------\n\n\n");
+
+string $tmpArr1[];
+string $tmp;
+
+string $objects[] = fix_polySmoothProxySetupNode( 0,2,1,0,0,0,1,1,1,1,1,0.1,1,0); // [0] - LO, [1] - HI
+
+string $LOTrans[] = `listRelatives -p -f $objects[0]`;
+string $LOTransShort[] = `listRelatives -p $objects[0]`;
+
+string $HITrans[] = `listRelatives -p -f $objects[1]`;
+
+$LOTrans[0] = `rename $LOTrans[0] ($LOTransShort[0]+"_proxy")`;
+$HITrans[0] = `rename $HITrans[0] ($LOTransShort[0]+"_subd")`;
+
+string $groupName = `group $HITrans[0] $LOTrans[0]`;
+
+$tmpArr1 = `ls -l -dag -ap -tr $groupName`;
+
+for ($tmp in $tmpArr1)
+	setAttr ($tmp+".inheritsTransform") 1;
+
+rename $groupName ($LOTransShort[0]+"_subdGroup");
+
+//print ("----------- Create Subdiv FINISHED ----------\n\n\n");
+}
+
+// ripped original procedure polySmoothProxySetupNode from performSmoothProxy.mel
+
+global proc string[] fix_polySmoothProxySetupNode(int $mth,
+										 int $dv,
+										 float $cont,
+										 int $kb,
+										 int $ksb,
+										 int $khe,
+										 int $suv,
+										 int $kmb,
+										 int $kt,
+										 int $niter,
+										 int $ediv,
+										 float $volume,
+										 float $roundness,
+										 // cage attributes
+										 int $base)
+{
+	// get the selection items
+	
+	string $result[];
+	string $tmpArr[];
+	
+	string $sel[] = `ls -sl -l -dag -lf -typ "mesh"`;
+
+	if ((size($sel)>1)||(size($sel)<=0)) error("Bad Selection");
+	
+	string $transform[] = `listRelatives -parent -f $sel[0]`;
+
+	string $lores = $sel[0];
+
+	// make a hires surface with the same transform. Remove shader
+	// from base if base argument is set that way (value 1)
+	// properties
+ 	string $result[];
+	int $removeShaders = ($base == 0);
+	if($removeShaders) {
+		$result = `polyDuplicateAndConnect -ros `;
+	} else {
+		$result = `polyDuplicateAndConnect`;
+	}
+	$tmpArr = `listRelatives -s -f $result[0]`;
+	string $hires = $tmpArr[0];
+	
+	
+
+	// find the input to the new mesh node (not necessarily a shape,
+	// could be a groupParts node for example);
+	string $incoming[] = eval("listConnections -p on " + $hires + ".inMesh");
+
+	// break the surface-surface connections
+	eval("disconnectAttr " + $incoming[0] + " " + $hires + ".inMesh");
+
+	// create the polySmooth node and hook up the lores mesh
+	string $smoothNode = `createNode polySmoothFace`;
+	eval("connectAttr " + $incoming[0] + " " + $smoothNode + ".inputPolymesh");
+
+	// see if a group node already exists
+
+	inheritTransform -on -p $hires;
+
+	// set attributes on the smooth node appropriately
+	eval("setAttr " + $smoothNode + ".mth " + $mth );
+	eval("setAttr " + $smoothNode + ".dv " + $dv );
+	eval("setAttr " + $smoothNode + ".c " + $cont );
+	eval("setAttr " + $smoothNode + ".kb " + $kb );
+	eval("setAttr " + $smoothNode + ".ksb " + $ksb );
+	eval("setAttr " + $smoothNode + ".khe " + $khe );
+	eval("setAttr " + $smoothNode + ".kmb " + $kmb );
+	eval("setAttr " + $smoothNode + ".suv " + $suv );
+	eval("setAttr " + $smoothNode + ".kt " + $kt );
+	eval("setAttr " + $smoothNode + ".sl " + $niter );
+	eval("setAttr " + $smoothNode + ".dpe " + $ediv );
+	eval("setAttr " + $smoothNode + ".ps " + $volume );
+	eval("setAttr " + $smoothNode + ".ro " + $roundness );
+
+	// now hook up output hires poly
+	eval("connectAttr " + $smoothNode + ".out " + $hires + ".inMesh");
+
+	// prevent topology operations on the hires mesh
+	eval("setAttr " + $hires + ".allowTopologyMod 0");
+
+	// ensure smooth operates on all the faces of the input
+	// geometry. If this were not here and the user added more faces
+	// to the input mesh, the new faces would not be subdivided.
+  	string $compAttr = $smoothNode + ".ics";
+  	setAttr $compAttr -type "componentList" 1 "f[*]";
+
+	// initial refresh shows hires mesh in poly mode, so force it,
+	// then select objects
+	refresh;
+	select -r $lores;
+	
+	if (0 == `objExists ($hires+".isProxy")`) addAttr -shortName prx -longName isProxy -at byte -hidden 1 -dv 0 $hires;
+		else setAttr ($hires+".isProxy") 0;
+	if (0 == `objExists ($lores+".isProxy")`) addAttr -shortName prx -longName isProxy -at byte -hidden 1 -dv 1 $lores;
+		else setAttr ($lores+".isProxy") 1;
+
+	string $result[];
+	$result[0] = $lores;
+	$result[1] = $hires;
+	
+	return $result;
+}
+
+
+

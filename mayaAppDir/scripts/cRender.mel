@@ -1,0 +1,253 @@
+// Copyright (C) 2000 Alias|Wavefront,
+// a division of Silicon Graphics Limited.
+//
+//
+// ALIAS|WAVEFRONT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS|WAVEFRONT BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+//
+//
+// Script File by Tom Kluyskens
+// Report BUGs and comments to tkluyskens@aw.sgi.com
+//
+// Creation Date:  March 29, 2000
+// Modified last on :  June 28, 2000
+//
+// Procedure Name:
+// cRender
+//
+// Description:
+// This script is called upon as a prerender script for doing caustic prerenders.
+//
+// Usage : put this script in your ~/maya/scripts directory, together with the caustics.mel script.
+//		A modified AEspotLightTemplate.mel script.has to be used for this script to work.
+//
+//
+
+
+
+global proc cRender ()
+{
+	
+	print ("Running caustics prerender script...\n");
+	
+	
+	int $cRender = 0;
+	float $cNoAnimFrame;
+
+	//list caustic map textures
+	string $cMaps[];
+	string $cMapsAll[];
+	string $cMap;
+	$cMapsAll = `ls -typ CausticMap`;
+	$cMaps = `ls -typ CausticMap`;
+	
+	//this avoids using the far falloff as a bug in the V1
+	//of the caustics plugin causes the falloff to be inversed
+	for ($cMap in $cMaps) setAttr ($cMap + ".farFalloffMax") 1000000;
+	for ($cMap in $cMaps) setAttr ($cMap + ".farFalloffMin") 1000000;
+	
+	//only calculate maps for those that want recalculating
+	//NOT for batchrender - useful for IPR tuning only
+	//for batchrender recalculateMap should be 1
+	//THIS WORKS, BUT HAS TO BE STREAMLINED IN NEXT VERSION
+	if (!`window -ex MayaWindow`) {
+		
+		print ("Batch rendering caustics...\n");
+		
+		//Maya window does not exist, so this must be batchrender
+		for ($cMap in $cMaps) setAttr ($cMap + ".recalculateMap") 1;
+	} else {
+		clear $cMaps;
+		for ($cMap in $cMapsAll) if (`getAttr ($cMap + ".recalculateMap")`== 1) $cMaps[size($cMaps)] = $cMap;
+	}
+
+	if (size($cMaps)) {
+	
+		//if there's no animation but the map is not yet calculated
+		//(if it is already, cFrame is set to -10101)
+		if ( (!`getAttr causticRaytraceQuality.cAnimation`) && (`getAttr causticRaytraceQuality.cFrame` != -10101.0) ) {
+			$cRender = 1;
+			$cNoAnimFrame = `getAttr causticRaytraceQuality.cFrame`;
+			if (!`window -ex MayaWindow`) setAttr causticRaytraceQuality.cFrame -10101.0;
+			print "Doing Caustic prerender for NO animation.\n";
+		}
+		
+		//if animation is on
+		if (`getAttr causticRaytraceQuality.cAnimation`) {
+			$cRender = 2;
+			print "Doing Caustic prerender for animation.\n";
+		}
+		
+	}
+		
+	if ($cRender) {
+		
+		string $currentSelection[] = `selectedNodes`;
+
+		//connect a new resolution node to the default render globals
+		string $currentResNode[] = `listConnections -d true -t resolution defaultRenderGlobals`;
+		if ( !($currentResNode[0] == "causticRenderResolution") ) connectAttr -f causticRenderResolution.message defaultRenderGlobals.resolution;
+	
+		//set and connect new renderQuality node
+		setAttr "causticRaytraceQuality.edgeAntiAliasing" 3;
+		setAttr "causticRaytraceQuality.shadingSamples" 1; // higher antialiasing causes tiling artifacts in the cmap renders
+		setAttr "causticRaytraceQuality.enableRaytracing" 1;
+		setAttr "causticRaytraceQuality.reflections" `getAttr causticRaytraceQuality.cReflections`;
+		setAttr "causticRaytraceQuality.refractions" `getAttr causticRaytraceQuality.cRefractions`;
+		string $currentQualNode[] = `listConnections -d true -t renderQuality defaultRenderGlobals`;
+		if ( !($currentQualNode[0] == "causticRaytraceQuality") ) connectAttr -f causticRaytraceQuality.message defaultRenderGlobals.quality;
+	
+	
+		//remember original render globals, and set for caustic prerenders
+		float $start = `getAttr defaultRenderGlobals.startFrame`;
+		float $end = `getAttr defaultRenderGlobals.endFrame`;
+		float $modExt = `getAttr defaultRenderGlobals.modifyExtension`;
+		float $startExt = `getAttr defaultRenderGlobals.startExtension`;
+		setAttr "defaultRenderGlobals.preRenderMel" -type "string" "";
+		setAttr "defaultRenderGlobals.modifyExtension" 1; // renumbering toggle
+		
+		//hide visible lights (prerender only!) -> renders faster
+		string $visibleLights[];
+		clear $visibleLights;
+		$allLights = `ls -lt`;
+		int $k	= 0;
+		for ($light in $allLights) {
+			if ((`getAttr ($light + ".visibility")`)) {
+				setAttr ($light + ".visibility") 0;
+				$visibleLights[$k] = $light;
+				$k++;
+			}
+		}
+
+		//enable prerendering of the caustic maps	
+		for ($cMap in $cMaps) setAttr ($cMap + ".preRender") 1;
+		
+		//get current time
+		float $currentFrame = `currentTime -q`;
+		float $cFrame = $currentFrame;
+		if ($cRender == 1) $cFrame = $cNoAnimFrame;
+		
+		//list spotlights
+		string $spotLights[];
+		clear $spotLights;
+		$spotLights = `ls -typ spotLight`;
+		
+		//get number of passes and motion blur amount
+		float $cPasses = `getAttr causticRaytraceQuality.cPasses`;
+		float $cMBlur = `getAttr causticRaytraceQuality.cMotionBlur`;
+		if ($cRender == 1) $cMBlur = 0;
+
+		// Handle IPR Case
+		// Save the current render global IPR settings
+		int $iprRender = `getAttr ("defaultRenderGlobals.createIprFile")`;
+		setAttr ("defaultRenderGlobals.createIprFile") 0;		
+
+		//main render loop
+		for ($causticLight in $spotLights)
+			if (`attributeQuery -n $causticLight -ex "useCaustics"`)
+				if (`getAttr ($causticLight + ".useCaustics")`)
+					for ($i = 0 ; $i < $cPasses ; $i++) {
+
+						float $cRenderAt = ($cFrame + $i * ($cMBlur / $cPasses));
+
+						setAttr "defaultRenderGlobals.startFrame" $cRenderAt;
+						setAttr "defaultRenderGlobals.endFrame" $cRenderAt;
+						setAttr "defaultRenderGlobals.startExtension" $currentFrame;
+
+
+			
+						if (`objExists causticCamera`) delete causticCamera;
+
+						// create a new camera
+						string $causticCamera[];
+						$causticCamera = `camera`;
+						rename $causticCamera[1] causticCamera;
+
+						// set attributes on it, and on the render resolution
+						if (`getAttr ($causticLight + ".cAdvanced")`) {
+
+							vector $camOffset = sphrand(.02); //for jittering cameraposition over the passes
+							float $cAdvValue = ( `getAttr ($causticLight + ".cmapHoffset")` + $camOffset.x );
+							setAttr "causticCamera.horizontalFilmOffset" $cAdvValue;
+							$cAdvValue = ( `getAttr ($causticLight + ".cmapVoffset")` + $camOffset.y );
+							setAttr "causticCamera.verticalFilmOffset" $cAdvValue;
+
+							$cAdvValue = `getAttr ($causticLight + ".cmapZoom")`;
+							$cAdvValue *= (1/ `getAttr ($causticLight + ".cmapWhRatio")`);
+							setAttr "causticCamera.horizontalFilmAperture" (1/$cAdvValue);
+							setAttr "causticCamera.verticalFilmAperture" 1;
+
+							$cAdvValue = `getAttr ($causticLight + ".cmapWhRatio")`;
+							float $cAdvValue2 = `getAttr ($causticLight + ".cmapMult")`;
+							setAttr "causticRenderResolution.height" (sqrt(1/ $cAdvValue) * 256 * $cAdvValue2);
+							setAttr "causticRenderResolution.width" (sqrt($cAdvValue) * 256 * $cAdvValue2);
+
+						} else {
+
+							setAttr "causticCamera.horizontalFilmAperture" 1;
+							setAttr "causticCamera.verticalFilmAperture" 1;
+							setAttr "causticRenderResolution.height" `getAttr ($causticLight + ".cmapResolution")`;
+							setAttr "causticRenderResolution.width" `getAttr ($causticLight + ".cmapResolution")`;
+
+							//set the FOV of the camera to the spotlight's angle+penumbra
+							float $fov = `getAttr ($causticLight + ".coneAngle")`;
+							if (`getAttr ($causticLight + ".penumbraAngle")` > 0) $fov += `getAttr ($causticLight + ".penumbraAngle")`;
+							float $focal = tan (0.00872665 * $fov);
+							$focal = 1 / ($focal * 2 * 0.03937);
+							setAttr "causticCamera.focalLength" $focal;
+						}
+
+						print ("Rendering caustics pass " + ($i+1) + " of " + $cPasses + " for spotlight " + $causticLight + " at frame " + $cRenderAt + ".\nResolution : " + `getAttr "causticRenderResolution.width"` + " by " + `getAttr "causticRenderResolution.height"` + "\n");
+
+						// select spotlight transform
+						select $causticLight;
+						pickWalk -d up;
+						string $spot[] = `ls -sl`;
+						$causticLight = $spot[0];
+
+						// parent it to the spotlight transform
+						parent -s -add causticCamera $causticLight;
+						delete $causticCamera[0];
+
+						setAttr "causticCamera.renderable" 1;
+						setAttr "causticCamera.mask" 0;
+						setAttr "causticCamera.depth" 0;
+						setAttr "causticCamera.backgroundColor" -type double3 1 1 1 ;
+
+						render causticCamera;
+
+						delete causticCamera;
+					}
+
+		//disable caustic maps before the final render of this frame starts
+		for ($cMap in $cMaps) setAttr ($cMap +".preRender") 0;
+
+		//reset current time
+		currentTime -e $currentFrame;
+
+		setAttr defaultRenderGlobals.preRenderMel -type "string" "cRender";
+		setAttr "defaultRenderGlobals.modifyExtension" $modExt;
+		setAttr "defaultRenderGlobals.startExtension" $startExt;
+
+		for ($light in $visibleLights) setAttr ($light + ".visibility") 1;
+
+		setAttr defaultRenderGlobals.startFrame $start;
+		setAttr defaultRenderGlobals.endFrame $end;
+
+		//restore the original resolution and quality nodes
+		string $currentResNode[] = `listConnections -d true -t resolution defaultRenderGlobals`;
+		if ( !($currentResNode[0] == `getAttr causticRenderResolution.origResolution`) ) connectAttr -f (`getAttr causticRenderResolution.origResolution` + ".message") defaultRenderGlobals.resolution;
+		string $currentResNode[] = `listConnections -d true -t renderQuality defaultRenderGlobals`;
+		if ( !($currentResNode[0] == `getAttr causticRaytraceQuality.origRenderQuality`) ) connectAttr -f (`getAttr causticRaytraceQuality.origRenderQuality` + ".message") defaultRenderGlobals.quality;
+
+		// Restore IPR values
+		setAttr ("defaultRenderGlobals.createIprFile") $iprRender;
+
+		select $currentSelection;
+	}
+}

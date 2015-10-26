@@ -1,0 +1,553 @@
+global proc shelf_UV () {
+    global string $gBuffStr;
+    global string $gBuffStr0;
+    global string $gBuffStr1;
+
+
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Border Edges" 
+        -enableBackground 0
+        -align "center" 
+        -label "Border Edges" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "PolyTexBorderEdges.png" 
+        -image1 "PolyTexBorderEdges.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyOptions -sb 4;\r\npolyOptions -r -displayMapBorder true;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Find Materials Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Find Materials Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "texSearch.png" 
+        -image1 "texSearch.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - " ( "" )
+        -mi "Find Polys Shaded" ( "source findPolysShaded;\nfindPolysShaded;" )
+        -mi "Find Objects Shaded" ( "source findObjectsShaded;\nfindObjectsShaded;" )
+        -mi "Find Objects with Texture" ( "source fix_findObjectsWithTexture;\nfix_findObjectsWithTexture;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "copyMat;" 
+        -enableBackground 0
+        -align "center" 
+        -label "copyMat;" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "duplicate_mat.png" 
+        -image1 "duplicate_mat.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "source fix_copyMat;\r\nfix_copyMat;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Cut UVs" 
+        -enableBackground 0
+        -align "center" 
+        -label "Cut UVs" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyMapCut.xpm" 
+        -image1 "polyMapCut.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyPerformAction polyMapCut e 0" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Sew UVs: Sew the textures together along the selected edges" 
+        -enableBackground 0
+        -align "center" 
+        -label "Sew UVs" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyMapSew.xpm" 
+        -image1 "polyMapSew.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "//polyPerformAction polyMapSew e 0;\r\npolyMergeUV -ch 0;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Move and Sew UVs" 
+        -enableBackground 0
+        -align "center" 
+        -label "Move and Sew UVs" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyMoveSew.xpm" 
+        -image1 "polyMoveSew.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performPolyMapSewMove 0" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Flip UVs: Flip the UVs for texturing" 
+        -enableBackground 0
+        -align "center" 
+        -label "Flip UVs" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "FlHor" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "menuIconPolygons.xpm" 
+        -image1 "menuIconPolygons.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyFlipUV -flipType 0 -local on " 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Flip UVs: Flip the UVs for texturing" 
+        -enableBackground 0
+        -align "center" 
+        -label "Flip UVs" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "FlVer" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "menuIconPolygons.xpm" 
+        -image1 "menuIconPolygons.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyFlipUV -flipType 1 -local on " 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Rotate UVs: Rotate selected UVs about vertex" 
+        -enableBackground 0
+        -align "center" 
+        -label "Rotate UVs" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyTextureRotateUV.xpm" 
+        -image1 "polyTextureRotateUV.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyRotateUVs 90" 
+        -sourceType "mel" 
+        -doubleClickCommand "performPolyRotateUVs 1" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "polyShiftUV" 
+        -enableBackground 0
+        -align "center" 
+        -label "polyShiftUV" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyShiftUV.png" 
+        -image1 "polyShiftUV.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "source polyShiftUV;\r\npolyShiftUV;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Automatic Projection: Select faces to be mapped automatically" 
+        -enableBackground 0
+        -align "center" 
+        -label "Automatic Mapping" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyAutoProj.xpm" 
+        -image1 "polyAutoProj.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyPerformAction \"polyAutoProjection -ibd 1 -cm 0 -l 2 -sc 1 -o 1 -p 6 -ps 0.2\" f 0;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Planar Mapping Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Planar Mapping Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polyPlanarProjDD.png" 
+        -image1 "polyPlanarProjDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Planar Mapping X" ( "string $selection[] = `ls -sl -l -fl`;\nPolySelectConvert 1;\npolyProjection -ch 1 -type Planar -ibd on -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -md x;\nselect $selection;" )
+        -mi "Planar Mapping X Square" ( "string $selection[] = `ls -sl -l -fl`;\nPolySelectConvert 1;\npolyProjection -ch 1 -type Planar -ibd on -kir -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -md x;\nselect $selection;" )
+        -mi "Planar Mapping Y" ( "string $selection[] = `ls -sl -l -fl`;\nPolySelectConvert 1;\npolyProjection -ch 1 -type Planar -ibd on -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -md y;\nselect $selection;" )
+        -mi "Planar Mapping Y Square" ( "string $selection[] = `ls -sl -l -fl`;\nPolySelectConvert 1;\npolyProjection -ch 1 -type Planar -ibd on -kir -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -md y;\nselect $selection;" )
+        -mi "Planar Mapping Z" ( "string $selection[] = `ls -sl -l -fl`;\nPolySelectConvert 1;\npolyProjection -ch 1 -type Planar -ibd on -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -md z;\nselect $selection;" )
+        -mi "Planar Mapping Z Square" ( "string $selection[] = `ls -sl -l -fl`;\nPolySelectConvert 1;\npolyProjection -ch 1 -type Planar -ibd on -kir -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -md z;\nselect $selection;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Cylindrical Mapping Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Cylindrical Mapping Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "polyCylProjDD.png" 
+        -image1 "polyCylProjDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - -" ( "" )
+        -mi "Cylindrical Mapping X" ( "polyProjection -ch 1 -type Cylindrical -ibd on -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -rx 0 -ry 0 -rz 90 -sf on ;" )
+        -mi "Cylindrical Mapping Y" ( "polyProjection -ch 1 -type Cylindrical -ibd on -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -rx 0 -ry 0 -rz 0 -sf on ;" )
+        -mi "Cylindrical Mapping Z" ( "polyProjection -ch 1 -type Cylindrical -ibd on -icx 0.5 -icy 0.5 -ra 0 -isu 1 -isv 1 -rx 90 -ry 0 -rz 0 -sf on ;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Create UVs based on the current view of the camera" 
+        -enableBackground 0
+        -align "center" 
+        -label "Create UVs Based On Camera" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyCameraUVs.png" 
+        -image1 "polyCameraUVs.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyProjection -type Planar -md p " 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "3D UV Mesh Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "3D UV Mesh Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "UVPolyTransferDD.png" 
+        -image1 "UVPolyTransferDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - -" ( "" )
+        -mi "Create 3D UVMesh" ( "source fix_UVPolyTransfer;\nfix_UVPolyTransfer(\"create\");" )
+        -mi "Delete 3D UVMesh" ( "source fix_UVPolyTransfer;\nfix_UVPolyTransfer(\"delete\");" )
+        -mi "Update UV" ( "source fix_UVPolyTransfer;\nfix_UVPolyTransfer(\"update\");" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Transfer: Select two objects to be crossed" 
+        -enableBackground 0
+        -align "center" 
+        -label "MyTransUV" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyTransfer.xpm" 
+        -image1 "polyTransfer.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "source MyTransUV;\r\nMyTransUV;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Convert Selection to Edges" 
+        -enableBackground 0
+        -align "center" 
+        -label "Convert Selection to Edges" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "polyConvertToEdge.xpm" 
+        -image1 "polyConvertToEdge.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "PolySelectConvert 2" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "refreshTextures" 
+        -enableBackground 0
+        -align "center" 
+        -label "refreshTextures" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "refreshTextures.png" 
+        -image1 "refreshTextures.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "refer;\r\n" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Normalize UVs: Normalize UVs of the selected faces" 
+        -enableBackground 0
+        -align "center" 
+        -label "Normalize UVs" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "norm" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "menuIconPolygons.xpm" 
+        -image1 "menuIconPolygons.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "polyNormalizeUV -normalizeType 1 -preserveAspectRatio off " 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Misc Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Misc Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "miscDD.png" 
+        -image1 "miscDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Randomize UV Shells" ( "source ip_randomizeUVShells;\nip_randomizeUVShells();" )
+    ;
+
+} 

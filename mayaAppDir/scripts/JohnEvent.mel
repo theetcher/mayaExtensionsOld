@@ -1,0 +1,13 @@
+global proc JohnEvent (string $particleObject, 
+	int $particleId, string $geometryObject) 
+{
+if ($geometryObject == " nurbsPlane1") {
+		select particleShape1.pt[$particleId];
+		setParticleAttr -at lifespanPP -fv 0 particleShape1;
+//		setParticleAttr -at rgbPP -vv 1 0 0 particleShape1;
+		print("OK
+");
+		} else print("FUCKUP
+");
+
+};

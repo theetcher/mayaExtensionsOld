@@ -1,0 +1,6 @@
+global proc fix_lockViews( )
+{
+	catch (`setAttr -lock true top.r`);
+	catch (`setAttr -lock true front.r`);
+	catch (`setAttr -lock true side.r`);
+}

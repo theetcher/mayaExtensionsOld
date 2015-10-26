@@ -1,0 +1,1524 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: polyConnectSubD v0.5
+''    Author: Oliver Shyal Beardsley
+''    Last Updated: August 7, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=modeling#1843
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//-=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=-//
+//-=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=-//
+/*
+Script:	polyConnectSubD V0.5 
+Author: 	Oliver Shyal Beardsley [Shydo]
+Email: 	osb@swanimator.com
+ICQ:		97591865
+Website: 	www.swanimator.com
+
+=-=-=-=-=-=-=-=-=-=-=
+TO LAUNCH THE SCRIPT:
+=-=-=-=-=-=-=-=-=-=-=
+
+source polyConnectSubDV05.mel;
+
+
+=-=-=-=-=-=
+FEATURES:
+=-=-=-=-=-=
+
+1/ Mirror and stitch on SubD objects (As well as ready stitched primitives).
+
+2/ Use of seperate poly proxy objects for SubDs
+(enables you to hide the Subd whilst animating the proxy)
+
+3/ Blind data nodes disabled (no more need to delete them in the hypergraph because of slow modeling)
+
+4/ Various proxy-shadings i.e Semi-Transparent, Shaded, Wireframe
+
+5/ Various constraints methods
+i.e SubD child doesn't have to be within the proxy
+
+=-
+NB
+=-
+This script is still under development, if you have any comments/suggestions/feedback
+about features/procedures/mel/interface/alterations you can let me know by mailing me,
+or by using the "suggest something" section in the Help menu of the script.
+The script is still in Beta, if it screws anything up in anyway you may not screw me
+in return, use and alter at own rist, by using the script you are agreeing with these
+terms and conditions.
+
+//-=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=-//
+//-=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=-//
+
+// OH MONKEY! 0{õ ó}0
+//              ( -)
+
+*/
+
+
+
+global string $PCSDname = "polyConnectSubD";
+global string $PCSDshort = "pcsd";
+//$MainWin = $PCSDshort + "_ui";
+global string $PCSDMainWinIconName;
+global string $PCSDversion = "v0.5";
+$PCSDMainWinIconName = ( "PCSD " + $PCSDversion );
+global string $PCSDcreated = "11/06/2002";
+global string $PCSDlastEdited = "05/08/2002";
+global string $PCSDmainWinTitle;
+$PCSDmainWinTitle = $PCSDname + " " + $PCSDversion + " " + $PCSDlastEdited;
+global string $PCSDdesc;
+$PCSDdesc = $PCSDshort + "_desc";
+global string $PCSDinfo;
+$PCSDinfo = $PCSDshort + "_info";
+
+pcsd_checkProxyShading;
+source generateChannelMenu.mel;
+
+if ( `window -exists  pcsd_ui` ) 	deleteUI pcsd_ui;
+
+window
+-maximizeButton  false
+-resizeToFitChildren false
+-menuBar true
+-menuBarVisible true
+-te 100
+-title $PCSDmainWinTitle
+-iconName  $PCSDMainWinIconName
+pcsd_ui;
+
+menu
+-label "File"
+-tearOff false;
+
+menuItem
+-label "Exit"
+-c "deleteUI  pcsd_ui";
+
+menu
+-label "Help"
+-tearOff false;
+
+menuItem
+-label "Description"
+-c "PCSD_desc";
+
+menuItem
+-label "Script Information"
+-c "PCSD_info";
+
+menuItem
+-divider true;
+
+
+
+menuItem
+-label "Check for update.."
+-c "system(\"load http://www.swanimator.com/melscripts/pcsd/checkupdate/v0.5.htm\")";
+
+menuItem
+-label "Suggest something.."
+-c "system(\"load http://www.swanimator.com/aboutcv/polyConnectSubDfeedbackform.htm\")";
+
+
+$PCSDMainFormLayout = `formLayout 	-numberOfDivisions 100`;
+
+radioButtonGrp
+-numberOfRadioButtons 2
+-label1 "Creation Options"
+-label2 "Editing Options"
+-on1 "PCSDEditingInterface 0"
+-on2 "PCSDEditingInterface 1"
+-sl 1
+PCSDCreateOrEditRBGrp;
+
+scrollLayout
+	-childResizable true
+	-h 200
+	-horizontalScrollBarThickness 10
+	PCSDMainScrollLayout;
+
+	columnLayout
+	-w 500;
+
+		frameLayout
+			-label "PCSD Primitives"
+			-labelAlign "center"
+			-collapsable true
+			-mw 5
+			-mh 5
+			-borderStyle "etchedIn"
+			PCSD_PrimitivesFrameLayout;
+
+			columnLayout;
+
+				rowColumnLayout
+					-numberOfRows 2
+					-w 200;
+
+					string $group1 = `radioButtonGrp
+					-numberOfRadioButtons 3
+					-label ""
+					-cw4 1 60 60 60
+					-on1 "global string $prim = \"CreatePolygonSphere;\";"
+					-on2 "global string $prim = \"CreatePolygonCube;\";"
+					-on3 "global string $prim = \"CreatePolygonCylinder;\";"
+					-labelArray3 "Sphere" "Cube" "Cylinder" prims_1`;
+
+					radioButtonGrp
+					-numberOfRadioButtons 3
+					-shareCollection $group1
+					-label ""
+					-cw4 1 60 60 60
+					-on1 "global string $prim = \"CreatePolygonCone;\";"
+					-on2 "global string $prim = \"CreatePolygonPlane;\";"
+					-on3 "global string $prim = \"CreatePolygonTorus;\";"
+					-labelArray3 "Cone" "Plane" "Torus"
+					prims_2;
+
+					radioButtonGrp -e -sl 2 prims_1;
+					global string $prim = "CreatePolygonCube;";
+
+				setParent ..;
+
+				rowColumnLayout
+					-numberOfRows 1;
+
+					text
+					-label " "
+					-w 5;
+
+					checkBox
+					-w 100
+					-label "Mirror and Stitch"
+					mirrorAndStitchCreationOptionBox;
+
+
+				setParent ..;
+			setParent ..;
+		setParent ..;
+
+
+		frameLayout
+			-label "Constraints"
+			-labelAlign "center"
+			-collapsable true
+			-mw 5
+			-mh 5
+			-borderStyle "etchedIn";
+
+
+			columnLayout
+				-adjustableColumn true
+				-columnAlign "left";
+
+				string $group1 = `radioButtonGrp
+				-numberOfRadioButtons 2
+				-label "Translation"
+				-cw3 63 80 70
+				-on1 "global string $optT = \"t\";"
+				-on2 "global string $optT = \"zero\";"
+				-sl 1
+				-labelArray3 "Constrained" "Free" TConstrain`;
+
+				string $group1 = `radioButtonGrp
+				-numberOfRadioButtons 2
+				-label "Rotation"
+				-cw3 63 80 70
+				-on1 "global string $optR = \"r\";"
+				-on2 "global string $optR = \"zero\";"
+				-sl 1
+				-labelArray3 "Constrained" "Free" RConstrain`;
+
+				string $group1 = `radioButtonGrp
+				-numberOfRadioButtons 2
+				-label "Scale"
+				-cw3 63 80 70
+				-on1 "global string $optS = \"s\";"
+				-on2 "global string $optS = \"zero\";"
+				-sl 1
+				-labelArray3 "Constrained" "Free" RConstrain`;
+
+
+
+				string $group1 = `radioButtonGrp
+				-numberOfRadioButtons 2
+				-label "Shear"
+
+				-cw3 63 80 70
+				-on1 "global string $optSh = \"sh\";"
+				-on2 "global string $optSh = \"zero\";"
+
+				-sl 1
+
+				-labelArray3 "Constrained" "Free" ShConstrain`;
+
+
+
+
+				global string $optT = "t";
+				global string $optR = "r";
+				global string $optS = "s";
+				global string $optSH = "sh";
+
+
+				text " ";
+
+				button
+				-label "Change constraints"
+				-w 150
+				-c "pcsd_constraints;"
+				pcsd_constraintsButton;
+
+			setParent ..;
+		setParent ..;
+
+
+		frameLayout
+			-label "Proxy Shading"
+			-labelAlign "center"
+			-collapsable true
+			-mw 5
+			-mh 5
+			-borderStyle "etchedIn";
+
+
+			columnLayout
+				-adjustableColumn true
+				-columnAlign "left";
+
+
+				string $bladeebla = `radioButtonGrp
+				-numberOfRadioButtons 3
+				-label " "
+				-cw4 1 70 70 70
+				-on1 "global int $shaded = -1; global string $pcsd_shader = \"polyConnectSubDLambertSG\";"
+				-on2 "global int $shaded = 1; global string $pcsd_shader = \"initialShadingGroup\";"
+				-on3 "global int $shaded = 0;"
+				-sl 1
+				-labelArray3 "X-ray" "Shaded" "Wireframe" shading_1`;
+
+				global int $shaded = -1;
+				global string $pcsd_shader = "polyConnectSubDLambertSG";
+
+				text 
+				-label "";
+
+				button
+				-label "Change proxy shading"
+				-w 150
+				-c "pcsd_checkProxyShading; proxyShading;"
+				pcsd_proxyShadingButton;
+
+			setParent ..;
+		setParent ..;
+
+		frameLayout
+			-label "Mirror and Stitch"
+			-labelAlign "center"
+			-collapsable true
+			-mw 5
+			-mh 5
+			-borderStyle "etchedIn"
+			PCSDMirrorAndStitchFrameLayout;
+
+
+			columnLayout
+				-adjustableColumn true -columnAlign "left";
+
+				text "Mirror and Stitch.";
+				checkBoxGrp
+				-numberOfCheckBoxes 3
+				-labelArray3 "+X" "+Y" "+Z"
+				-on1 "checkBoxGrp -e -v1 off checkBoxesNegative; button -e -enable true pcdsWinDoStitch;"
+				-on2 "checkBoxGrp -e -v2 off checkBoxesNegative; button -e -enable true pcdsWinDoStitch;"
+				-on3 "checkBoxGrp -e -v3 off checkBoxesNegative; button -e -enable true pcdsWinDoStitch;"
+				-columnWidth3 50 50 50 checkBoxesPositive;
+				checkBoxGrp
+				-numberOfCheckBoxes 3
+				-labelArray3 "-X" "-Y" "-Z"
+				-on1 "checkBoxGrp -e -v1 off checkBoxesPositive; button -e -enable true pcdsWinDoStitch;"
+				-on2 "checkBoxGrp -e -v2 off checkBoxesPositive; button -e -enable true pcdsWinDoStitch;"
+				-on3 "checkBoxGrp -e -v3 off checkBoxesPositive; button -e -enable true pcdsWinDoStitch;"
+				-columnWidth3 50 50 50 checkBoxesNegative;
+
+
+
+				text -label " ";
+				text "Mirror method";
+
+				radioButtonGrp
+				-numberOfRadioButtons 2
+				-cw 1 100
+				-sl 1
+				-label1 "Bounding Box"
+				-label2 "Origin" mirrorMethod;
+
+				text -label " ";
+
+				checkBoxGrp
+				-label1 "Stitch"
+				-value1 on
+				-on1 "global string $PCSD_Stitch = \"on\""
+				-of1 "global string $PCSD_Stitch = \"off\""
+				stitchCheckBox;
+
+				rowColumnLayout
+					-numberOfColumns 2
+					-columnWidth 1 120
+					-columnWidth 2 80;
+
+					text  "Merge Vertex Distance";
+					floatField -value 0.001 PCSDstitchVertexOption;
+				setParent ..;
+				button
+				-label "Mirror/Stitch"
+				-c "PCSD_mirrorStitch \"\""
+				-enable false
+				pcdsWinDoStitch;
+			setParent ..;
+
+		setParent ..;
+	setParent ..;
+setParent ..;
+
+
+
+formLayout
+	-numberOfDivisions 100
+	PCSDBottomButtonColumnLayout;
+
+	button
+	-label "create"
+	-w 150
+	-c "button_create;"
+	PCSDPrimitivesCreateButton;
+
+	button
+	-label "convert subD to PCSD"
+	-h 25
+	-c "button_convertSubDToPCSD;"
+	button_convertSubDToPCSD;
+
+	button
+	-label "convert subD to poly Proxy"
+	-h 25
+	-c "button_convertSubDToPolyProxy;"
+	button_convertSubDToPolyProxy;
+
+	button
+	-label "convert poly to PCSD"
+	-h 25
+	-c "button_convertPolyToPCSD;"
+	button_convertPolyToPCSD;
+
+showWindow pcsd_ui;
+
+
+
+global proc PCSDEditingInterface (int $switch)
+{
+
+	switch ($switch) {
+
+		case 0:
+		int $manage = 0;
+		int $manageOpposit = 1;
+		window -e -w 270 -h 360 pcsd_ui;
+		break;
+
+		case 1:
+		int $manage = 1;
+		int $manageOpposit = 0;
+		window -e -wh 270 570 pcsd_ui;
+		break;
+
+	}
+
+
+
+	formLayout -e
+
+	-attachPosition PCSDPrimitivesCreateButton "left" 5 10
+	-attachPosition button_convertSubDToPCSD "left" 5 10
+	-attachPosition button_convertSubDToPolyProxy "left" 5 10
+	-attachPosition button_convertPolyToPCSD "left" 5 10
+
+	-attachPosition PCSDPrimitivesCreateButton "right" 5 90
+	-attachPosition button_convertSubDToPCSD "right" 5 90
+	-attachPosition button_convertSubDToPolyProxy "right" 5 90
+	-attachPosition button_convertPolyToPCSD "right" 5 90
+
+	-attachForm PCSDPrimitivesCreateButton "top" 3
+	-attachForm PCSDPrimitivesCreateButton "bottom" 3
+	-attachControl button_convertSubDToPCSD "top" 5 PCSDPrimitivesCreateButton
+	-attachControl button_convertSubDToPolyProxy "top" 5 button_convertSubDToPCSD
+	-attachControl button_convertPolyToPCSD "top" 5 button_convertSubDToPolyProxy
+
+	PCSDBottomButtonColumnLayout;
+
+
+	button -e -m $manage pcsd_constraintsButton;
+	button -e -m $manage pcsd_proxyShadingButton;
+	frameLayout -e -m $manageOpposit PCSD_PrimitivesFrameLayout;
+	frameLayout -e -m $manage PCSDMirrorAndStitchFrameLayout;
+
+	button -e -m $manageOpposit PCSDPrimitivesCreateButton;
+	button -e -m $manage button_convertSubDToPCSD;
+	button -e -m $manage button_convertSubDToPolyProxy;
+	button -e -m $manage button_convertPolyToPCSD;
+
+}
+
+
+
+PCSDEditingInterface 0;
+
+
+
+global proc button_create ()
+{
+
+	global string $prim;
+	global string $pcsd_source;
+	pcsd_checkProxyShading;				// Check if the shader exists
+	pcsd_layers check;				// Check if the layers exist
+	thatSpecialCube;				// Cube Creation procedure
+	pcsd_constraints;				// Constrains procedure
+	pcsd_layers process;				// Put them in their respective layers
+	proxyShading;					// Apply chosen shading
+	PCSD_openObjects $pcsd_source $prim;		// Auto Mirror and Stitch
+}
+
+
+
+
+
+
+
+
+global proc button_convertSubDToPCSD ()
+{
+	pcsd_checkType subdiv;
+	pcsd_layers check;				// Check if the layers exist
+	pcsd_progressBar;
+	pcsd_checkProxyShading;				// Check if the shader exists
+	pcsd_progressTheBar;
+	checkPCSDExists;
+	convertSubDtoPolyProxy;
+	pcsd_progressTheBar;
+	convertPolytopolyConnectSubD;
+	pcsd_layers process;
+	pcsd_progressTheBar;
+	pcsd_constraints;
+	pcsd_progressTheBar;
+	proxyShading;
+	pcsd_progressTheBar;
+	deleteUI pcsdProgressbarwin;
+}
+
+
+
+
+
+
+
+global proc button_convertSubDToPolyProxy ()
+{
+	pcsd_checkType subdiv;
+	pcsd_layers check;
+	pcsd_progressBar;
+	pcsd_progressTheBar;
+	pcsd_checkProxyShading;
+	pcsd_progressTheBar;
+	checkPCSDExists;
+	convertSubDtoPolyProxy;
+	pcsd_progressTheBar;
+	pcsd_progressTheBar;
+	pcsd_progressTheBar;
+	deleteUI pcsdProgressbarwin;
+}
+
+
+
+
+
+
+global proc button_convertPolyToPCSD ()
+{
+	pcsd_checkType mesh;
+	pcsd_layers check;
+	pcsd_progressBar;
+	pcsd_progressTheBar;
+	pcsd_checkProxyShading;
+	pcsd_progressTheBar;
+	convertPolytopolyConnectSubD;
+	pcsd_layers process;
+	pcsd_progressTheBar;
+	pcsd_constraints;
+	pcsd_progressTheBar;
+	proxyShading;
+	pcsd_progressTheBar;
+	deleteUI pcsdProgressbarwin;
+}
+
+
+
+
+global proc PCSD_mirrorStitch ( string $option)
+{
+
+	int $PCSDmirrX;
+	int $PCSDmirrY;
+	int $PCSDmirrZ;
+
+
+
+	switch ($option)
+	{
+		case "creation":
+
+		$PCSDmirrX = -1;
+		$PCSDmirrY = 0;
+		$PCSDmirrZ = 0;
+		break;
+
+
+		case "":
+
+		if ( `checkBoxGrp -q -v1 checkBoxesPositive` == 1 ) $PCSDmirrX = 1;
+		else if ( `checkBoxGrp -q -v1 checkBoxesNegative` == 1 ) $PCSDmirrX = -1;
+		else $PCSDmirrX = 0;
+
+		if ( `checkBoxGrp -q -v2 checkBoxesPositive` == 1 ) $PCSDmirrY = 1;
+		else if ( `checkBoxGrp -q -v2 checkBoxesNegative` == 1 ) $PCSDmirrY = -1;
+		else $PCSDmirrY = 0;
+
+		if ( `checkBoxGrp -q -v3 checkBoxesPositive` == 1 ) $PCSDmirrZ = 1;
+		else if ( `checkBoxGrp -q -v3 checkBoxesNegative` == 1 ) $PCSDmirrZ = -1;
+		else $PCSDmirrZ = 0;
+		break;
+	}
+
+	global string $PCSD_Stitch = "on";
+
+	FreezeTransformations;
+
+	pickWalk -d down;
+	string $sourceProxy[];
+	$sourceProxy = ` ls -sl `;
+
+
+	/////////////////////////////////////
+	// Check if object is open or closed
+
+	getBorderEdges $sourceProxy[0];
+
+	string $borderEdges[];
+	$borderEdges = ` ls -sl `;
+
+	if ($borderEdges[0] == "") error "Object is closed, mirror stitch only works on open PCSD proxy objects";
+	else;
+	int $mirrorMethod = ` radioButtonGrp -q -sl mirrorMethod `;
+	/////////////////////////////////////
+
+
+	float $BBinfo[] = ` polyEvaluate -b -ae $sourceProxy[0] `;
+
+	float $Xminplane = $BBinfo[0];
+	float $Xmaxplane = $BBinfo[1];
+	float $Yminplane = $BBinfo[2];
+	float $Ymaxplane = $BBinfo[3];
+	float $Zminplane = $BBinfo[4];
+	float $Zmaxplane = $BBinfo[5];
+
+	float $pvx;
+	float $pvy;
+	float $pvz;
+
+	$mirrorMethod = ` radioButtonGrp -q -sl mirrorMethod `;
+
+	if ( $mirrorMethod == 1 )
+	{
+
+		if ( $PCSDmirrX == 1 )
+		$pvx = $Xmaxplane;
+		else if ( $PCSDmirrX == -1 )
+		$pvx = $Xminplane;
+
+		if ( $PCSDmirrY == 1 )
+		$pvy = $Ymaxplane;
+		else if ( $PCSDmirrY == -1 )
+		$pvy = $Yminplane;
+
+		if ( $PCSDmirrZ == 1 )
+		$pvz = $Zmaxplane;
+		else if ( $PCSDmirrZ == -1 )
+		$pvz = $Zminplane;
+	}
+
+
+	if ( $mirrorMethod == 2 )
+
+	{
+		$pvx = 0;
+		$pvy = 0;
+		$pvz = 0;
+	}
+
+
+
+	string $polyChipOff = ` createNode polyChipOff `;
+
+	if ($PCSDmirrX == 1)
+	{
+		setAttr ($polyChipOff + ".sx") -1;
+		setAttr ($polyChipOff + ".pvx") $pvx;
+	}
+	else;
+	if ($PCSDmirrX == -1)
+	{
+		setAttr ($polyChipOff + ".sx") -1;
+		setAttr ($polyChipOff + ".pvx") $pvx;
+	}
+	else;
+
+	if ($PCSDmirrY == 1)
+	{
+		setAttr ($polyChipOff + ".sy") -1;
+		setAttr ($polyChipOff + ".pvy") $pvy;
+	}
+	else;
+
+	if ($PCSDmirrY == -1)
+	{
+		setAttr ($polyChipOff + ".sy") -1;
+		setAttr ($polyChipOff + ".pvy") $pvy;
+	}
+	else;
+
+	if ($PCSDmirrZ == 1)
+	{
+		setAttr ($polyChipOff + ".sz") -1;
+		setAttr ($polyChipOff + ".pvz") $pvz;
+	}
+	else;
+
+	if ($PCSDmirrZ == -1)
+	{
+		setAttr ($polyChipOff + ".sz") -1;
+		setAttr ($polyChipOff + ".pvz") $pvz;
+	}
+	else;
+
+	setAttr ( $polyChipOff + ".inputComponents" ) -type "componentList" 1 "f[*]";
+
+	string $polyMergeVert = ` createNode polyMergeVert`;
+	setAttr ( $polyMergeVert + ".inputComponents" ) -type "componentList" 1 "vtx[*]";
+	setAttr ( $polyMergeVert + ".texture" ) 0;
+	string $mergeVertValue = ` floatField -q -v PCSDstitchVertexOption `;
+	eval ("setAttr " + $polyMergeVert + ".distance " + $mergeVertValue);
+	if ( $PCSD_Stitch == "on" ) setAttr ($polyMergeVert + ".nodeState ") 0;
+	if ( $PCSD_Stitch == "off" ) setAttr ($polyMergeVert + ".nodeState ") 1;
+
+
+	string $polyNormal1 = ` createNode polyNormal`;
+	setAttr ( $polyNormal1 + ".inputComponents" ) -type "componentList" 1 "f[*]";
+	setAttr ( $polyNormal1 + ".normalMode") 1;
+
+	string $polyNormal2 = ` createNode polyNormal`;
+	setAttr ( $polyNormal2 + ".inputComponents" ) -type "componentList" 1 "f[*]";
+	setAttr ( $polyNormal2 + ".normalMode") 3;
+
+
+
+	connectAttr ($polyChipOff + ".output") ($polyMergeVert + ".inputPolymesh");
+	connectAttr ($polyMergeVert + ".output") ($polyNormal1 + ".inputPolymesh");
+	connectAttr ($polyNormal1 + ".output") ($polyNormal2 + ".inputPolymesh");
+
+	string $outPolyConnec[] = ` listConnections ($sourceProxy[0] + ".outMesh") `;
+
+	disconnectAttr ($sourceProxy[0] + ".outMesh") ($outPolyConnec[0] + ".inMesh");
+
+	connectAttr ($sourceProxy[0] + ".outMesh") ($polyChipOff + ".inputPolymesh");
+
+	connectAttr ($polyNormal2 + ".output") ($outPolyConnec[0] + ".inMesh");
+
+}
+
+
+
+
+
+
+
+global proc PCSD_openObjects ( string $ObjectToOpen, string $primitive )
+{
+	if ( `checkBox -q -v mirrorAndStitchCreationOptionBox` == 1 )
+	{
+		if ( $primitive == "CreatePolygonSphere;" )
+		{
+			select -r $ObjectToOpen;
+			setAttr ($ObjectToOpen + ".rz") 90;
+			select -r ($ObjectToOpen + ".f[180:359]");
+			select -tgl ($ObjectToOpen +".f[380:399]");
+			delete;
+			select -r $ObjectToOpen;
+			PCSD_mirrorStitch creation;
+
+		}
+
+		if ( $primitive == "CreatePolygonCube;" )
+		{
+
+			setAttr ($ObjectToOpen + ".translateX") 0.25;
+			setAttr ($ObjectToOpen + ".sx") 0.5;
+
+			select -r ($ObjectToOpen + ".f[5]");
+			delete;
+
+			select -r $ObjectToOpen;
+
+			PCSD_mirrorStitch creation;
+
+
+		}
+
+		if ( $primitive == "CreatePolygonCylinder;" )
+		{
+			select -r ($ObjectToOpen + ".f[4:13]");
+			select -tgl ($ObjectToOpen + ".f[24:33]");
+			select -tgl ($ObjectToOpen + ".f[44:53]");
+
+			delete;
+
+			select -r $ObjectToOpen;
+
+			PCSD_mirrorStitch creation;
+
+
+		}
+
+		if ( $primitive == "CreatePolygonCone;" )
+		{
+
+			polySplit -ch on -s 1 -ep 14 0 -ep 3 1 $ObjectToOpen ;
+
+			select -r ($ObjectToOpen + ".f[5:14]");
+			select -tgl ($ObjectToOpen + ".f[21]");
+
+			delete;
+
+			select -r $ObjectToOpen;
+
+			PCSD_mirrorStitch creation;
+
+
+		}
+
+
+		if ( $primitive == "CreatePolygonPlane;" )
+		{
+			setAttr ($ObjectToOpen + ".ry") 90;
+
+			select -r ($ObjectToOpen + ".f[50:99]");
+
+			delete;
+
+			select -r $ObjectToOpen;
+
+			PCSD_mirrorStitch creation;
+
+
+		}
+
+		if ( $primitive == "CreatePolygonTorus;" )
+		{
+			setAttr ($ObjectToOpen + ".rz") 90;
+
+			select -r ($ObjectToOpen + ".f[0:199]");
+
+			delete;
+
+			select -r $ObjectToOpen;
+
+			PCSD_mirrorStitch creation;
+
+
+		}
+		xform -piv 0 0 0 $ObjectToOpen;
+
+	}
+}
+
+
+
+
+
+
+
+
+global proc pcsd_checkType (string $type)
+{
+
+	string $isObjSelected[] = `ls  -sl`;
+	if ($isObjSelected[0] == "") error "No object selected";
+	else {
+
+
+		if ($type == "subdiv") $typePrint = "subD surfaces";
+		else if ($type == "mesh") $typePrint = "polygon objects";
+
+		pickWalk -d down;
+
+		string $selectedObject[];
+		$selectedObject = `ls  -sl`;
+
+		$objectType = `objectType -isType $type $selectedObject[0]`;
+		if ($objectType != 1)
+		{
+			eval ("error \"Only works on " + $typePrint + "\"");
+			pickWalk -d up;
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+global proc pcsd_layers (string $layerOption)
+{
+
+	global string $pcsd_source;
+	global string $pcsd_destination;
+
+	switch ($layerOption) {
+
+		case "check":
+
+		if ( `objExists "proxyLayer"` );
+		else 	{
+			createDisplayLayer -name "proxyLayer" -number 1 -empty;
+		}
+
+		if ( `objExists "subDLayer"` );
+		else 	{
+			createDisplayLayer -name "subDLayer" -number 1 -empty;
+		}
+		break;
+
+		case "makeSubDReference":
+		setAttr subDLayer.displayType 2;
+		break;
+
+
+		case "process":
+		select -r $pcsd_source;
+		layerEditorAddObjects proxyLayer;
+		select -r $pcsd_destination;
+		layerEditorAddObjects subDLayer;
+		select -cl;
+		break;
+
+
+	}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+global proc thatSpecialCube()
+
+{
+	global string $prim;
+	eval $prim;
+
+	global string $polyC[];
+	$polyC = `ls  -sl`;
+
+	global string $pcsd_source;
+	global string $pcsd_destination;
+
+
+	select -cl  ;
+
+	createSubdCube;
+	global string $subdC[];
+	$subdC = `ls  -sl`;
+
+	$pcsd_source = $polyC[0];
+	$pcsd_destination = $subdC[0];
+
+	select -r $subdC[0];
+	select -tgl $polyC[0];
+	pickWalk -d down;
+	string	$objects[] = `ls -sl`;
+	createNode  polyToSubdiv;
+	string $ptsd[] = `ls  -sl`;
+
+	polyToSubdiv -e -maxPolyCount 10000 $ptsd[0];
+
+	eval ("connectAttr  -f " + $objects[1] + ".outMesh  " + $ptsd[0] + ".inMesh");
+	eval ("connectAttr  -f " + $ptsd[0] + ".outSubdiv "  + $objects[0] + ".create");
+
+	select -cl  ;
+}
+
+
+
+
+
+global string $newSubDC[];
+global string $newPolyC[];
+
+
+
+
+
+
+
+
+
+global proc checkPCSDExists ()
+{
+	global string  $newSubDC[];
+	$newSubDC = `ls -sl`;
+	$pcsd_destination = $newSubDC[0];
+
+	evalEcho  ("subdGivenIntoHierMode " +  $newSubDC[0]);
+
+	pickWalk -d down;
+	string $newSubDCShape[];
+	$newSubDCShape = `ls  -sl`;
+
+	string $getConnec[] = `eval ("listConnections -scn on " + $newSubDCShape[0] + ".create")`;
+	if ($getConnec[0] == "") ; //do nothing
+	else
+	{
+		string $getConnec2[] = `eval ("listConnections -scn on " + $getConnec[0] + ".inMesh")`;
+		delete $getConnec2[0];
+	}
+}
+
+
+
+
+
+
+global proc convertSubDtoPolyProxy()
+
+{
+	pickWalk -d up;
+
+	global string $pcsd_source;
+	global string $pcsd_destination;
+
+	global string  $newSubDC[];
+	$newSubDC = `ls -sl`;
+	$pcsd_destination = $newSubDC[0];
+
+	pickWalk -d down;
+	string $newSubDCShape[];
+	$newSubDCShape = `ls  -sl`;
+	select $newSubDC[0];
+
+	//create default poly  proxy for selected subD object
+	evalEcho  ("subdGivenIntoPolyMode " +  $newSubDC[0] + " 1 0 0 0");
+
+	hide $newSubDC[0];
+	//delete the subD's  shape
+	pickWalk -d down;
+	delete;
+
+	//create new polygon  proxy
+	CreatePolygonCube;
+	global string  $newPolyC[];
+	$newPolyC = `ls -sl`;
+	$pcsd_source = $newPolyC[0];
+
+	eval ("connectAttr " + $newSubDC[0] + ".sp" + " " + $newPolyC[0] + ".sp");
+	eval ("connectAttr " + $newSubDC[0] + ".rp" + " " + $newPolyC[0] + ".rp");
+	eval ("connectAttr " + $newSubDC[0] + ".spt" + " " + $newPolyC[0] + ".spt");
+	eval ("connectAttr " + $newSubDC[0] + ".rpt" + " " + $newPolyC[0] + ".rpt");
+
+	eval ("connectAttr " + $newSubDC[0] + ".t" + " " + $newPolyC[0] + ".t");
+	eval ("connectAttr " + $newSubDC[0] + ".r" + " " + $newPolyC[0] + ".r");
+	eval ("connectAttr " + $newSubDC[0] + ".s" + " " + $newPolyC[0] + ".s");
+	eval ("connectAttr " + $newSubDC[0] + ".sh" + " " + $newPolyC[0] + ".sh");
+
+
+	pickWalk -d down;
+	string  $newPolyCShape[0] = `ls -sl`;
+
+	//connect Meshes
+
+	string $histShape =  $newSubDC[0] + "ShapeHistPoly";
+
+	evalDeferred  ("delete " + $newSubDC[0]);
+
+	evalEcho ("connectAttr  -f " + $histShape + ".outMesh "  + $newPolyCShape[0] +  ".inMesh");
+}
+
+
+
+
+
+
+
+
+
+global proc pcsd_progressBar ()
+
+{
+	if ( `window -exists  "pcsdProgressbarwin"` )
+	deleteUI  pcsdProgressbarwin;
+	window -titleBar off -rtf on -w 100 -h 50 pcsdProgressbarwin;
+	columnLayout;
+		progressBar -maxValue 5 -width 200 pcsdProgressbarBar;
+	setParent ..;
+	showWindow pcsdProgressbarwin;
+}
+
+
+
+
+
+
+global proc pcsd_progressTheBar ()
+
+{
+	progressBar -edit -step 1 pcsdProgressbarBar;
+}
+
+
+
+
+
+
+
+
+global proc convertPolytopolyConnectSubD()
+
+{
+	pickWalk -d up;
+
+	global string $polyC[];
+	$polyC = `ls  -sl`;
+
+	global string $pcsd_source;
+
+	$pcsd_source = $polyC[0];
+	pickWalk -d down;
+
+	string $polyCShape[];
+	$polyCShape = `ls  -sl`;
+
+	string $objectType = `objectType -isType "mesh" $polyCShape[0]`;
+	if ($objectType != 1) error "Only works on polygon object" ;
+	else {
+		select -cl  ;
+
+		createSubdCube;
+		global string $subdC[];
+		$subdC = `ls  -sl`;
+
+		global string $pcsd_destination;
+		$pcsd_destination = $subdC[0];
+
+		select -r $subdC[0];
+		select -tgl $polyC[0];
+
+		pickWalk -d down;
+		string $objects[] = `ls -sl`;
+		createNode  polyToSubdiv;
+		string $ptsd[] = `ls  -sl`;
+
+		polyToSubdiv -e -maxPolyCount 10000 $ptsd[0];
+		evalEcho ("connectAttr  -f " + $objects[1] + ".outMesh  " + $ptsd[0] + ".inMesh");
+		evalEcho ("connectAttr  -f " + $ptsd[0] + ".outSubdiv "  + $objects[0] + ".create");
+		select -cl;
+	}
+}
+
+
+
+
+
+
+
+
+global proc pcsd_constraints ()
+
+{
+	global string $optT;
+	global string $optR;
+	global string $optS;
+	global string $optSh;
+
+	global string $pcsd_source;
+	global string $pcsd_destination;
+
+	string $isObjSelected[] = `ls  -sl`;
+	if ($isObjSelected[0] != "")
+	{
+		string $pcsd_selection[] = `ls  -sl`;
+		$pcsd_source = $pcsd_selection[0];
+		$pcsd_destination = $pcsd_selection[1];
+	}
+
+	// TRANSLATE
+
+	if ($optT == "t") {
+		eval ("CBdeleteConnection " + " " + $pcsd_destination + ".t");
+		eval ("connectAttr " + $pcsd_source + "." + $optT + " " + $pcsd_destination + "." + $optT);
+	}
+
+	else {
+		eval ("CBdeleteConnection " + " " + $pcsd_destination + ".t");
+	}
+
+	// ROTATE
+
+	if ($optR == "r") {
+		eval ("CBdeleteConnection " + " " + $pcsd_destination + ".r");
+		eval ("connectAttr " + $pcsd_source + "." + $optR + " " + $pcsd_destination + "." + $optR);
+	}
+	else {
+		eval ("CBdeleteConnection " + " " + $pcsd_destination + ".r");
+	}
+
+	// SCALE
+
+	if ($optS == "s") {
+		eval ("CBdeleteConnection " + " " + $pcsd_destination + ".s");
+		eval ("connectAttr " + $pcsd_source + "." + $optS + " " + $pcsd_destination + "." + $optS);
+	}
+
+	else {
+		eval ("CBdeleteConnection " + " " + $pcsd_destination + ".s");
+	}
+
+	// SHEAR
+
+	if ($optSh == "sh") {
+		eval ("CBdeleteConnection " + " " + $pcsd_destination + ".sh");
+		eval ("connectAttr " + $pcsd_source + ".sh" + " " + $pcsd_destination + ".sh");
+	}
+
+	else {
+		eval("CBdeleteConnection " + " " + $pcsd_destination + ".sh");
+	}
+
+	// PIVOTS
+
+	string $theObj = ($pcsd_source + ".rp");
+	string $connection[] = ` listConnections $theObj `;
+	if ( $connection[0] == "" ) 
+	eval ("connectAttr " + $pcsd_source + ".rp" + " " + $pcsd_destination + ".rp");
+	else;
+
+	string $theObj = ($pcsd_source + ".sp");
+	string $connection[] = ` listConnections $theObj `;
+	if ( $connection[0] == "" ) 
+	eval ("connectAttr " + $pcsd_source + ".sp" + " " + $pcsd_destination + ".sp");
+	else;
+
+
+	string $theObj = ($pcsd_source + ".spt");
+	string $connection[] = ` listConnections $theObj `;
+	if ( $connection[0] == "" ) 
+	eval ("connectAttr " + $pcsd_source + ".spt" + " " + $pcsd_destination + ".spt");
+	else;
+
+	string $theObj = ($pcsd_source + ".rpt");
+	string $connection[] = ` listConnections $theObj `;
+	if ( $connection[0] == "" ) 
+	eval ("connectAttr " + $pcsd_source + ".rpt" + " " + $pcsd_destination + ".rpt");
+	else;
+}
+
+
+
+
+
+
+
+
+
+
+global proc proxyShading()
+
+{
+
+
+	global string $pcsd_source;
+
+	string $isThereAnObjectSelected[];
+	$isThereAnObjectSelected = ` ls -sl `;
+	
+	if ( $isThereAnObjectSelected[0] != "" )
+	{
+	$currentSelection = ` ls -sl `;
+	$pcsd_source = $currentSelection[0];
+	}
+
+
+
+	global int $shaded;
+	if ($shaded == 1) connectProxyShading;
+	else if ($shaded == 0) disconnectProxyShading;
+	else if ($shaded == -1) connectProxyShading;
+/*
+else;
+
+if ( ` checkBox -q -value PCSDMakeProxyRenderable ` == 1 )
+{
+global int $PCSDRenderStat = 1;
+} 
+else {
+global int $PCSDRenderStat = 0;
+}
+
+global int $PCSDRenderStat;
+setAttr ($pcsd_source + ".castsShadows") $PCSDRenderStat;
+setAttr ($pcsd_source + ".receiveShadows") $PCSDRenderStat;
+setAttr ($pcsd_source + ".motionBlur") $PCSDRenderStat;
+setAttr ($pcsd_source + ".primaryVisibility") $PCSDRenderStat;
+setAttr ($pcsd_source + ".smoothShading") $PCSDRenderStat;
+setAttr ($pcsd_source + ".visibleInReflections") $PCSDRenderStat;
+setAttr ($pcsd_source + ".visibleInRefractions") $PCSDRenderStat;
+*/
+}
+
+
+
+
+
+
+
+
+
+
+
+global proc disconnectProxyShading()
+{
+
+	setAttr "proxyLayer.shading" 0;
+}
+
+
+
+
+
+
+
+
+
+global proc connectProxyShading()
+{
+	global int $shaded;
+	global string $pcsd_source;
+
+	string $isThereAnObjectSelected[];
+	$isThereAnObjectSelected = ` ls -sl `;
+	
+	if ( $isThereAnObjectSelected[0] != "" )
+	{
+	$currentSelection = ` ls -sl `;
+	$pcsd_source = $currentSelection[0];
+	}
+
+	setAttr "proxyLayer.shading" 1;
+	select $pcsd_source;
+
+	if ($shaded == -1) sets -e -forceElement polyConnectSubDLambertSG;
+
+	else sets -e -forceElement initialShadingGroup;
+
+	select -cl  ;
+}
+
+
+
+
+
+
+
+
+
+
+global proc pcsd_checkProxyShading()
+
+{
+	if( `objExists polyConnectSubDLambert` );
+
+	else {
+		shadingNode -asShader -n polyConnectSubDLambert lambert;
+		sets -renderable true -noSurfaceShader true -empty -name polyConnectSubDLambertSG;
+		connectAttr -f polyConnectSubDLambert.outColor polyConnectSubDLambertSG.surfaceShader;
+		setAttr "polyConnectSubDLambert.transparency" -type double3 0.5 0.5 0.5;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+global proc PCSD_info()
+{
+
+	global string $MainWin;
+	global string $PCSDinfo;
+	global string $PCSDname;
+	global string $PCSDversion;
+	global string $PCSDcreated;
+	global string $PCSDlastEdited;
+
+	window -e -iconify 1 pcsd_ui;
+
+	if ( `window -exists  PCSDinfo` )
+	deleteUI PCSDinfo;
+
+	window
+	-width 300
+	-height 250
+	-resizeToFitChildren false
+	-title "Description"
+	-iconName  "help" PCSDinfo;
+
+
+	columnLayout
+		-parent PCSDinfo
+		-adjustableColumn true
+		-columnAttach "both" 5
+		-rowSpacing 5;
+
+		text -label "" desc_1;
+		separator;
+		text -label "" desc_2;
+		separator;
+		text -label "" desc_3;
+		separator;
+
+		button
+		-l "back"
+		-c "deleteUI  PCSDinfo; window -e -iconify 0 pcsd_ui;";
+		string $PCSDdesc_1 = $PCSDname + $PCSDversion;
+		string $PCSDdesc_2 = "Script created on " + $PCSDcreated + "\nLast edited " + $PCSDlastEdited;
+		string $PCSDdesc_3 = "Creator: Oliver Shyal Beardsley \n" +
+		"Email: osb@swanimator.com \n" +
+		"Website: www.swanimator.com \n" +
+		"\nThanks to 1000101 (Reevs) \n" +
+		"for his help and suggestions.";
+
+		text -edit -label $PCSDdesc_1 desc_1;
+		text -edit -label $PCSDdesc_2 desc_2;
+		text -edit -label $PCSDdesc_3 desc_3;
+
+	setParent ..;
+	showWindow PCSDinfo;
+
+window -e -wh 300 220 PCSDinfo;
+
+}
+
+
+
+global proc PCSD_desc()
+{
+
+	global string $MainWin;
+	global string $PCSDname;
+	global string $PCSDdesc;
+
+	window -e -iconify 1 pcsd_ui;
+
+	if ( `window -exists  PCSD_desc` )
+	deleteUI  PCSD_desc;
+
+	window
+	-width 300
+	-height 300
+	-resizeToFitChildren false
+	-title "Description"
+	-iconName  "help" PCSD_desc;
+
+	columnLayout
+		-parent PCSD_desc
+		-adjustableColumn true
+		-columnAttach "both" 5
+		-rowSpacing 0;
+
+		text -label "Features:" desc_1;
+		text -label " ";
+		text -label "1/ Mirror and stitch on SubD objects \n(As well as ready stitched primitives).";
+		text -label " ";
+		text -label "2/ Use of seperate poly proxy objects for SubDs \n (enables you to hide the Subd whilst animating the proxy)";
+		text -label " ";
+		text -label "3/ Blind data nodes disabled (no more need to delete \nthem in the hypergraph because of slow modeling)";
+		text -label " ";
+		text -label "4/ Various proxy-shadings \ni.e Semi-Transparent, Shaded, Wireframe";
+		text -label " ";
+		text -label "5/ Various constraints methods \ni.e SubD child doesn't have to be within the proxy";
+		text -label " ";
+
+		button
+		-l "back"
+		-c "deleteUI  PCSD_desc; window -e -iconify 0 pcsd_ui;";
+
+		string $PCSDdesc_1 = $PCSDname + " description";
+
+//		text -edit -label $PCSDdesc_1 desc_1;
+	setParent ..;
+	showWindow PCSD_desc;
+	window -e -wh 300 300 PCSD_desc;
+}
+select -cl  ;
+
+
+
+//////-
+//////[oo]///--	Attach Layouts:
+/////-
+
+formLayout -edit
+-attachForm PCSDCreateOrEditRBGrp "top" 0
+-attachForm PCSDCreateOrEditRBGrp "left" 0
+-attachForm PCSDBottomButtonColumnLayout "bottom" 0
+-attachForm PCSDBottomButtonColumnLayout "left" 0
+-attachForm PCSDBottomButtonColumnLayout "right" 0
+-attachForm PCSDMainScrollLayout "right" 0
+-attachForm PCSDMainScrollLayout "left" 0
+-attachControl PCSDMainScrollLayout "top" 0 PCSDCreateOrEditRBGrp
+-attachControl PCSDMainScrollLayout "bottom" 0 PCSDBottomButtonColumnLayout
+$PCSDMainFormLayout;
+
+
+

@@ -1,0 +1,1591 @@
+// Copyright (C) 1999 E.POINT Corp.
+// 
+// E.POINT CORPORATION DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL E.POINT CORPORATION BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+//
+//  E_copy.mel version 1.8
+//
+//  by jgd at E.POINT Corp. / gyedo@epoint.co.kr
+//
+//  last modified in 1999.11.22
+//
+//
+//  Description:
+//      This script enhances maya's duplicate 
+//      with randomizing and expression capablities.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      None.
+//
+//  Revision History
+//	- ver 1.8 (1999.11.22)
+//		now, instancing leaf-level objects enabled
+//
+//  - ver 1.71 (1999.8.23)
+//      fileDiloag starts at HOME directory
+//
+//  - ver 1.7 (1999.8.21)
+//      single random scale capability added
+//      now, you can copy objects random in scale with equilateral x, y, z
+//
+//  - ver 1.6 (1999.8.4)
+//      now, interface making added to expression capability 
+//
+//  - ver 1.5 (1999.7.31)
+//      expression capability added
+//      interface changes to tab layout
+//
+
+global proc E_copy() {
+    waitCursor -state on;
+
+    string $window = "E_copyWindow";
+    
+    if (!`window -exists $window`)
+    	makeE_copyWin($window);
+    
+    showWindow $window;
+
+    waitCursor -state off;
+}
+
+global proc E_copyScatterTypeMenuCB(string $window) {
+    setParent $window;
+    
+    int $option = `optionMenuGrp -query -select E_copyScatterTypeMenu`;
+
+    if ($option == 1) // Translate type
+    {
+    	floatFieldGrp -edit -enable true E_copyTranslateFieldGrp;
+    	floatFieldGrp -edit -enable false E_copyRandomCubeFieldGrp;
+    	floatSliderGrp -edit -enable false E_copyRandomRadiusSliderGrp;
+        columnLayout -edit -enable false E_copyTransExpressionLayout;
+    }
+    else if ($option == 2) // Random Cube Type
+    {
+    	floatFieldGrp -edit -enable false E_copyTranslateFieldGrp;
+    	floatFieldGrp -edit -enable true E_copyRandomCubeFieldGrp;
+    	floatSliderGrp -edit -enable false E_copyRandomRadiusSliderGrp;
+        columnLayout -edit -enable false E_copyTransExpressionLayout;
+    }
+    else if ($option == 3) // Sphere type
+    {
+     	floatFieldGrp -edit -enable false E_copyTranslateFieldGrp;
+    	floatFieldGrp -edit -enable false E_copyRandomCubeFieldGrp;
+    	floatSliderGrp -edit -enable true E_copyRandomRadiusSliderGrp;
+        columnLayout -edit -enable false E_copyTransExpressionLayout;
+    }
+    else // Expression type
+    {
+     	floatFieldGrp -edit -enable false E_copyTranslateFieldGrp;
+    	floatFieldGrp -edit -enable false E_copyRandomCubeFieldGrp;
+    	floatSliderGrp -edit -enable false E_copyRandomRadiusSliderGrp;
+        columnLayout -edit -enable true E_copyTransExpressionLayout;
+    }
+}
+
+global proc E_copyRotateTypeMenuCB(string $window) {
+    setParent $window;
+    
+    int $option = `optionMenuGrp -query -select E_copyRotateTypeMenu`;
+
+    if ($option == 1) // Rotate
+    {
+	    floatFieldGrp -e -en true E_copyRotateFieldGrp;
+	    floatFieldGrp -e -en false E_copyRotateFieldGrp2;
+        floatFieldGrp -e -l "Rotate" E_copyRotateFieldGrp;
+        floatFieldGrp -e -l "" E_copyRotateFieldGrp2;
+        columnLayout -e -enable false E_copyRotateExpressionLayout;
+    }
+    else if ($option == 2) // Random Rotate
+    {
+	    floatFieldGrp -e -en true E_copyRotateFieldGrp;
+        floatFieldGrp -e -en true E_copyRotateFieldGrp2;
+        floatFieldGrp -e -l "Random Min" E_copyRotateFieldGrp;
+        floatFieldGrp -e -l "Random Max" E_copyRotateFieldGrp2;
+        columnLayout -e -enable false E_copyRotateExpressionLayout;
+    }
+    else // Expression type
+    {
+	    floatFieldGrp -e -en false E_copyRotateFieldGrp;
+	    floatFieldGrp -e -en false E_copyRotateFieldGrp2;
+        columnLayout -e -enable true E_copyRotateExpressionLayout;
+    }
+}
+
+global proc E_copyScaleTypeMenuCB(string $window) {
+    setParent $window;
+    
+    int $option = `optionMenuGrp -query -select E_copyScaleTypeMenu`;
+
+    if ($option == 1) // Scale
+    {
+	    floatFieldGrp -e -en true E_copyScaleFieldGrp;
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp2;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp1;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp2;        
+        floatFieldGrp -e -l "Scale" E_copyScaleFieldGrp;
+        floatFieldGrp -e -l "" E_copyScaleFieldGrp2;
+        columnLayout -e -enable false E_copyScaleExpressionLayout;
+    }
+    else if ($option == 2) // Random Scale
+    {
+	    floatFieldGrp -e -en true E_copyScaleFieldGrp;
+        floatFieldGrp -e -en true E_copyScaleFieldGrp2;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp1;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp2;        
+        floatFieldGrp -e -l "Random Min" E_copyScaleFieldGrp;
+        floatFieldGrp -e -l "Random Max" E_copyScaleFieldGrp2;
+        columnLayout -e -enable false E_copyScaleExpressionLayout;
+    }
+    else if ($option == 3) // Single Random Scale
+    {
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp;
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp2;
+        floatSliderGrp -e -en true E_copyScaleSliderGrp1;
+        floatSliderGrp -e -en true E_copyScaleSliderGrp2;        
+        floatFieldGrp -e -l "Scale" E_copyScaleFieldGrp;
+        floatFieldGrp -e -l "" E_copyScaleFieldGrp2;
+        columnLayout -e -enable false E_copyScaleExpressionLayout;
+    }
+    else // Expression type
+    {
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp;
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp2;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp1;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp2;        
+        columnLayout -e -enable true E_copyScaleExpressionLayout;
+    }
+}
+
+global proc E_copyNewLibrary(string $item)
+{
+    if (`window -ex  E_copyNewLibraryWin`)
+    	    deleteUI E_copyNewLibraryWin;
+
+	window -s true -mnb false -mxb false -w 450 -h 300 -title "Enter Parameters" E_copyNewLibraryWin;
+    columnLayout -rs 5 -adjustableColumn true;
+
+    scrollField E_copyNewLibraryParameter;
+	
+    button -l "Enter"
+    	-c ("E_copyNewLibrary2 " + $item);
+
+    showWindow E_copyNewLibraryWin;
+}
+
+global proc E_copyNewLibrary2(string $item)
+{
+    string $parameters = `scrollField -q -tx E_copyNewLibraryParameter`;
+    
+    if ($item == "Trans")
+    {
+        global float $E_copyTX, $E_copyTY, $E_copyTZ;
+        $E_copyTX = $E_copyTY = $E_copyTZ = 0.0;
+
+        scrollField -e -cl E_copyTransExpressionField1;
+        scrollField -e -cl E_copyTransExpressionField;
+
+        optionVar -stringValue E_copyTransTempParameter $parameters;
+        if (`columnLayout -q -ex E_copyTransExpressionUI`) deleteUI E_copyTransExpressionUI;
+        setParent E_copyTransExpressionUILayout;
+        columnLayout E_copyTransExpressionUI;
+    }
+    else if ($item == "Rotate")
+    {
+        global float $E_copyRX, $E_copyRY, $E_copyRZ;
+        $E_copyRX = $E_copyRY = $E_copyRZ = 0.0;
+
+        scrollField -e -cl E_copyRotateExpressionField1;
+        scrollField -e -cl E_copyRotateExpressionField;
+
+        optionVar -stringValue E_copyRotateTempParameter $parameters;
+        if (`columnLayout -q -ex E_copyRotateExpressionUI`) deleteUI E_copyRotateExpressionUI;
+        setParent E_copyRotateExpressionUILayout;
+        columnLayout E_copyRotateExpressionUI;
+    }
+    else if ($item == "Scale")
+    {
+        global float $E_copySX, $E_copySY, $E_copySZ;
+        $E_copySX = $E_copySY = $E_copySZ = 0.0;
+
+        scrollField -e -cl E_copyScaleExpressionField1;
+        scrollField -e -cl E_copyScaleExpressionField;
+
+        optionVar -stringValue E_copyScaleTempParameter $parameters;
+        if (`columnLayout -q -ex E_copyScaleExpressionUI`) deleteUI E_copyScaleExpressionUI;
+        setParent E_copyScaleExpressionUILayout;
+        columnLayout E_copyScaleExpressionUI;
+    }
+
+    makeE_copyParameterUI($item, $parameters);
+
+    if (`window -ex  E_copyNewLibraryWin`)
+    	    deleteUI E_copyNewLibraryWin;
+}
+
+global proc E_copyLoadLibrary(string $item)
+{
+    string $dirs[];
+	string $buffer;
+    string $parameters;
+    string $declaration;
+    string $expression;
+    int $flag;
+
+    string $dir = `getenv("MAYA_SCRIPT_PATH")`;
+    tokenize $dir ";" $dirs;
+
+    string $SCRIPT_PATH = $dirs[0];    
+
+
+   	string $filename = eval("fileDialog -dm \"" + $SCRIPT_PATH + "/\"");
+
+    if ($filename != "")
+    {
+        int $fileId = fopen($filename, "r");
+
+	    if ($fileId == 0) error ("Cannot open file : " + $filename);
+    	else print ("\n// " + $filename + " is opened successfully!\n");
+ 
+    	while (!(`feof $fileId`))
+        {
+            $buffer = fgetline($fileId);
+
+            if ($buffer == "//-- Parameters --//\n") $flag = 1;
+            else if ($buffer == "//-- Declaration --//\n") $flag = 2;
+            else if ($buffer == "//-- Expression --//\n") $flag = 3;
+            else if ($flag == 1) $parameters += $buffer; 
+            else if ($flag == 2) $declaration += $buffer;
+            else if ($flag == 3) $expression += $buffer;
+        }
+
+      	fclose $fileId;
+
+        if ($item == "Trans")
+        {
+            optionVar -stringValue E_copyTransTempParameter $parameters;
+
+            if (`columnLayout -q -ex E_copyTransExpressionUI`) deleteUI E_copyTransExpressionUI;
+            setParent E_copyTransExpressionUILayout;
+            columnLayout E_copyTransExpressionUI;
+            
+            if ($parameters != "") makeE_copyParameterUI("Trans", $parameters);
+        
+            scrollField -e -tx $declaration E_copyTransExpressionField;
+            scrollField -e -tx $expression E_copyTransExpressionField1;
+        }
+        else if ($item == "Rotate")
+        {
+            optionVar -stringValue E_copyRotateTempParameter $parameters;
+
+            if (`columnLayout -q -ex E_copyRotateExpressionUI`) deleteUI E_copyRotateExpressionUI;
+            setParent E_copyRotateExpressionUILayout;
+            columnLayout E_copyRotateExpressionUI;
+            
+            if ($parameters != "") makeE_copyParameterUI("Rotate", $parameters);
+
+            scrollField -e -tx $declaration E_copyRotateExpressionField;
+            scrollField -e -tx $expression E_copyRotateExpressionField1;
+        }
+        else if ($item == "Scale")
+        {
+            optionVar -stringValue E_copyScaleTempParameter $parameters;
+
+            if (`columnLayout -q -ex E_copyScaleExpressionUI`) deleteUI E_copyScaleExpressionUI;
+            setParent E_copyScaleExpressionUILayout;
+            columnLayout E_copyScaleExpressionUI;
+            
+            if ($parameters != "") makeE_copyParameterUI("Scale", $parameters);
+
+            scrollField -e -tx $declaration E_copyScaleExpressionField;
+            scrollField -e -tx $expression E_copyScaleExpressionField1;
+        }
+    }
+}
+
+global proc E_copySaveLibrary(string $item)
+{
+    if (`window -ex  E_copySaveLibraryWin`)
+    	    deleteUI E_copySaveLibraryWin;
+
+	window -s true -mnb false -mxb false -w 450 -h 100 -title "Save Library" E_copySaveLibraryWin;
+    columnLayout -rs 5 -adjustableColumn true;
+
+    textFieldButtonGrp -label "filename : "
+			-bl "Browse"
+			-bc "E_copyBrowseSavefile()"
+    E_copySaveLibraryFileName;
+	
+    button -l "Save"
+    	-c ("E_copySaveLibrary2 " + $item);
+
+    showWindow E_copySaveLibraryWin;
+}
+
+global proc E_copySaveLibrary2(string $item)
+{
+    string $newLine;
+
+    string $fileName = `textFieldButtonGrp -q -tx E_copySaveLibraryFileName`;
+
+    string $osTest= `system("ver")`;
+
+    if ($osTest == "") $newLine = "\n";
+    else $newLine = "\r\n";
+
+    string $parameters = "//-- Parameters --//" + $newLine;
+    string $declaration = "//-- Declaration --//" + $newLine;
+    string $expression = "//-- Expression --//" + $newLine;
+
+    ccE_copyParameter($item);
+    
+    if ($item == "Trans")
+    {
+        $parameters += `optionVar -q E_copyTransTempParameter`;
+        $declaration += `scrollField -q -tx E_copyTransExpressionField`;
+        $expression += `scrollField -q -tx E_copyTransExpressionField1`;    
+    }
+    else if ($item == "Rotate")
+    {
+        $parameters += `optionVar -q E_copyRotateTempParameter`;
+        $declaration += `scrollField -q -tx E_copyRotateExpressionField`;
+        $expression += `scrollField -q -tx E_copyRotateExpressionField1`;    
+    }
+    else if ($item == "Scale")
+    {
+        $parameters += `optionVar -q E_copyScaleTempParameter`;
+        $declaration += `scrollField -q -tx E_copyScaleExpressionField`;
+        $expression += `scrollField -q -tx E_copyScaleExpressionField1`;    
+    }    
+
+    if (`window -ex  E_copySaveLibraryWin`)
+    	    deleteUI E_copySaveLibraryWin;
+
+    int $fileId = fopen( $fileName, "w" );
+
+    fprint($fileId, "// E_copy " + $item + " Expression Library" + $newLine + $newLine);
+    fprint($fileId, $parameters + $newLine);
+    fprint($fileId, $declaration + $newLine);
+    fprint($fileId, $expression + $newLine);
+
+    fclose $fileId;            
+}
+
+global proc E_copyBrowseSavefile()
+{
+    string $dirs[];
+
+    string $dir = `getenv("MAYA_SCRIPT_PATH")`;
+    tokenize $dir ";" $dirs;
+
+    string $SCRIPT_PATH = $dirs[0];    
+
+
+   	string $filename = eval("fileDialog -dm \"" + $SCRIPT_PATH + "/\"");
+
+	string $filename = `fileDialog`;
+	
+	textFieldButtonGrp -e -tx $filename E_copySaveLibraryFileName;
+}
+
+global proc string[] parseE_copyParameter(string $cmd)
+{
+    string $statement;
+    string $statements[];
+    string $buffer[];
+    string $returnValue[];
+    int $i = 0;
+
+    $cmd = `substitute "\r\n" $cmd ""`; // eliminate new line characters
+
+    tokenize $cmd ";" $statements;
+
+    for ($statement in $statements)
+    {
+        int $num = `tokenize $statement " " $buffer`;
+        $returnValue[$i++] = $buffer[1];
+        $returnValue[$i++] = $buffer[2];
+        $returnValue[$i++] = $buffer[$num - 1];
+        clear $buffer;
+    }
+    
+    return $returnValue;
+};
+
+global proc makeE_copyParameterUI(string $item, string $cmd)
+{
+    string $parameter[];
+    string $parent;
+    string $name;
+    string $cCmd;
+    string $UIname;
+    float $floatValue;
+    int $intValue;
+    int $i;
+
+    if ($item == "Trans") $parent = "E_copyTransExpressionUI";
+    else if ($item == "Rotate") $parent = "E_copyRotateExpressionUI";
+    else if ($item == "Scale") $parent = "E_copyScaleExpressionUI";
+
+    $cCmd = "ccE_copyParameter " + $item;
+
+    $parameter = parseE_copyParameter($cmd);
+    for ($i = 0; $i < size($parameter); $i += 3)
+    {
+        if ($parameter[$i] == "float")
+        {
+            $name = $parameter[$i + 1];
+            $floatValue = $parameter[$i + 2];
+            $UIname = "E_copy_float_" + $parameter[$i + 1] + "_UI";
+            setParent $parent;
+            floatSliderGrp -f true -cw 1 100 -cw 2 50 -cc $cCmd -l $name -minValue -100.0 -maxValue 100.0 -fieldMinValue -1000.0 -fieldMaxValue 1000.0 -v $floatValue $UIname;
+        }
+        else if ($parameter[$i] == "int")
+        {
+            $name = $parameter[$i + 1];
+            $intValue = $parameter[$i + 2];
+            $UIname = "E_copy_int_" + $parameter[$i + 1] + "_UI";
+            setParent $parent;
+            intSliderGrp -f true -cw 1 100 -cw 2 50 -cc $cCmd -l $name -minValue -100 -maxValue 100 -fieldMinValue -1000 -fieldMaxValue 1000 -v $intValue $UIname;
+        }
+    }
+        
+    clear($parameter);
+}
+
+global proc ccE_copyParameter(string $item)
+{
+    string $UIs[];
+    string $UI;
+    string $dataType;
+    string $name;
+    float $floatValue;
+    int $intValue;
+    string $parameterCmd;
+    int $no1;
+    int $no2;
+
+    if (`columnLayout -q -ex ("E_copy" + $item + "ExpressionUI")`)
+    {   
+        $UIs = `columnLayout -q -ca ("E_copy" + $item + "ExpressionUI")`;
+
+        for ($UI in $UIs)
+        {
+            $dataType = `substring $UI 8 12`;
+            
+            $no1 = 9 + size($dataType);
+            $no2 = size($UI) - 3;
+
+            $name = "$" + `substring $UI $no1 $no2`;
+    
+            if ($dataType == "int") // when integer data
+            {
+                $intValue = `intSliderGrp -q -v $UI`;
+
+                $parameterCmd += "global " + $dataType + " " + $name + " = " + $intValue + ";\n";
+            }
+            else if ($dataType == "float") // when float data
+            {
+                $floatValue = `floatSliderGrp -q -v $UI`;
+
+                $parameterCmd += "global " + $dataType + " " + $name + " = " + $floatValue + ";\n";
+            }
+        }
+    }
+    optionVar -stringValue ("E_copy" + $item + "TempParameter") $parameterCmd;
+}
+
+global proc makeE_copyWin(string $window) {
+    
+    string $geoTypeCmd =
+	"{int $geoType = `radioButtonGrp -q -select E_copyGeoTypeOption`;" +
+	"if ($geoType == 1)  {" +
+	"   checkBoxGrp -e -en true E_copyInpConnChkbox;" +
+	"   checkBoxGrp -e -en true E_copyUpGraphChkbox;" +
+	"} else {" +
+	"   checkBoxGrp -e -en false E_copyInpConnChkbox;" +
+	"   checkBoxGrp -e -en false E_copyUpGraphChkbox;" +
+	"}}";
+    
+    string $upGraphCmd =
+	"{if (`checkBoxGrp -q -v1 E_copyUpGraphChkbox`) {" +
+	"   checkBoxGrp -e -v1 false E_copyInpConnChkbox;" +
+	"   checkBoxGrp -e -en false E_copyInpConnChkbox;" +
+	"} else {" +
+	"   checkBoxGrp -e -en true E_copyInpConnChkbox;" +
+	"}}"; 
+    
+    string $inpConnCmd = 
+	"{if (`checkBoxGrp -q -v1 E_copyInpConnChkbox`) {" +
+	"   checkBoxGrp -e -v1 false E_copyUpGraphChkbox;" +
+	"   checkBoxGrp -e -en false E_copyUpGraphChkbox;" +
+	"} else {" +
+	"   checkBoxGrp -e -en true E_copyUpGraphChkbox;" +
+	"}}";
+
+    int $copyNum = `optionVar -q E_copyNumber`;
+    int $geoType = `optionVar -q E_copyGeoType`;
+    int $copyOption = `optionVar -q E_copyOption`;
+    int $rotateType = `optionVar -q E_copyRotate`;
+    int $scaleType = `optionVar -q E_copyScale`;
+    int $scatterType = `optionVar -q E_copyType`;
+    float $radiusRand = `optionVar -q E_copyRadius`;
+    float $scatterTranX = `optionVar -q E_copyTranX`;
+    float $scatterTranY = `optionVar -q E_copyTranY`;
+    float $scatterTranZ = `optionVar -q E_copyTranZ`;
+    float $scatterCubeX = `optionVar -q E_copyCubeX`;
+    float $scatterCubeY = `optionVar -q E_copyCubeY`;
+    float $scatterCubeZ = `optionVar -q E_copyCubeZ`;
+    float $newRotateX = `optionVar -q E_copyRotateX`;
+    float $newRotateY = `optionVar -q E_copyRotateY`;
+    float $newRotateZ = `optionVar -q E_copyRotateZ`;
+    float $newRandomRX = `optionVar -q E_copyRandomRX`;
+    float $newRandomRY = `optionVar -q E_copyRandomRY`;
+    float $newRandomRZ = `optionVar -q E_copyRandomRZ`;
+    float $newScaleX = `optionVar -q E_copyScaleX`;
+    float $newScaleY = `optionVar -q E_copyScaleY`;
+    float $newScaleZ = `optionVar -q E_copyScaleZ`;
+    float $newRandomSX = `optionVar -q E_copyRandomSX`;
+    float $newRandomSY = `optionVar -q E_copyRandomSY`;
+    float $newRandomSZ = `optionVar -q E_copyRandomSZ`;
+    float $newRandomMinS = `optionVar -q E_copyRandomMinS`;
+    float $newRandomMaxS = `optionVar -q E_copyRandomMaxS`;
+
+    string $E_copyTransParameterCmd = `optionVar -q E_copyTransParameterCmd`;
+    string $E_copyTransDeclareCmd = `optionVar -q E_copyTransDeclare`;
+    string $E_copyTransCmd = `optionVar -q E_copyTransCmd`;
+
+    string $E_copyRotateParameterCmd = `optionVar -q E_copyRotateParameterCmd`;
+    string $E_copyRotateDeclareCmd = `optionVar -q E_copyRotateDeclare`;
+    string $E_copyRotateCmd = `optionVar -q E_copyRotateCmd`;
+
+    string $E_copyScaleParameterCmd = `optionVar -q E_copyScaleParameterCmd`;
+    string $E_copyScaleDeclareCmd = `optionVar -q E_copyScaleDeclare`;
+    string $E_copyScaleCmd = `optionVar -q E_copyScaleCmd`;
+
+    if ($copyNum == 0) $copyNum = 1;
+    if ($rotateType == 0) $rotateType = 1;
+    if ($scaleType == 0) $scaleType = 1;
+    if ($geoType == 0) $geoType = 1;
+    if ($scatterType == 0) $scatterType = 1;
+
+    if ($E_copyTransParameterCmd == 0) $E_copyTransParameterCmd = "";
+    if ($E_copyTransDeclareCmd == 0) $E_copyTransDeclareCmd = "";
+    if ($E_copyTransCmd == 0) $E_copyTransCmd = "";
+
+    if ($E_copyRotateParameterCmd == 0) $E_copyRotateParameterCmd = "";
+    if ($E_copyRotateDeclareCmd == 0) $E_copyRotateDeclareCmd = "";
+    if ($E_copyRotateCmd == 0) $E_copyRotateCmd = "";
+
+    if ($E_copyScaleParameterCmd == 0) $E_copyScaleParameterCmd = "";
+    if ($E_copyScaleDeclareCmd == 0) $E_copyScaleDeclareCmd = "";
+    if ($E_copyScaleCmd == 0) $E_copyScaleCmd = "";
+
+    window -title "E_copy v1.8"
+    	-iconName "E_copy v1.8"
+    	-titleBar true
+    	-minimizeButton true
+    	-maximizeButton false
+    	-sizeable true
+    	$window;
+    
+    string $windowLayout = `columnLayout -rs 5 -adjustableColumn true`;
+
+    string $tabLayout = `tabLayout -h 550 -innerMarginWidth 5 -innerMarginHeight 5 -scr true`;
+
+    string $transLayout = `columnLayout -rs 5 -adjustableColumn true`;
+    
+    optionMenuGrp -label "Scatter Type"
+    	-cal 1 "right"
+    	-cc ("E_copyScatterTypeMenuCB " + $window)
+    	E_copyScatterTypeMenu;
+
+	menuItem -l "Translate";
+	menuItem -l "Random Cube";
+	menuItem -l "Random Sphere";
+    menuItem -l "Expression";
+	setParent -menu ..;
+
+    optionMenuGrp -e -sl $scatterType E_copyScatterTypeMenu;
+
+    floatFieldGrp -l "Translate"
+    	-numberOfFields 3
+        -cw 2 105
+        -cw 3 105
+        -cw 4 105
+	    -v1 $scatterTranX -v2 $scatterTranY -v3 $scatterTranZ
+	E_copyTranslateFieldGrp;
+
+    floatFieldGrp -l "Random Cube"
+    	-numberOfFields 3
+        -cw 2 105
+        -cw 3 105
+        -cw 4 105
+    	-v1 $scatterCubeX -v2 $scatterCubeY -v3 $scatterCubeZ
+	E_copyRandomCubeFieldGrp;
+
+    floatSliderGrp -l "Random Radius"
+        -cw 2 105
+        -cw 3 210
+        -columnAttach 3 "both" 0
+    	-f true
+    	-v $radiusRand
+    	-s 0.0001
+    	-min 0.0
+    	-max 100.0
+	E_copyRandomRadiusSliderGrp;
+
+    columnLayout -rs 5 -adjustableColumn true E_copyTransExpressionLayout;
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 75
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "left"  3
+    	-columnAttach 3 "both"  0;
+
+    text -l "Declaration";
+    text -l "global float $E_copyTX, $E_copyTY, $E_copyTZ;";
+
+    setParent ..;
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 30
+        -rowAttach 1 "top" 0
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "both"  0
+    	-columnAttach 3 "both"  0;
+
+    text -l "";
+
+    scrollField
+        -wordWrap false
+        -height 80
+        -tx $E_copyTransDeclareCmd
+    E_copyTransExpressionField;
+
+    text -l "";
+
+    setParent ..;    
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 30
+        -rowAttach 1 "top" 0
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "both"  0
+    	-columnAttach 3 "both"  0;
+
+    text -l "Parameters";
+    
+    columnLayout E_copyTransExpressionUILayout;
+    columnLayout E_copyTransExpressionUI;
+
+    if ($E_copyTransParameterCmd != "")
+        makeE_copyParameterUI("Trans", $E_copyTransParameterCmd);
+    
+    setParent ..;
+    setParent ..;
+    text -l "";
+
+    setParent ..;    
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 30
+        -rowAttach 1 "top" 0
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "both"  0
+    	-columnAttach 3 "both"  0;
+
+    text -l "Expression";
+
+    scrollField
+        -wordWrap false
+        -height 220
+        -tx $E_copyTransCmd
+    E_copyTransExpressionField1;
+
+    text -l "";
+
+    setParent ..;    
+    
+    rowLayout
+        -numberOfColumns 5
+        -columnWidth5 140 106 106 106 70
+        -columnAlign5 "center" "center" "center" "center" "center"
+    	-columnAttach5 "both" "both" "both" "both" "both";
+
+    text -l "";
+
+    button 
+        -l "Load"
+    	-c "E_copyLoadLibrary(\"Trans\")";
+
+    button 
+        -l "Save"
+        -c "E_copySaveLibrary(\"Trans\")";
+
+    button 
+        -l "New"
+    	-c "E_copyNewLibrary(\"Trans\")";
+
+    if ($scatterType == 1) // Translate type
+    {
+    	floatFieldGrp -edit -enable true E_copyTranslateFieldGrp;
+    	floatFieldGrp -edit -enable false E_copyRandomCubeFieldGrp;
+    	floatSliderGrp -edit -enable false E_copyRandomRadiusSliderGrp;
+        columnLayout -edit -enable false E_copyTransExpressionLayout;
+    }
+    else if ($scatterType == 2) // Random Cube type
+    {
+    	floatFieldGrp -edit -enable false E_copyTranslateFieldGrp;
+    	floatFieldGrp -edit -enable true E_copyRandomCubeFieldGrp;
+    	floatSliderGrp -edit -enable false E_copyRandomRadiusSliderGrp;
+        columnLayout -edit -enable false E_copyTransExpressionLayout;
+    }
+    else if ($scatterType == 3) // Random Sphere type
+    {
+    	floatFieldGrp -edit -enable false E_copyTranslateFieldGrp;
+    	floatFieldGrp -edit -enable false E_copyRandomCubeFieldGrp;
+    	floatSliderGrp -edit -enable true E_copyRandomRadiusSliderGrp;
+        columnLayout -edit -enable false E_copyTransExpressionLayout;
+    }
+    else // Expresion type
+    {
+    	floatFieldGrp -edit -enable false E_copyTranslateFieldGrp;
+    	floatFieldGrp -edit -enable false E_copyRandomCubeFieldGrp;
+    	floatSliderGrp -edit -enable false E_copyRandomRadiusSliderGrp;
+        columnLayout -edit -enable true E_copyTransExpressionLayout;
+    }
+
+    setParent $tabLayout;
+
+    string $rotateLayout = `columnLayout -rs 5 -adjustableColumn true`;
+
+    optionMenuGrp -label "Rotate Type"
+    	-cal 1 "right"
+    	-cc ("E_copyRotateTypeMenuCB " + $window)
+    E_copyRotateTypeMenu;
+
+	menuItem -l "Rotate";
+	menuItem -l "Random Rotate";
+    menuItem -l "Expression";
+	setParent -menu ..;
+
+    optionMenuGrp -e -sl $rotateType E_copyRotateTypeMenu;
+
+    floatFieldGrp -l ""
+    	-numberOfFields 3
+        -cw 2 105
+        -cw 3 105
+        -cw 4 105
+    	-v1 $newRotateX -v2 $newRotateY -v3 $newRotateZ
+	E_copyRotateFieldGrp;
+
+    floatFieldGrp -l ""
+    	-nf 3
+        -cw 2 105
+        -cw 3 105
+        -cw 4 105
+    	-v1 $newRandomRX -v2 $newRandomRY -v3 $newRandomRZ
+	E_copyRotateFieldGrp2;
+
+    columnLayout -rs 5 -adjustableColumn true E_copyRotateExpressionLayout;
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 75
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "left"  3
+    	-columnAttach 3 "both"  0;
+
+    text -l "Declaration";
+    text -l "global float $E_copyRX, $E_copyRY, $E_copyRZ;";
+
+    setParent ..;
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 30
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right" 9
+    	-columnAttach 2 "both"  0
+    	-columnAttach 3 "both"  0;
+
+    text -l "";
+
+    scrollField
+        -wordWrap false
+        -height 80
+        -tx $E_copyRotateDeclareCmd
+    E_copyRotateExpressionField;
+
+    text -l "";
+
+    setParent ..;    
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 30
+        -rowAttach 1 "top" 0
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "both"  0
+    	-columnAttach 3 "both"  0;
+
+    text -l "Parameters";
+    
+    columnLayout E_copyRotateExpressionUILayout;
+    columnLayout E_copyRotateExpressionUI;
+
+    if ($E_copyRotateParameterCmd != "")
+        makeE_copyParameterUI("Rotate", $E_copyRotateParameterCmd);
+    
+    setParent ..;
+    setParent ..;
+    text -l "";
+
+    setParent ..;    
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 30
+        -rowAttach 1 "top" 0
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "both"  0
+    	-columnAttach 3 "both"  0;
+
+    text -l "Expression";
+
+    scrollField
+        -wordWrap false
+        -height 220
+        -tx $E_copyRotateCmd
+    E_copyRotateExpressionField1;
+
+    text -l "";
+
+    setParent ..;    
+    
+    rowLayout
+        -numberOfColumns 5
+        -columnWidth5 140 106 106 106 70
+        -columnAlign5 "center" "center" "center" "center" "center"
+    	-columnAttach5 "both" "both" "both" "both" "both";
+
+    text -l "";
+
+    button 
+        -l "Load"
+    	-c "E_copyLoadLibrary(\"Rotate\")";
+
+    button 
+        -l "Save"
+        -c "E_copySaveLibrary(\"Rotate\")";
+
+    button 
+        -l "New"
+    	-c "E_copyNewLibrary(\"Rotate\")";
+
+    if ($rotateType == 1) // Rotate
+    {
+	    floatFieldGrp -e -en true E_copyRotateFieldGrp;
+	    floatFieldGrp -e -en false E_copyRotateFieldGrp2;
+        floatFieldGrp -e -l "Rotate" E_copyRotateFieldGrp;
+        floatFieldGrp -e -l "" E_copyRotateFieldGrp2;
+        columnLayout -e -enable false E_copyRotateExpressionLayout;
+    }
+    else if ($rotateType == 2) // Random Rotate
+    {
+	    floatFieldGrp -e -en true E_copyRotateFieldGrp;
+        floatFieldGrp -e -en true E_copyRotateFieldGrp2;
+        floatFieldGrp -e -l "Random Min" E_copyRotateFieldGrp;
+        floatFieldGrp -e -l "Random Max" E_copyRotateFieldGrp2;
+        columnLayout -e -enable false E_copyRotateExpressionLayout;
+    }
+    else // Expression type
+    {
+	    floatFieldGrp -e -en false E_copyRotateFieldGrp;
+	    floatFieldGrp -e -en false E_copyRotateFieldGrp2;
+        columnLayout -e -enable true E_copyRotateExpressionLayout;
+    }
+	
+    setParent $tabLayout;
+
+    string $scaleLayout = `columnLayout -rs 5 -adjustableColumn true`;
+
+    optionMenuGrp -label "Scale Type"
+	-cal 1 "right"
+	-cc ("E_copyScaleTypeMenuCB " + $window)
+    	E_copyScaleTypeMenu;
+
+	menuItem -l "Scale";
+	menuItem -l "Random Scale";
+    menuItem -l "Single Random";
+    menuItem -l "Expression";
+	setParent -menu ..;
+
+    optionMenuGrp -e -sl $scaleType E_copyScaleTypeMenu;
+
+    floatFieldGrp -l ""
+    	-numberOfFields 3
+        -cw 2 105
+        -cw 3 105
+        -cw 4 105
+    	-v1 $newScaleX -v2 $newScaleY -v3 $newScaleZ
+	E_copyScaleFieldGrp;
+	
+    floatFieldGrp -l ""
+    	-nf 3
+        -cw 2 105
+        -cw 3 105
+        -cw 4 105
+    	-v1 $newRandomSX -v2 $newRandomSY -v3 $newRandomSZ
+	E_copyScaleFieldGrp2;
+
+    floatSliderGrp -l "Single Random Min"
+        -cw 2 105
+        -cw 3 210
+        -columnAttach 3 "both" 0
+    	-f true
+    	-v $newRandomMinS
+    	-s 0.0001
+    	-min 0.0
+    	-max 100.0
+	E_copyScaleSliderGrp1;
+
+    floatSliderGrp -l "Single Random Max"
+        -cw 2 105
+        -cw 3 210
+        -columnAttach 3 "both" 0
+    	-f true
+    	-v $newRandomMaxS
+    	-s 0.0001
+    	-min 0.0
+    	-max 100.0
+	E_copyScaleSliderGrp2;
+
+    columnLayout -rs 5 -adjustableColumn true E_copyScaleExpressionLayout;
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 75
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "left"  3
+    	-columnAttach 3 "both"  0;
+
+    text -l "Declaration" E_copyScaleExpression1;
+    text -l "global float $E_copySX, $E_copySY, $E_copySZ;" E_copyScaleExpression2;
+
+    setParent ..;
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 30
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "both" 	0
+    	-columnAttach 2 "both"  0
+    	-columnAttach 3 "both"  0;
+
+    text -l "";
+
+    scrollField
+        -wordWrap false
+        -height 80
+        -tx $E_copyScaleDeclareCmd
+    E_copyScaleExpressionField;
+
+    text -l "";
+
+    setParent ..;    
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 30
+        -rowAttach 1 "top" 0
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "both"  0
+    	-columnAttach 3 "both"  0;
+
+    text -l "Parameters";
+    
+    columnLayout E_copyScaleExpressionUILayout;
+    columnLayout E_copyScaleExpressionUI;
+
+    if ($E_copyScaleParameterCmd != "")
+        makeE_copyParameterUI("Scale", $E_copyScaleParameterCmd);
+    
+    setParent ..;
+    setParent ..;
+    text -l "";
+
+    setParent ..;    
+
+    rowLayout
+        -numberOfColumns 3
+        -columnWidth3 140 320 30
+        -rowAttach 1 "top" 0
+    	-columnAlign  1 "right"
+    	-columnAttach 1 "right"	9
+    	-columnAttach 2 "both"  0
+    	-columnAttach 3 "both"  0;
+
+    text -l "Expression" E_copyScaleExpression3;
+
+    scrollField
+        -wordWrap false
+        -height 220
+        -tx $E_copyScaleCmd
+    E_copyScaleExpressionField1;
+
+    text -l "";
+
+    setParent ..;    
+
+    rowLayout
+        -numberOfColumns 5
+        -columnWidth5 140 106 106 106 70
+        -columnAlign5 "center" "center" "center" "center" "center"
+    	-columnAttach5 "both" "both" "both" "both" "both";
+
+    text -l "";
+
+    button 
+        -l "Load"
+    	-c "E_copyLoadLibrary(\"Scale\")";
+
+    button 
+        -l "Save"
+        -c "E_copySaveLibrary(\"Scale\")";
+
+    button 
+        -l "New"
+    	-c "E_copyNewLibrary(\"Scale\")";
+
+    if ($scaleType == 1) // Scale
+    {
+	    floatFieldGrp -e -en true E_copyScaleFieldGrp;
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp2;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp1;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp2;        
+        floatFieldGrp -e -l "Scale" E_copyScaleFieldGrp;
+        floatFieldGrp -e -l "" E_copyScaleFieldGrp2;
+        columnLayout -e -enable false E_copyScaleExpressionLayout;
+    }
+    else if ($scaleType == 2) // Random Scale
+    {
+	    floatFieldGrp -e -en true E_copyScaleFieldGrp;
+        floatFieldGrp -e -en true E_copyScaleFieldGrp2;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp1;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp2;        
+        floatFieldGrp -e -l "Random Min" E_copyScaleFieldGrp;
+        floatFieldGrp -e -l "Random Max" E_copyScaleFieldGrp2;
+        columnLayout -e -enable false E_copyScaleExpressionLayout;
+    }
+    else if ($scaleType == 3) // Single Random
+    {
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp;
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp2;
+        floatSliderGrp -e -en true E_copyScaleSliderGrp1;
+        floatSliderGrp -e -en true E_copyScaleSliderGrp2;        
+        floatFieldGrp -e -l "Scale" E_copyScaleFieldGrp;
+        floatFieldGrp -e -l "" E_copyScaleFieldGrp2;
+        columnLayout -e -enable false E_copyScaleExpressionLayout;
+    }
+    else // Expression type
+    {
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp;
+	    floatFieldGrp -e -en false E_copyScaleFieldGrp2;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp1;
+        floatSliderGrp -e -en false E_copyScaleSliderGrp2;        
+        columnLayout -e -enable true E_copyScaleExpressionLayout;
+    }
+
+    setParent $windowLayout;
+
+    tabLayout -e -tl $transLayout "Translate" -tl $rotateLayout "Rotate" -tl $scaleLayout "Scale" $tabLayout;
+
+    separator;
+    
+    intSliderGrp -l "Number of Copies"
+    	-field true
+    	-min 1
+        -max 100
+        -fmn 1
+        -fmx 1000
+        -cw 2 105
+        -cw 3 210
+        -columnAttach 3 "both" 0
+        -ss 1
+    	-v $copyNum
+        -cc "intSliderGrp -e -max 100 -fmx 1000 \"E_copyNumOfCopiesSliderGrp\";"
+	E_copyNumOfCopiesSliderGrp;
+
+    radioButtonGrp
+    	-nrb 3
+    	-l "Geometry Type"
+    	-l1 "Copy" -l2 "Instance" -l3 "Leaf level Instance"
+    	-select $geoType
+    	-cc $geoTypeCmd
+	E_copyGeoTypeOption;
+   
+    checkBoxGrp -ncb 1
+    	-label ""
+    	-l1 "Duplicate Upstream Graph"
+    	-cw 2 300
+    	-cc $upGraphCmd
+	E_copyUpGraphChkbox;
+	
+    checkBoxGrp -ncb 1
+    	-label ""
+    	-l1 "Duplicate Input Connections"
+    	-cw 2 300
+    	-cc $inpConnCmd
+	E_copyInpConnChkbox;
+
+    if ($geoType == 2) {
+    	checkBoxGrp -e -en false E_copyInpConnChkbox;
+    	checkBoxGrp -e -en false E_copyUpGraphChkbox;
+    } else {
+    	checkBoxGrp -e -en true E_copyInpConnChkbox;
+    	checkBoxGrp -e -en true E_copyUpGraphChkbox;
+    }
+    
+    if ($copyOption == 0) {
+    	checkBoxGrp -e -v1 false E_copyInpConnChkbox;
+    	checkBoxGrp -e -v1 false E_copyUpGraphChkbox;
+    } else if ($copyOption == 1) {
+    	checkBoxGrp -e -v1 false E_copyInpConnChkbox;
+    	checkBoxGrp -e -v1 true E_copyUpGraphChkbox;
+    } else {
+    	checkBoxGrp -e -v1 true E_copyInpConnChkbox;
+    	checkBoxGrp -e -v1 false E_copyUpGraphChkbox;
+    }
+
+    separator;
+
+    rowLayout -numberOfColumns 4
+	    -adj 1
+        -columnAlign4 "center" "center" "center" "center"
+    	-columnAttach4 "both" "both" "both" "both";
+
+    button
+    	-l "E_copy"
+	    -c "doE_copy()";
+
+    button
+    	-l "Save"
+    	-c "saveE_copyWin()";
+
+    button
+    	-l "Reset"
+    	-c "resetE_copyWin()";
+
+    button
+    	-l "Close"
+    	-c ("window -e -vis 0 " + $window);
+}
+
+global proc saveE_copyWin() {
+    int $copyNum = `intSliderGrp -q -v E_copyNumOfCopiesSliderGrp`;
+    float $radiusRand = `floatSliderGrp -q -v E_copyRandomRadiusSliderGrp`;
+    int $geoType = `radioButtonGrp -q -select E_copyGeoTypeOption`;
+    int $rotateType = `optionMenuGrp -q -sl E_copyRotateTypeMenu`;
+    int $scaleType = `optionMenuGrp -q -select E_copyScaleTypeMenu`;
+    float $scatterTranX = `floatFieldGrp -q -v1 E_copyTranslateFieldGrp`;
+    float $scatterTranY = `floatFieldGrp -q -v2 E_copyTranslateFieldGrp`;
+    float $scatterTranZ = `floatFieldGrp -q -v3 E_copyTranslateFieldGrp`;
+    float $scatterCubeX = `floatFieldGrp -q -v1 E_copyRandomCubeFieldGrp`;
+    float $scatterCubeY = `floatFieldGrp -q -v2 E_copyRandomCubeFieldGrp`;
+    float $scatterCubeZ = `floatFieldGrp -q -v3 E_copyRandomCubeFieldGrp`;
+    float $newRotateX = `floatFieldGrp -q -v1 E_copyRotateFieldGrp`;
+    float $newRotateY = `floatFieldGrp -q -v2 E_copyRotateFieldGrp`;
+    float $newRotateZ = `floatFieldGrp -q -v3 E_copyRotateFieldGrp`;
+    float $newScaleX = `floatFieldGrp -q -v1 E_copyScaleFieldGrp`;
+    float $newScaleY = `floatFieldGrp -q -v2 E_copyScaleFieldGrp`;
+    float $newScaleZ = `floatFieldGrp -q -v3 E_copyScaleFieldGrp`;
+    float $newRandomRX = `floatFieldGrp -q -v1 E_copyRotateFieldGrp2`;
+    float $newRandomRY = `floatFieldGrp -q -v2 E_copyRotateFieldGrp2`;
+    float $newRandomRZ = `floatFieldGrp -q -v3 E_copyRotateFieldGrp2`;
+    float $newRandomSX = `floatFieldGrp -q -v1 E_copyScaleFieldGrp2`;
+    float $newRandomSY = `floatFieldGrp -q -v2 E_copyScaleFieldGrp2`;
+    float $newRandomSZ = `floatFieldGrp -q -v3 E_copyScaleFieldGrp2`;
+    float $newRandomMinS = `floatSliderGrp -q -v E_copyScaleSliderGrp1`;
+    float $newRandomMaxS = `floatSliderGrp -q -v E_copyScaleSliderGrp2`;
+
+    ccE_copyParameter("Trans");
+    ccE_copyParameter("Rotate");
+    ccE_copyParameter("Scale");
+
+    string $E_copyTransParameterCmd = `optionVar -q E_copyTransTempParameter`;
+    string $E_copyRotateParameterCmd = `optionVar -q E_copyRotateTempParameter`;
+    string $E_copyScaleParameterCmd = `optionVar -q E_copyScaleTempParameter`;
+
+    string $E_copyTransDeclareCmd = `scrollField -q -tx E_copyTransExpressionField`;
+    string $E_copyRotateDeclareCmd = `scrollField -q -tx E_copyRotateExpressionField`;
+    string $E_copyScaleDeclareCmd = `scrollField -q -tx E_copyScaleExpressionField`;
+
+    string $E_copyTransCmd = `scrollField -q -tx E_copyTransExpressionField1`;
+    string $E_copyRotateCmd = `scrollField -q -tx E_copyRotateExpressionField1`;
+    string $E_copyScaleCmd = `scrollField -q -tx E_copyScaleExpressionField1`; 
+    
+    int $scatterType = `optionMenuGrp -q -sl E_copyScatterTypeMenu`;
+    int $upGraph = `checkBoxGrp -q -v1 E_copyUpGraphChkbox`;
+    int $inpConn = `checkBoxGrp -q -v1 E_copyInpConnChkbox`;
+    int $copyOption;
+    
+    if ($upGraph == 1)
+    	$copyOption = 1;
+    else if ($inpConn == 1)
+        $copyOption = 2;
+    else $copyOption = 0;
+
+    optionVar -intValue E_copyNumber $copyNum;
+    optionVar -floatValue E_copyRadius $radiusRand;
+    optionVar -intValue E_copyGeoType $geoType;
+    optionVar -intValue E_copyRotate $rotateType;
+    optionVar -intValue E_copyScale $scaleType;
+    optionVar -floatValue E_copyTranX $scatterTranX;
+    optionVar -floatValue E_copyTranY $scatterTranY;
+    optionVar -floatValue E_copyTranZ $scatterTranZ;
+    optionVar -floatValue E_copyCubeX $scatterCubeX;
+    optionVar -floatValue E_copyCubeY $scatterCubeY;
+    optionVar -floatValue E_copyCubeZ $scatterCubeZ;
+    optionVar -floatValue E_copyRotateX $newRotateX;
+    optionVar -floatValue E_copyRotateY $newRotateY;
+    optionVar -floatValue E_copyRotateZ $newRotateZ;
+    optionVar -floatValue E_copyScaleX $newScaleX;
+    optionVar -floatValue E_copyScaleY $newScaleY;
+    optionVar -floatValue E_copyScaleZ $newScaleZ;
+    optionVar -floatValue E_copyRandomRX $newRandomRX;
+    optionVar -floatValue E_copyRandomRY $newRandomRY;
+    optionVar -floatValue E_copyRandomRZ $newRandomRZ;
+    optionVar -floatValue E_copyRandomSX $newRandomSX;
+    optionVar -floatValue E_copyRandomSY $newRandomSY;
+    optionVar -floatValue E_copyRandomSZ $newRandomSZ;
+    optionVar -floatValue E_copyRandomMinS $newRandomMinS;
+    optionVar -floatValue E_copyRandomMaxS $newRandomMaxS;
+    optionVar -intValue E_copyType $scatterType;
+    optionVar -intValue E_copyOption $copyOption;
+
+    optionVar -stringValue E_copyTransParameterCmd $E_copyTransParameterCmd;
+    optionVar -stringValue E_copyTransDeclare $E_copyTransDeclareCmd;
+    optionVar -stringValue E_copyTransCmd $E_copyTransCmd;
+
+    optionVar -stringValue E_copyRotateParameterCmd $E_copyRotateParameterCmd;
+    optionVar -stringValue E_copyRotateDeclare $E_copyRotateDeclareCmd;
+    optionVar -stringValue E_copyRotateCmd $E_copyRotateCmd;
+
+    optionVar -stringValue E_copyScaleParameterCmd $E_copyScaleParameterCmd;
+    optionVar -stringValue E_copyScaleDeclare $E_copyScaleDeclareCmd;
+    optionVar -stringValue E_copyScaleCmd $E_copyScaleCmd;
+}
+
+global proc resetE_copyWin() {
+    global float $E_copyTX, $E_copyTY, $E_copyTZ, $E_copyRX, $E_copyRY, $E_copyRZ, $E_copySX, $E_copySY, $E_copySZ;
+    $E_copyTX = $E_copyTY = $E_copyTZ = $E_copyRX = $E_copyRY = $E_copyRZ = $E_copySX = $E_copySY = $E_copySZ = 0.0;
+
+    intSliderGrp -e -v 1 E_copyNumOfCopiesSliderGrp;
+    floatSliderGrp -e -v 3.0 E_copyRandomRadiusSliderGrp;
+    radioButtonGrp -e -select 1 E_copyGeoTypeOption;
+    floatFieldGrp -e -v1 0.0 -v2 0.0 -v3 0.0 E_copyTranslateFieldGrp;
+    floatFieldGrp -e -v1 3.0 -v2 3.0 -v3 3.0 E_copyRandomCubeFieldGrp;
+    floatFieldGrp -e -v1 0.0 -v2 0.0 -v3 0.0 E_copyRotateFieldGrp;
+    floatFieldGrp -e -v1 1.0 -v2 1.0 -v3 1.0 E_copyScaleFieldGrp;
+    floatFieldGrp -e -v1 360.0 -v2 360.0 -v3 360.0 E_copyRotateFieldGrp2;
+    floatFieldGrp -e -v1 1.0 -v2 1.0 -v3 1.0 E_copyScaleFieldGrp2;
+    floatSliderGrp -e -v 1.0 E_copyScaleSliderGrp1;
+    floatSliderGrp -e -v 1.0 E_copyScaleSliderGrp2;
+
+    optionMenuGrp -e -sl 1 E_copyScatterTypeMenu;
+    optionMenuGrp -e -sl 1 E_copyRotateTypeMenu;
+    optionMenuGrp -e -sl 1 E_copyScaleTypeMenu; 
+
+    floatFieldGrp -edit -enable true E_copyTranslateFieldGrp;
+    floatFieldGrp -edit -enable false E_copyRandomCubeFieldGrp;
+    floatSliderGrp -edit -enable false E_copyRandomRadiusSliderGrp;
+    columnLayout -edit -enable false E_copyTransExpressionLayout;
+
+    floatFieldGrp -e -en true E_copyRotateFieldGrp;
+    floatFieldGrp -e -en false E_copyRotateFieldGrp2;
+    floatFieldGrp -e -l "Rotate" E_copyRotateFieldGrp;
+    floatFieldGrp -e -l "" E_copyRotateFieldGrp2;
+    columnLayout -e -enable false E_copyRotateExpressionLayout;
+
+    floatFieldGrp -e -en true E_copyScaleFieldGrp;
+    floatFieldGrp -e -en false E_copyScaleFieldGrp2;
+    floatSliderGrp -e -en false E_copyScaleSliderGrp1;
+    floatSliderGrp -e -en false E_copyScaleSliderGrp2;    
+    floatFieldGrp -e -l "Scale" E_copyScaleFieldGrp;
+    floatFieldGrp -e -l "" E_copyScaleFieldGrp2;
+    columnLayout -e -enable false E_copyScaleExpressionLayout;
+  
+    checkBoxGrp -e -v1 false E_copyUpGraphChkbox;
+    checkBoxGrp -e -v1 false E_copyInpConnChkbox;
+    
+    optionVar -intValue E_copyNumber 1;
+    optionVar -floatValue E_copyRadius 3.0;
+    optionVar -intValue E_copyGeoType 1;
+    optionVar -intValue E_copyRotate 1;
+    optionVar -intValue E_copyScale 1;
+    optionVar -floatValue E_copyTranX 0.0;
+    optionVar -floatValue E_copyTranY 0.0;
+    optionVar -floatValue E_copyTranZ 0.0;
+    optionVar -floatValue E_copyCubeX 3.0;
+    optionVar -floatValue E_copyCubeY 3.0;
+    optionVar -floatValue E_copyCubeZ 3.0;
+    optionVar -floatValue E_copyRotateX 0.0;
+    optionVar -floatValue E_copyRotateY 0.0;
+    optionVar -floatValue E_copyRotateZ 0.0;
+    optionVar -floatValue E_copySCaleX 1.0;
+    optionVar -floatValue E_copySCaleY 1.0;
+    optionVar -floatValue E_copySCaleZ 1.0;
+    optionVar -floatValue E_copyRandomRX 360.0;
+    optionVar -floatValue E_copyRandomRY 360.0;
+    optionVar -floatValue E_copyRandomRZ 360.0;
+    optionVar -floatValue E_copyRandomSX 0.0;
+    optionVar -floatValue E_copyRandomSY 0.0;
+    optionVar -floatValue E_copyRandomSZ 0.0;
+    optionVar -floatValue E_copyRandomMinS 1.0;
+    optionVar -floatValue E_copyRandomMaxS 1.0;
+    optionVar -intValue E_copyType 1;
+    optionVar -intValue E_copyOption 0;
+
+    optionVar -stringValue E_copyTransTempParameter "";
+    optionVar -stringValue E_copyTransParameterCmd "";
+    optionVar -stringValue E_copyTransDeclare "";
+    optionVar -stringValue E_copyTransCmd "";
+
+    optionVar -stringValue E_copyRotateTempParameter "";
+    optionVar -stringValue E_copyRotateParameterCmd "";
+    optionVar -stringValue E_copyRotateDeclare "";
+    optionVar -stringValue E_copyRotateCmd "";
+
+    optionVar -stringValue E_copyScaleTempParameter "";
+    optionVar -stringValue E_copyScaleParameterCmd "";
+    optionVar -stringValue E_copyScaleDeclare "";
+    optionVar -stringValue E_copyScaleCmd "";
+
+    if (`columnLayout -q -ex E_copyTransExpressionUI`) deleteUI E_copyTransExpressionUI;
+    if (`columnLayout -q -ex E_copyRotateExpressionUI`) deleteUI E_copyRotateExpressionUI;
+    if (`columnLayout -q -ex E_copyScaleExpressionUI`) deleteUI E_copyScaleExpressionUI;
+    
+    scrollField -e -cl E_copyTransExpressionField;
+    scrollField -e -cl E_copyTransExpressionField1;
+
+    scrollField -e -cl E_copyRotateExpressionField;
+    scrollField -e -cl E_copyRotateExpressionField1;
+
+    scrollField -e -cl E_copyScaleExpressionField;
+    scrollField -e -cl E_copyScaleExpressionField1;
+}
+
+global proc doE_copy() {
+    waitCursor -state on;
+    int $Ii;
+    int $Jj;
+    vector $newTrans;
+    float $ntX, $ntY, $ntZ;
+    float $minX, $minY, $minZ;
+    float $maxX, $maxY, $maxZ;
+    float $nrX, $nrY, $nrZ;
+    float $nsX, $nsY, $nsZ;
+    
+    global float $E_copyTX, $E_copyTY, $E_copyTZ, $E_copyRX, $E_copyRY, $E_copyRZ, $E_copySX, $E_copySY, $E_copySZ;
+
+    string $E_copyCmd;
+    string $currents[];
+    string $originalNode;
+
+    int $numOfCopy = `intSliderGrp -q -v E_copyNumOfCopiesSliderGrp`;
+    int $rotateType = `optionMenuGrp -q -sl E_copyRotateTypeMenu`;
+    int $scaleType = `optionMenuGrp -q -select E_copyScaleTypeMenu`;
+    int $geoType = `radioButtonGrp -q -select E_copyGeoTypeOption`;
+    int $scatterType = `optionMenuGrp -query -select E_copyScatterTypeMenu`;
+    float $sphrandRadius = `floatSliderGrp -q -v E_copyRandomRadiusSliderGrp`;
+    float $randCubeX = `floatFieldGrp -q -v1 E_copyRandomCubeFieldGrp`;
+    float $randCubeY = `floatFieldGrp -q -v2 E_copyRandomCubeFieldGrp`;
+    float $randCubeZ = `floatFieldGrp -q -v3 E_copyRandomCubeFieldGrp`;
+
+    string $E_copyTransDeclareCmd = `scrollField -q -tx E_copyTransExpressionField`;
+    string $E_copyRotateDeclareCmd = `scrollField -q -tx E_copyRotateExpressionField`;
+    string $E_copyScaleDeclareCmd = `scrollField -q -tx E_copyScaleExpressionField`;
+
+    string $E_copyTransCmd = `scrollField -q -tx E_copyTransExpressionField1`;
+    string $E_copyRotateCmd = `scrollField -q -tx E_copyRotateExpressionField1`;
+    string $E_copyScaleCmd = `scrollField -q -tx E_copyScaleExpressionField1`; 
+
+    ccE_copyParameter("Trans");
+    ccE_copyParameter("Rotate");
+    ccE_copyParameter("Scale");
+
+    string $E_copyTransParameterCmd = `optionVar -q E_copyTransTempParameter`;
+    string $E_copyRotateParameterCmd = `optionVar -q E_copyRotateTempParameter`;
+    string $E_copyScaleParameterCmd = `optionVar -q E_copyScaleTempParameter`;
+    
+    if ($E_copyTransParameterCmd == 0) $E_copyTransParameterCmd = "";
+    if ($E_copyRotateParameterCmd == 0) $E_copyRotateParameterCmd = "";
+    if ($E_copyScaleParameterCmd == 0) $E_copyScaleParameterCmd = "";
+
+    int $upGraph = `checkBoxGrp -q -v1 E_copyUpGraphChkbox`;
+    int $inpConn = `checkBoxGrp -q -v1 E_copyInpConnChkbox`;
+    int $copyOption;
+
+    if ($upGraph == 1)
+    	$copyOption = 1;
+    else if ($inpConn == 1)
+        $copyOption = 2;
+    else
+        $copyOption = 0;
+
+    string $originalNodes[] = `ls -sl`;
+
+    if ($E_copyTransParameterCmd != "") // setup parameters
+        eval($E_copyTransParameterCmd);
+    if ($E_copyRotateParameterCmd != "")
+        eval($E_copyRotateParameterCmd);
+    if ($E_copyScaleParameterCmd != "")
+        eval($E_copyScaleParameterCmd);
+
+    if ($E_copyTransDeclareCmd != "") // declare variables
+        eval($E_copyTransDeclareCmd);
+    if ($E_copyRotateDeclareCmd != "")
+        eval($E_copyRotateDeclareCmd);
+    if ($E_copyScaleDeclareCmd != "")    
+        eval($E_copyScaleDeclareCmd);
+
+    $nrX = $nrY = $nrZ = 0.0;
+    $nsX = $nsY = $nsZ = 1.0;
+
+    for ($Ii = 1; $Ii <= $numOfCopy; $Ii++) {
+	
+        $Jj = 0;
+	
+        if ($scatterType == 1) {
+	        $ntX = `floatFieldGrp -q -v1 E_copyTranslateFieldGrp`;
+    	    $ntY = `floatFieldGrp -q -v2 E_copyTranslateFieldGrp`;
+    	    $ntZ = `floatFieldGrp -q -v3 E_copyTranslateFieldGrp`;
+    	} else if ($scatterType == 2) {
+    	    $ntX = rand($randCubeX);
+    	    $ntY = rand($randCubeY);
+    	    $ntZ = rand($randCubeZ);    
+    	} else if ($scatterType == 3) {
+    	    $newTrans = sphrand(1) * $sphrandRadius;
+    	    $ntX = $newTrans.x;
+    	    $ntY = $newTrans.y;
+    	    $ntZ = $newTrans.z;
+    	} else {
+            if ($E_copyTransCmd != "") eval($E_copyTransCmd);
+
+            $ntX = $E_copyTX;
+            $ntY = $E_copyTY;
+            $ntZ = $E_copyTZ;
+        }
+
+    	if ($rotateType == 2 ) {
+    	    $minX = `floatFieldGrp -q -v1 E_copyRotateFieldGrp`;
+    	    $minY = `floatFieldGrp -q -v2 E_copyRotateFieldGrp`;
+    	    $minZ = `floatFieldGrp -q -v3 E_copyRotateFieldGrp`;
+    	    $maxX = `floatFieldGrp -q -v1 E_copyRotateFieldGrp2`;
+    	    $maxY = `floatFieldGrp -q -v2 E_copyRotateFieldGrp2`;
+    	    $maxZ = `floatFieldGrp -q -v3 E_copyRotateFieldGrp2`;
+    	    $nrX = rand($minX, $maxX);
+    	    $nrY = rand($minY, $maxY);
+    	    $nrZ = rand($minZ, $maxZ);
+    	} else if ($rotateType == 1) {
+    	    $nrX += `floatFieldGrp -q -v1 E_copyRotateFieldGrp`;
+    	    $nrY += `floatFieldGrp -q -v2 E_copyRotateFieldGrp`;
+    	    $nrZ += `floatFieldGrp -q -v3 E_copyRotateFieldGrp`;
+    	} else {
+            if ($E_copyRotateCmd != "") eval($E_copyRotateCmd);
+
+            $nrX = $E_copyRX;
+            $nrY = $E_copyRY;
+            $nrZ = $E_copyRZ;
+        }
+
+        if ($scaleType == 3) {
+            $minX = `floatSliderGrp -q -v E_copyScaleSliderGrp1`;
+            $maxX = `floatSliderGrp -q -v E_copyScaleSliderGrp2`;
+            $nsX = rand($minX, $maxX);
+            $nsY = $nsX;
+            $nsZ = $nsX;
+        } else if ($scaleType == 2) {
+    	    $minX = `floatFieldGrp -q -v1 E_copyScaleFieldGrp`;
+    	    $minY = `floatFieldGrp -q -v2 E_copyScaleFieldGrp`;
+    	    $minZ = `floatFieldGrp -q -v3 E_copyScaleFieldGrp`;
+    	    $maxX = `floatFieldGrp -q -v1 E_copyScaleFieldGrp2`;
+    	    $maxY = `floatFieldGrp -q -v2 E_copyScaleFieldGrp2`;
+    	    $maxZ = `floatFieldGrp -q -v3 E_copyScaleFieldGrp2`;
+    	    $nsX = rand($minX, $maxX);
+    	    $nsY = rand($minY, $maxY);
+    	    $nsZ = rand($minZ, $maxZ);
+    	} else if ($scaleType == 1) {
+    	    $nsX *= `floatFieldGrp -q -v1 E_copyScaleFieldGrp`;
+    	    $nsY *= `floatFieldGrp -q -v2 E_copyScaleFieldGrp`;
+    	    $nsZ *= `floatFieldGrp -q -v3 E_copyScaleFieldGrp`;
+    	} else {
+            if ($E_copyScaleCmd != "") eval($E_copyScaleCmd);
+
+            $nsX = $E_copySX;
+            $nsY = $E_copySY;
+            $nsZ = $E_copySZ;
+        }
+
+    	for ($originalNode in $originalNodes) {
+
+    		if ($Ii == 1) select -r $originalNode;
+    		else if ($scatterType == 1) select -r $currents[$Jj];
+    		else select -r $originalNode;
+	
+    		if ($geoType == 1) {
+    		    if ($copyOption == 1) $E_copyCmd = "duplicate -un";
+    		    else if ($copyOption == 2) $E_copyCmd = "duplicate -ic";
+    		    else $E_copyCmd = "duplicate";
+    		} if ($geoType == 2)
+    			$E_copyCmd = "instance";
+    		else if ($geoType == 3)
+    			$E_copyCmd = "instance -lf";
+
+    		string $temp[] = eval($E_copyCmd);
+    	            $currents[$Jj] = $temp[0];    
+
+    		select -r $currents[$Jj];
+           	move -r $ntX $ntY $ntZ;
+
+    		select -r $currents[$Jj];
+            rotate $nrX $nrY $nrZ;
+
+    		select -r $currents[$Jj];
+            scale $nsX $nsY $nsZ;
+
+    		if ($copyOption == 2) saveInitialState;
+	
+    		select -cl;
+    		$Jj++;
+	    }
+    }
+
+    select -cl;
+    saveE_copyWin();
+    waitCursor -state off;
+}

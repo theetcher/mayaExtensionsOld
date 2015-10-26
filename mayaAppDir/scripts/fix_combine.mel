@@ -1,0 +1,28 @@
+
+// Combines objects, parents it to the first selected object's parent and deletes history //
+
+global proc fix_combine( )
+{
+
+	string $tmp1[];
+	string $tmp2;
+	string $parent[];
+	string $targets[];
+	
+	$targets = `ls -sl -l`;
+	$targetsShort = `ls -sl`;
+	$parent = `listRelatives -p -pa $targets[0]`;
+	$result = `polyUnite $targets`;
+	if ($parent[0] != "") parent $result[0] $parent[0];
+	delete -ch $result[0];
+	for ($tmp in $targets)
+		{
+		$tmp1 = `ls $tmp`;
+		if ($tmp1[0] != "") delete $tmp;
+		}
+//	print $targetsShort[0];	
+	$tmp2 = eval ("match \"[A-z,0-9]+$\" "+$targetsShort[0]);
+	rename $result[0] $tmp2;
+	catch(`select $tmp2`);
+
+}

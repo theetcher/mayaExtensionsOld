@@ -1,0 +1,39 @@
+/* XPM */
+static char *gridDisplay[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #8c8a8c",
+". c #acaaac",
+"# c #9c9e9c",
+"a c #949594",
+"b c #bcbebc",
+"c c #a4a2a4",
+"d c #c4c2c4",
+"e c #8c8e8c",
+/* pixels */
+"ddbddbddbddbddbddbddbddb",
+"bdbbdbbdbbdbbdbbdbbdbbdd",
+"dbe```````````````````bd",
+"dd`a.c..c.c`e..c.c..a`bd",
+"dbe#bdbbddbe#bdbdbbbcedb",
+"db`#dbdddbde#dbdddddcebd",
+"dd`#dbdbddd`#bdbddbd#ebd",
+"bd`#bdbddbdeaddddddd#edb",
+"db`#dddbddbe#dbdbdbdcebd",
+"db`#bdbddbde#bddddddcebd",
+"db`#dbdbddde#dbdbdbd#ebd",
+"db``ea`eeee```````````bd",
+"db`a.......`a..c.c..a`bd",
+"db`#bbbbddbe#bbddbbbcebd",
+"db`#ddddbdde#bddbddd#edb",
+"db`#bbddddbe#bddddbdcebd",
+"db`#ddbdbdd`#bbdbdbd#edb",
+"dbe#bdbdddbe#ddddbdbcedd",
+"dd`#ddbdbdde#bbdbdddcebd",
+"bde#bdbdddbeaddddbdbcebb",
+"db`a#c#####ee.......aebb",
+"dbe````````````````e``bb",
+"ddbbbbbbbdbbbbbbbbbbbbdd",
+"bddddddddddddddddbddbddb"
+};

@@ -1,0 +1,48 @@
+proc modified_combine( )
+{
+
+	string $tmp1[];
+	string $tmp2;
+	string $parent[];
+	string $targets[];
+	
+	$targets = `ls -sl -l`;
+	$targetsShort = `ls -sl`;
+	$parent = `listRelatives -p -pa $targets[0]`;
+	$result = `polyUnite $targets`;
+	if ($parent[0] != "") parent $result[0] $parent[0];
+	delete -ch $result[0];
+	for ($tmp in $targets)
+		{
+		$tmp1 = `ls $tmp`;
+		if ($tmp1[0] != "") delete $tmp;
+		}
+	$tmp2 = eval ("match \"[A-z,0-9]+$\" "+$targetsShort[0]);
+	rename $result[0] $tmp2;
+	catch(`select $tmp2`);
+
+}
+
+global proc fix_deleteIOG ()
+{
+
+string $fakePlane[];
+string $meshes[] = `ls -l -ni -typ "mesh"`;
+string $meshTransforms[];
+
+for ($badMesh in $meshes) {
+	$fakePlane  = `polyPlane -w 1 -h 1 -sx 1 -sy 1 -ax 0 1 0 -tx 1 -ch 0`;
+	move -a 100 100 100 $fakePlane;
+	watchStr($badMesh,"$badMesh");
+	$meshTransforms = `listRelatives -p -f $badMesh`;
+	if ($meshTransforms[0] != "") {
+		select $meshTransforms[0];
+		select -add $fakePlane;
+		modified_combine();
+	}
+	
+//	break;
+}
+
+}
+

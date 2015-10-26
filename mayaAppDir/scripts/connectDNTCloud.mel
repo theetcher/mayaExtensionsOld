@@ -1,0 +1,53 @@
+global proc connectDNTCloud ( )
+	{
+	string $objs[];
+	$objs = `ls -sl`;
+
+	catch( `eval("connectAttr -f "+$objs[1]+".LightScattColor "+$objs[0]+".vspReflectedColor")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".LightScattIntensity "+$objs[0]+".vspReflectedColorScalar")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".Visibility "+$objs[0]+".vspVisibilityScalar")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".Opacity "+$objs[0]+".vspOpacityScalar")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".Spread "+$objs[0]+".vspLightScattering")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".SelfShadow "+$objs[0]+".vspSelfShadowFlag")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ShadowColor "+$objs[0]+".vspShadowColor")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ShadIntensity "+$objs[0]+".vspShadowColorScalar")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".Cutoff "+$objs[0]+".vspMinShadow")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".Gradient "+$objs[0]+".vspShadowScale")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ComputeCloudTexture "+$objs[0]+".lwcProcDensityFlag")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".AvgDensity "+$objs[0]+".lwcAvgDensity")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".Fuzziness "+$objs[0]+".lwcDetailBias")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".Puffiness "+$objs[0]+".lwcDensityContrast")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".NoiseScale "+$objs[0]+".lwcLengthScale")` );
+//	catch( `eval("connectAttr -f "+$objs[1]+".RandomSeed "+$objs[0]+".lwcSeed")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ActivateTimeEvolution "+$objs[0]+".lwcEvolveFlag")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".SizeScaleBias "+$objs[0]+".lwcEvolveSizeBias")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".TimeScale "+$objs[0]+".lwcEvolveTimeScale")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ComputeParticleTextureMask "+$objs[0]+".lwcParticleMaskFlag")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ParticleWeight "+$objs[0]+".partAvgDensity")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ParticleRadius "+$objs[0]+".partAvgRadius")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ParticleSharpness "+$objs[0]+".partDensityBias")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".MinMaskWeight "+$objs[0]+".partMinDensityClamp")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".MaxMaskWeight "+$objs[0]+".partMaxDensityClamp")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".RadiusPP "+$objs[0]+".RadiusPP")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".DensityPP "+$objs[0]+".DensityPP")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".EdgeTaperPercent "+$objs[0]+".lwcTaperPercentage")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".VoxelBlurLevel "+$objs[0]+".lwcVoxelBlurr")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".LatticeScaleFactor "+$objs[0]+".lwcLatticeScaleFactor")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".AutoLatticeSize "+$objs[0]+".lwcResolution")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ManualLatticeSize "+$objs[0]+".lwcManualResolutionFlag")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".XLatticeSize "+$objs[0]+".lwcNX")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".YLatticeSize "+$objs[0]+".lwcNY")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ZLatticeSize "+$objs[0]+".lwcNZ")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ComputeTransparency "+$objs[0]+".TransparencyFlag")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".FixedTransparency "+$objs[0]+".FixedTransparency")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".ComputeMatteOpacity "+$objs[0]+".MatteOpacityFlag")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".FixedMatteOpacity "+$objs[0]+".FixedMatteOpacity")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".RaytraceInside "+$objs[0]+".RaytraceInternal")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".RaytraceOutside "+$objs[0]+".RaytraceExternal")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".TreshholdDensity "+$objs[0]+".rcpThresholdDensity")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".StepSize "+$objs[0]+".rcpStepSize")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".MarchLimit "+$objs[0]+".rcpMarchLimit")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".Supersampling "+$objs[0]+".rcpSupersampling")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".UpdateLightsIPR "+$objs[0]+".UpdateLightsIPR")` );
+	catch( `eval("connectAttr -f "+$objs[1]+".GenerateRW "+$objs[0]+".lwcOutputFilesFlag")` );
+}

@@ -1,0 +1,242 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: UltraJitter v1.0
+''    Author: Julian Love
+''    Last Updated: May 29, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=animation#1758
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//UltraJitter, by Julian Love, JulianLove@mac.com. Copyright (C) Julian Love, 2002
+//
+//description:	
+//		select object(s) and run ultraJitter at the command line
+//		the selected objects will be grouped to a null that has
+//		some extra attrs:
+//
+//		jScale: the max distance that the jitter will traverse
+//		jAmplitude: jitter amount
+//		jWeightX: amount of jitter applied to the translateX channel
+//		jWeightY: amount of jitter applied to the translateY channel
+//		jWeightZ: amount of jitter applied to the translateZ channel
+//		jitterType: the type of math function used to compute the jitter:
+//
+//			-type 1: random. totally random numbers in positive/negative direction
+//			-type 2: gaussian. Bell curve weighted random. Tends to stick closer to the center
+//			-type 3: dnoise. Uses 3D spatial noise. More reserved than #1
+//			-type 4: besselj0. A bessel function that is very noisey.
+//			-type 5: sinewave gaussian. try scale of 10 and amplitude of .05
+//			-type 6: spikey. try scale of 10 and amplitude of .01
+//			-type 7: superSpikey. try scale of 1 amplitude of .5
+//			-type 8: stutter. try scale of .25 amplitude of .1
+//			-type 9: jumpy. try scale of .1 and amplitude of 200
+//			-type 10: quakey. try scale of 2 and amplitude of 50
+//			-type 11: tremors. try scale of .5 and amplitude of 1
+//			-type 12: breezey. try scale of .5 and amplitude of .5
+//			-type 13: periodic episode. try scale of .1 and amplitude of .5
+//			-type 14: periodic impulse. try scale of 5 and amplitude of 5
+//
+//usage:		ultraJitter;
+
+
+global proc ultraJitter (){
+	string	$sel[] = `ls -sl -type "transform"`;
+	string	$attrs[] = {".tx", ".ty", ".tz", ".rx", ".ry", ".rz", ".sx", ".sy", ".sz", ".visibility"}; 
+	string	$groupName;
+	string	$a;
+	
+	float	$pos[];
+	
+	for ($x in $sel){
+		select -r $x;
+		$pos = `xform -ws $x`;
+		$groupName = `group -n ($x + "_jit")`;
+		
+		addAttr -ln jScale -at double  -min 0 -max 200 -dv 1 $groupName;
+		setAttr -e -keyable true ($groupName + ".jScale");
+		
+		addAttr -ln jAmplitude -at double  -min 0 -max 1000 -dv 1 $groupName;
+		setAttr -e -keyable true ($groupName + ".jAmplitude");
+		
+		addAttr -ln jWeightX -at double  -min 0 -max 1 -dv 1 $groupName;
+		setAttr -e -keyable true ($groupName + ".jWeightX");
+		addAttr -ln jWeightY -at double  -min 0 -max 1 -dv 1 $groupName;
+		setAttr -e -keyable true ($groupName + ".jWeightY");
+		addAttr -ln jWeightZ -at double  -min 0 -max 1 -dv 1 $groupName;
+		setAttr -e -keyable true ($groupName + ".jWeightZ");
+		
+		addAttr -ln jType -at long  -min 1 -max 14 -dv 1 $groupName;
+		setAttr -e -keyable true ($groupName + ".jType");
+		
+		for ($a in $attrs)
+			{setAttr -e -keyable false ($groupName + $a);}
+		
+		
+		expression -s ("int $j = `getAttr " + $groupName + ".jType`;\nswitch ($j){\n\tcase 1:\n\t\tfloat $x = rand (jScale, (jScale* -1));\n\t\tfloat $y = " + 
+		"rand (jScale, (jScale* -1));\n\t\tfloat $z = rand (jScale, (jScale* -1));\n\t\tvector $vRand = <<$x, $y, $z>>;\n\t\tbreak;\n\tcase 2:\n\t\tvector " +  
+		"$vRand = `gauss <<jScale, jScale, jScale>>`;\n\t\tbreak;\n\tcase 3:\n\t\tvector $vRand = `dnoise <<rand(jScale), rand(jScale), rand(jScale)>>`;" +  
+		"\n\t\tbreak;\n\tcase 4:\n\t\tfloat $b = (besselj0(rand(jScale)) * jScale);\n\t\tvector $vRand = <<gauss($b), gauss($b), gauss($b)>>;\n\t\tbreak;" +  
+		"\n\tcase 5:\n\t\tfloat $amp = jScale;\n\t\tfloat $freq = besselj1 (jAmplitude);\n\t\tfloat $x = (gauss($amp) * sin($freq));\n\t\tfloat $y = (gauss($amp) * " +  
+		"sin($freq));\n\t\tfloat $z = (gauss($amp) * sin($freq));\n\t\tvector $vRand = <<$x, $y, $z>>;\n\t\tbreak;\n\tcase 6:\n\t\tfloat $amp = jScale;\n\t\tfloat " +  
+		"$freq = gauss (jAmplitude);\n\t\tfloat $x = (gauss($amp) * sin($freq));\n\t\tfloat $y = (gauss($amp) * sin($freq));\n\t\tfloat $z = (gauss($amp) * " +  
+		"sin($freq));\n\t\tvector $vRand = <<$x, $y, $z>>;\n\t\tbreak;\n\tcase 7:\n\t\tfloat $amp = gauss (jScale);\n\t\tfloat $freq = gauss (jAmplitude);" +  
+		"\n\t\tfloat $x = (gauss($amp) * sin($freq));\n\t\tfloat $y = (gauss($amp) * sin($freq));\n\t\tfloat $z = (gauss($amp) * sin($freq));\n\t\tvector " +  
+		"$vRand = <<$x, $y, $z>>;\n\t\tbreak;\n\tcase 8:\n\t\tfloat $amp = jScale;\n\t\tfloat $freq = gauss (jAmplitude);\n\t\tfloat $x = (gauss($amp) * " +  
+		"`smoothstep (sin(frame)) $amp $freq`);\n\t\tfloat $y = (gauss($amp) * `smoothstep (sin(frame)) $amp $freq`);\n\t\tfloat $z = (gauss($amp) * " +  
+		"`smoothstep (sin(frame)) $amp $freq`);\n\t\tvector $vRand = <<$x, $y, $z>>;\n\t\tbreak;\n\tcase 9:\n\t\tfloat $amp = jScale;\n\t\tfloat $freq = " +  
+		"gauss (jAmplitude);\n\t\tfloat $x = (gauss($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tfloat $y = (gauss($amp) * `smoothstep " +  
+		"(sin(time * $freq)) $freq $amp`);\n\t\tfloat $z = (gauss($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tvector $vRand = <<$x, $y, $z>>;" +  
+		"\n\tcase 10:\n\t\tfloat $jScale = jScale;\n\t\tfloat $amp = `smoothstep (sin(time)) $jScale 1`;\n\t\tfloat $freq = gauss (jAmplitude);\n\t\tfloat $x = " +  
+		"(gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tfloat $y = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tfloat " +  
+		"$z = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tvector $vRand = <<$x, $y, $z>>;\n\t\tbreak;\n\tcase 11:\n\t\tfloat $jScale = " +  
+		"jScale;\n\t\tfloat $amp = `smoothstep (sin(time)) 5 $jScale`;\n\t\tfloat $freq = gauss (jAmplitude);\n\t\tfloat $x = (gauss ($amp) * `smoothstep (sin(time * $freq)) " +  
+		"$freq $amp`);\n\t\tfloat $y = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tfloat $z = (gauss ($amp) * `smoothstep (sin(time * $freq)) " +  
+		"$freq $amp`);\n\t\tvector $vRand = <<$x, $y, $z>>;\n\t\tbreak;\n\tcase 12:\n\t\tfloat $jScale = jScale;\n\t\tfloat $amp = `smoothstep (sin(time)) " +  
+		"$jScale .5`;\n\t\tfloat $freq = gauss (jAmplitude);\n\t\tfloat $x = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tfloat $y = (gauss ($amp) * " +  
+		"`smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tfloat $z = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tvector $vRand = <<$x, $y, $z>>;" +  
+		"\n\tcase 13:\n\t\tfloat $amp = jScale;\n\t\tfloat $freq = gauss (jAmplitude);\n\t\tfloat $x = (gauss($amp) * `smoothstep (sin(time)) $amp $freq`);\n\t\tfloat $y = " +  
+		"(gauss($amp) * `smoothstep (sin(time)) $amp $freq`);\n\t\tfloat $z = (gauss($amp) * `smoothstep (sin(time)) $amp $freq`);\n\t\tvector $vRand = <<$x, $y, $z>>;" +  
+		"\n\t\tbreak;\n\tcase 14:\n\t\tfloat $jScale = jScale;\n\t\tfloat $jAmp = jAmplitude;\n\t\tfloat $amp = `smoothstep (sin(time)) $jScale .5`;\n\t\tfloat $freq = " +  
+		"`smoothstep (sin(time)) $jAmp .2`;\n\t\tfloat $x = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tfloat $y = (gauss ($amp) * `smoothstep " +  
+		"(sin(time * $freq)) $freq $amp`);\n\t\tfloat $z = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);\n\t\tvector $vRand = <<$x, $y, $z>>;\n\t\tbreak;" +  
+		"\n}\n\ntx = ($vRand.x * jWeightX);\nty = ($vRand.y * jWeightY);\ntz = ($vRand.z * jWeightZ);") -o $groupName -ae 1 -uc all ;
+	}
+	
+	print "\n";
+	print "\n";
+	print "UltraJitter quick help:\n";
+	print "\n";
+	print "type 1:   Random			Random. jScale only\n";
+	print "type 2:   Gaussian			Bell curve weighted. jScale only\n";
+	print "type 3:   Dnoise			3D spatial noise. jScale only\n";
+	print "type 4:   Besselj0			Bessel function. jScale only.\n";
+	print "type 5:   Sine gaussian		Defaults: jScale 10.0  jAmplitude 0.05\n";
+	print "type 6:   Spikey			Defaults: jscale 10.0  jAmplitude 0.01\n";
+	print "type 7:   SuperSpikey		Defaults: jScale 1.00  jAmplitude 0.50\n";
+	print "type 8:   Stutter			Defaults: jScale 0.25  jAmplitude 0.10\n";
+	print "type 9:   jumpy				Defaults: jScale 0.10  jAmplitude 200\n";
+	print "type 10: quakey			Defaults: jScale 2.00  jAmplitude 50.0\n";
+	print "type 11: tremors			Defaults: jScale 0.50  jAmplitude 1.00\n";
+	print "type 12: breezey			Defaults: jScale 0.50  jAmplitude 0.50\n";
+	print "type 13: periodic episode		Defaults: jScale 0.10  jAmplitude 0.50\n";
+	print "type 14: periodic impulse		Defaults: jScale 5.00  jAmplitude 5.00\n";
+	print "\n";
+	print "\n";
+}
+
+
+/*
+//...expression
+int $j = `getAttr nurbsSphere1_jit.jType`;
+switch ($j){
+	case 1:
+		float $x = rand (jScale, (jScale* -1));
+		float $y = rand (jScale, (jScale* -1));
+		float $z = rand (jScale, (jScale* -1));
+		vector $vRand = <<$x, $y, $z>>;
+		break;
+	case 2:
+		vector $vRand = `gauss <<jScale, jScale, jScale>>`;
+		break;
+	case 3:
+		vector $vRand = `dnoise <<rand(jScale), rand(jScale), rand(jScale)>>`;
+		break;
+	case 4:
+		float $b = (besselj0(rand(jScale)) * jScale);
+		vector $vRand = <<gauss($b), gauss($b), gauss($b)>>;
+		break;
+	case 5:
+		float $amp = jScale;
+		float $freq = besselj1 (jAmplitude);
+		float $x = (gauss($amp) * sin($freq));
+		float $y = (gauss($amp) * sin($freq));
+		float $z = (gauss($amp) * sin($freq));
+		vector $vRand = <<$x, $y, $z>>;
+		break;
+	case 6:
+		float $amp = jScale;
+		float $freq = gauss (jAmplitude);
+		float $x = (gauss($amp) * sin($freq));
+		float $y = (gauss($amp) * sin($freq));
+		float $z = (gauss($amp) * sin($freq));
+		vector $vRand = <<$x, $y, $z>>;
+		break;
+	case 7:
+		float $amp = gauss (jScale);
+		float $freq = gauss (jAmplitude);
+		float $x = (gauss($amp) * sin($freq));
+		float $y = (gauss($amp) * sin($freq));
+		float $z = (gauss($amp) * sin($freq));
+		vector $vRand = <<$x, $y, $z>>;
+		break;
+	case 8:
+		float $amp = jScale;
+		float $freq = gauss (jAmplitude);
+		float $x = (gauss($amp) * `smoothstep (sin(frame)) $amp $freq`);
+		float $y = (gauss($amp) * `smoothstep (sin(frame)) $amp $freq`);
+		float $z = (gauss($amp) * `smoothstep (sin(frame)) $amp $freq`);
+		vector $vRand = <<$x, $y, $z>>;
+		break;
+	case 9:
+		float $amp = jScale;
+		float $freq = gauss (jAmplitude);
+		float $x = (gauss($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $y = (gauss($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $z = (gauss($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		vector $vRand = <<$x, $y, $z>>;
+	case 10:
+		float $jScale = jScale;
+		float $amp = `smoothstep (sin(time)) $jScale 1`;
+		float $freq = gauss (jAmplitude);
+		float $x = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $y = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $z = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		vector $vRand = <<$x, $y, $z>>;
+		break;
+	case 11:
+		float $jScale = jScale;
+		float $amp = `smoothstep (sin(time)) 5 $jScale`;
+		float $freq = gauss (jAmplitude);
+		float $x = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $y = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $z = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		vector $vRand = <<$x, $y, $z>>;
+		break;
+	case 12:
+		float $jScale = jScale;
+		float $amp = `smoothstep (sin(time)) $jScale .5`;
+		float $freq = gauss (jAmplitude);
+		float $x = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $y = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $z = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		vector $vRand = <<$x, $y, $z>>;
+	case 13:
+		float $amp = jScale;
+		float $freq = gauss (jAmplitude);
+		float $x = (gauss($amp) * `smoothstep (sin(time)) $amp $freq`);
+		float $y = (gauss($amp) * `smoothstep (sin(time)) $amp $freq`);
+		float $z = (gauss($amp) * `smoothstep (sin(time)) $amp $freq`);
+		vector $vRand = <<$x, $y, $z>>;
+		break;
+	case 14:
+		float $jScale = jScale;
+		float $jAmp = jAmplitude;
+		float $amp = `smoothstep (sin(time)) $jScale .5`;
+		float $freq = `smoothstep (sin(time)) $jAmp .2`;
+		float $x = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $y = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		float $z = (gauss ($amp) * `smoothstep (sin(time * $freq)) $freq $amp`);
+		vector $vRand = <<$x, $y, $z>>;
+		break;
+}
+
+tx = ($vRand.x * jWeightX);
+ty = ($vRand.y * jWeightY);
+tz = ($vRand.z * jWeightZ);
+*/

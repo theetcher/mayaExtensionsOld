@@ -1,0 +1,39 @@
+/* XPM */
+static char *pasteV[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #040204",
+". c #848684",
+"# c #c6c4c6",
+"a c #f7f8f7",
+"b c #676967",
+"c c #252325",
+"d c #b4b2b4",
+"e c #143694",
+/* pixels */
+"########################",
+"##d##d##########d###d###",
+"###d###d##d##d####d###d#",
+"#d######......#d########",
+"####....ba##d`.b.b##d##d",
+"#d#.aaabadcc#.`dddc#####",
+"###.aabaaaadd..`ddcd#d##",
+"#d#.aa``````````ddc#####",
+"###.a#aaa#a###ddddcd##d#",
+"#dd.#aaa#a###dddddc#####",
+"##eeeeeeeeeeeeeeeeeeee##",
+"##eeeeeeeeeeeeeeeeeeeed#",
+"#deeeeeeeeeeeeeeeeeeee#d",
+"###.aa###dd.aaaaaa.#c###",
+"###.#a####d.abbbaa.`ccd#",
+"#d#.#a###dd.aaaaaaa##c##",
+"###.ddd#ddd.abbbbbbb#c##",
+"#d##cccc```.aaaaaaaa#c##",
+"#####d#d###.abbbbbbb#c##",
+"#d#######d#.#########c##",
+"###d###d###``````ccccc##",
+"#d###d##################",
+"########d##d###########d",
+"##d##d#######d##########"
+};

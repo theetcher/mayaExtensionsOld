@@ -1,0 +1,39 @@
+/* XPM */
+static char *textureBorder[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #143594",
+". c #8c8a8c",
+"# c #223f94",
+"a c #1c3a99",
+"b c #c4c2c4",
+"c c #acaaac",
+"d c #c5c7c5",
+"e c #1c3699",
+/* pixels */
+"bbbbbbbddddddbbbbbbbbbbd",
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bb`````````bbbbbbbbbc.bb",
+"bb`````````bbbbbbbbc.cbb",
+"bb``bbbbb``bbbbbbbc.cbbb",
+"bb``bbbbb``cbbbbcc.cbbbb",
+"bb``bbbbb``bbbbbc.cbbcbb",
+"bb``cbbbc``bbbbc.cbbbbbb",
+"bb``bbbbb``bcbc.cbbbbbbb",
+"bb`````````bbc.ccbbbbbbb",
+"bb`````````bc.cbbbbbbbbb",
+"bbbbbbbbbbbc.ccdbbbbbcbb",
+"bbbbbbbbbcc.`````````#bb",
+"bbbbbbcbbc.c`````````#bb",
+"bbbbcddbc.cb``````````bb",
+"bbbbbbbc.cbb```bbbb```db",
+"bbbbbbc.ccdb```bbbb``abb",
+"bbbbbc.cbbbb```bbbb``abb",
+"bbbbc.ccdbbb```bbbb``abb",
+"bbbc..ddbbbb``````````bb",
+"bbc.cdbbbbbb````````aabb",
+"bb.cbbbbbbbb````````a`bb",
+"bbbcbbbbbcbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbb"
+};

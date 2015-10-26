@@ -1,0 +1,87 @@
+//
+// SubSurf.mel v1.4  --   01 September 1998
+//  
+// Mel script for MAYA
+//
+//  By Massimo Liani
+//     Pixel Machine Company
+//     Vicenza, Italy
+//     e-mail max@pmc.it
+//     http   www.pmc.it
+//
+//  
+//  Function:
+//     Create SubdivisionSurfaces from polygon objects
+//
+//  Usage:
+//     Select one or more polygon objects, then type "SubSurf".
+//     This script allows you to smooth even a complex polygon object
+//     but still work with it as a very simple control cage.
+//     This way you can model, transform and animate a simply mesh
+//     and render a perfect smoothed shape.
+//     
+//  Note:   
+//     You must have the default ShadingGroup named "initialShadingGroup",
+//     as at start of MAYA, connected to the object you would smooth.
+//     
+//     
+//
+
+
+global proc SubSurf ()
+// Main procedure
+{
+	// Are there some selected objects?
+	string $originA[] = `ls -sl`;
+	int $SelE = size($originA);
+	if ($SelE)
+	{
+		pickWalk -d down;
+		string $originB[] = `ls -sl`;
+		int $Recurs;
+		int $NumEdges[];
+		for ($Recurs = 0; $Recurs < $SelE;)
+		// Cycle control selections
+		{
+			if (catch($NumEdges = `polyEvaluate -e $originA[$Recurs]`) == 0)
+				Builder($Recurs, $originA, $originB);
+			else
+				print ($originA[$Recurs]+ " is not a Polygon Object.\n");
+			$Recurs = $Recurs + 1;
+		}
+	}
+	else
+		print("Error: You must select at least one Polygon Object.\n");
+}	
+
+global proc Builder (int $Count, string $origin1[], string $origin2[])
+// Build SubdivisionSurfaces
+{
+	string $poly[] = `polyCube -n Subdivision`;
+	string $Interm[] = `polySmooth -sm 2 -ch 1 ($poly[0])`;
+	connectAttr -f ($origin2[$Count]+ ".outMesh") ($Interm[0]+ ".inputPolymesh");
+	sets -rm initialShadingGroup $origin2[$Count];
+	select -r $poly[1]; delete;
+	addAttr -is 1 -ln Smoothness -at long  -min 0 -max 10 -dv 2 $origin2[$Count];
+	setAttr -keyable on ($origin2[$Count] + ".Smoothness");
+	setAttr -keyable off ($poly[0]+ ".translateX");
+	setAttr -keyable off ($poly[0]+ ".translateY");
+	setAttr -keyable off ($poly[0]+ ".translateZ");
+	setAttr -keyable off ($poly[0]+ ".scaleX");
+	setAttr -keyable off ($poly[0]+ ".scaleY");
+	setAttr -keyable off ($poly[0]+ ".scaleZ");
+	setAttr -keyable off ($poly[0]+ ".rotateX");
+	setAttr -keyable off ($poly[0]+ ".rotateY");
+	setAttr -keyable off ($poly[0]+ ".rotateZ");
+	setAttr -keyable off ($poly[0]+ ".visibility");
+	connectAttr -f ($origin1[$Count]+ ".Smoothness") ($Interm[0]+ ".smoothness");
+	connectAttr -f ($origin1[$Count]+ ".translateX") ($poly[0]+ ".translateX");
+	connectAttr -f ($origin1[$Count]+ ".translateY") ($poly[0]+ ".translateY");
+	connectAttr -f ($origin1[$Count]+ ".translateZ") ($poly[0]+ ".translateZ");
+	connectAttr -f ($origin1[$Count]+ ".rotateX") ($poly[0]+ ".rotateX");
+	connectAttr -f ($origin1[$Count]+ ".rotateY") ($poly[0]+ ".rotateY");
+	connectAttr -f ($origin1[$Count]+ ".rotateZ") ($poly[0]+ ".rotateZ");
+	connectAttr -f ($origin1[$Count]+ ".scaleX") ($poly[0]+ ".scaleX");
+	connectAttr -f ($origin1[$Count]+ ".scaleY") ($poly[0]+ ".scaleY");
+	connectAttr -f ($origin1[$Count]+ ".scaleZ") ($poly[0]+ ".scaleZ");
+}

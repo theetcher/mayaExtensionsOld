@@ -1,0 +1,30 @@
+global proc string whatIsIt (string $sel)
+{
+if (`size $sel` == 0)
+	return "0";
+int $counter = 1;
+for ($counter = 1; $counter < `size $sel`; $counter++)
+	{
+	if (`substring $sel $counter $counter` == "[")
+		{
+		break;
+		}
+	}
+
+if (`size $sel` == $counter)
+	return "o";
+else
+	{
+	if (`substring $sel ($counter - 1) ($counter - 1)` == "x")
+		return "v";
+	else if (`substring $sel ($counter - 1) ($counter - 1)` == "e")
+		return "e";
+	else if (`substring $sel ($counter - 1) ($counter - 1)` == "f")
+		return "f";
+	else if (`substring $sel ($counter - 1) ($counter - 1)` == "p")
+		return "u";
+	else
+		return "";
+	}
+return "";
+}

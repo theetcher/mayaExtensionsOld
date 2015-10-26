@@ -1,0 +1,19 @@
+global proc animatedDuplicateDyn ( )
+{
+        int $startTime = `playbackOptions -q -min`;
+        int $endTime = `playbackOptions -q -max`;
+//        print ($startTime+"\n");
+//        print ($endTime+"\n");
+        int $tmp1;
+        int $crntTime;
+        for ( $tmp1 = $startTime; $tmp1 <= $endTime; $tmp1++)
+		{
+		duplicate s;
+		$crntTime = `getAttr time1.outTime`;
+		$crntTime = $crntTime+1;
+		eval("runup -mxf "+$crntTime);
+		
+		print ($crntTime+"\n");
+		}
+
+}

@@ -1,0 +1,73 @@
+global proc fix_duplicateExtract()
+{
+	string $facesToDuplicate[] = `ls -sl -l`;
+	if ( !size($facesToDuplicate) ) error ("Nothing selected.");
+
+// get original object name
+	string $temp[];
+	tokenize $facesToDuplicate[0] "." $temp;
+	string $objOrig = $temp[0];
+
+// duplicating object and getting its name
+	$temp = `duplicate -rr $objOrig`;
+	string $objDup = $temp[0];
+
+// generating list of duplicated faces based on original objects names	
+	string $facesDup[];
+	for ($i = 0; $i < size($facesToDuplicate); $i++ ) {
+		$facesDup[$i] = `substitute $objOrig $facesToDuplicate[$i] $objDup`;
+	}
+
+// deleting all except duplicated faces on duplicate mesh	
+	select $objDup;
+	PolySelectConvert 1;
+	select -d $facesDup;
+	delete;
+
+// making "result" selection which will help delete original faces if user will choose so.
+	select -cl;
+	select $objDup;
+	select -add $facesToDuplicate;
+
+// "Delete Original Faces?" window 
+	if (`window -exists fix_duplicateExtractConfirmWin` == true) {
+		deleteUI fix_duplicateExtractConfirmWin;
+	}
+
+	window  -title "Delete Original Faces?"
+		-widthHeight 200 100
+		-sizeable false
+		fix_duplicateExtractConfirmWin;
+		columnLayout
+		-w 200
+		-h 25;
+			separator 
+			-w 200
+			-h 25
+			-st "in";
+		setParent ..;
+		rowLayout -numberOfColumns 2
+			-columnWidth2 100 100
+			-ct2 "left"  "left"
+			-co2 22 22
+			-cl2 "center" "center";
+			button -label "Yes"
+				-w 50
+				-h 35
+				-c "string $resultSelection[] = `ls -sl`; select -d $resultSelection[0]; delete; select $resultSelection[0]; deleteUI fix_duplicateExtractConfirmWin; changeSelectMode -object;";
+			button -label "No"
+				-w 50
+				-h 35
+				-c "string $resultSelection[] = `ls -sl`; select $resultSelection[0]; deleteUI fix_duplicateExtractConfirmWin; changeSelectMode -object;";
+	showWindow fix_duplicateExtractConfirmWin;
+
+}
+
+
+
+
+
+
+
+
+

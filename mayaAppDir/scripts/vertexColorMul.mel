@@ -1,0 +1,136 @@
+/*  This file downloaded from Highend3d.com
+''
+''  Highend3d.com File Information:
+''
+''    Script Name: vertexNoise v1.0
+''    Author: Edvard Toth
+''    Last Updated: December 22, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=polygon#2070
+''
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+
+//=============================
+// vertexNoise v1.0 (12/2002)
+// by Edvard Toth
+//
+// The script is freeware. Non-commercial redistribution is permitted as long as this header remains included and unmodified.
+// Your feedback is always appreciated - if you find the script useful or if you have questions, comments, suggestions, requests,
+// bug-reports or if you created an updated version, please contact me at:
+//
+// contact@edvardtoth.com
+// http://www.edvardtoth.com
+//
+//=============================
+// INSTALLATION: Copy the script into your Maya script-directory and start it with the vertexNoise; command.
+//
+// COMPATIBILITY NOTE: Tested only with Maya4.0
+//
+// DESCRIPTION:
+// The script applies fully adjustable random noise to selected vertices, even across multiple objects.
+// The type of the noise can either be uniform (based on the vertex-normals) or directional (based on the XYZ-axes).
+//
+// A smoothing function with adjustable intensity is also available for fine-tuning purposes.
+//
+// Since the original vertex-selection is retained, the noise/smooth operations can be applied repeatedly until
+// the desired result is reached.
+//
+// Note: the smoothing-operation doesn't work if vertices on multiple objects are selected.
+
+
+global proc vertexColorMul()
+{
+   global string $VertexWin = "vertexColorMul";
+
+   if (`window -ex $VertexWin`)
+   {
+      deleteUI $VertexWin;
+   }
+
+window -t "vertexNoise v1.0" -rtf 1 -s 1 -mnb 1 -mxb 0 $VertexWin;
+
+string $form = `formLayout -numberOfDivisions 100 VertexForm`;
+
+columnLayout -adjustableColumn false -columnWidth 300 -columnAlign "left" -rowSpacing 2 -cat "both" 2 VertexColumn;
+
+separator -h 5 -st "none";
+
+floatSliderGrp -field 1 -cw 1 70 -cw 2 40 -l "Mul R" -pre 1 -min -0 -max 10 -v 1 mulr;
+floatSliderGrp -field 1 -cw 1 70 -cw 2 40 -l "Mul G" -pre 1 -min -0 -max 10 -v 1 mulg;
+floatSliderGrp -field 1 -cw 1 70 -cw 2 40 -l "Mul B" -pre 1 -min -0 -max 10 -v 1 mulb;
+floatSliderGrp -field 1 -cw 1 70 -cw 2 40 -l "Mul A" -pre 1 -min -0 -max 10 -v 1 mula;
+
+setParent..;
+
+string $noisebutton = `button -w 150 -h 25 -label "Apply" -command "doVertexColorMul"`;
+string $resetbutton = `button -w 50 -h 25 -label "Reset" -command "vertexColorMul"`;
+
+formLayout -edit
+
+-attachControl $noisebutton "top" 5 VertexColumn
+-attachForm $noisebutton "left" 10
+
+-attachControl $resetbutton "top" 5 VertexColumn
+-attachControl $resetbutton "left" 5 $noisebutton
+
+$form;
+setParent ..;
+
+
+showWindow;
+}
+
+
+global proc doVertexColorMul()
+{
+
+   global string $VertexWin;
+   global string $noiseType;
+
+   float $rmul= `floatSliderGrp -q -v ($VertexWin+"|VertexForm|VertexColumn|mulr")`;
+   float $gmul= `floatSliderGrp -q -v ($VertexWin+"|VertexForm|VertexColumn|mulg")`;
+   float $bmul= `floatSliderGrp -q -v ($VertexWin+"|VertexForm|VertexColumn|mulb")`;
+   float $amul= `floatSliderGrp -q -v ($VertexWin+"|VertexForm|VertexColumn|mula")`;
+
+   string $AllSelection[] = `ls -hl`;
+   string $selectedObjects[] = `ls -hl -o`;
+
+   sets -n NoiseVerts;
+
+   for ($selection in $AllSelection)
+
+   {
+      select $selection;
+
+      int $VertexCount[] = `polyEvaluate -v`;
+
+      for ( $i = 0; $i < $VertexCount[0]; $i++) {
+         if (`sets -im NoiseVerts ($selection + ".vtx[" + $i + "]")` == 1 ) {
+            select ($selection + ".vtx[" + $i + "]");
+            float $r[] = `polyColorPerVertex -q -r`;
+            float $g[] = `polyColorPerVertex -q -g`;
+            float $b[] = `polyColorPerVertex -q -b`;
+            float $a[] = `polyColorPerVertex -q -a`;
+            $r[0] *= $rmul;
+            $g[0] *= $gmul;
+            $b[0] *= $bmul;
+            $a[0] *= $amul;
+            polyColorPerVertex -r $r[0];
+            polyColorPerVertex -g $g[0];
+            polyColorPerVertex -b $b[0];
+            polyColorPerVertex -a $a[0];
+         }
+      }
+   }
+            // RESTORE SELECTION
+
+            select $selectedObjects;
+            hilite $selectedObjects;
+            changeSelectMode -component;
+            select -add NoiseVerts;
+            delete NoiseVerts;
+}

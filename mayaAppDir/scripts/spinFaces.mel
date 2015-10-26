@@ -1,0 +1,186 @@
+////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//SpinFaces 1.0b
+//
+//This mel chane the direction of the edge shared by two faces....
+//Lightwave users know this as SpinQuad...i wanted it for Maya...
+//
+//Giuseppe Improta
+//improtag@libero.it
+//http://www.3dluvr.com/knower
+//
+//
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc SplitFace(int $SplitEdgeANum , int $SplitEdgeAVal , int $SplitEdgeBNum, int $SplitEdgeBVal, string $MergedFaceVtxs[])
+
+{
+polySplit -ep $SplitEdgeANum $SplitEdgeAVal -ep $SplitEdgeBNum $SplitEdgeBVal;
+print ("Splitted edges " + $SplitEdgeANum + " and " + $SplitEdgeBNum);
+print "\n";
+string $newFaces[] = `polyListComponentConversion -fv -tf -in $MergedFaceVtxs`;
+select $newFaces;
+}
+
+
+global proc spinFaces()
+
+{
+
+//storing the starting components
+
+
+string $selFaces[] = `ls -sl -fl`;
+
+//checking for erros
+
+string $TypeCheck = whatComponent($selFaces[0]);
+if ($TypeCheck != "f")
+error "You must select at least and max 2 quads !!";
+if (($selFaces[0] == "")||($selFaces[2]!= "")||(size($selFaces)<2))
+error "You must select at least and max 2 quads !!";
+
+// go on...
+
+string $SharedEdge[] = unfilterComponents(`polyListComponentConversion -ff -te -in $selFaces`);
+string $SharedEdgeVtxs[] = unfilterComponents(`polyListComponentConversion -fe -tv $SharedEdge`);
+string $selFacesVtxs[] = unfilterComponents(`polyListComponentConversion -ff -tv $selFaces`);
+
+//deleting SharedEdge
+
+polyDelEdge $SharedEdge[0];
+
+//storin resultant face 
+
+string $MergedFace[] = unfilterComponents(`polyListComponentConversion -fv -tf -in $selFacesVtxs`);
+
+//getting the vertices of MergedFace counter-clockwise
+
+string $MergedFaceVtxFaces[] = unfilterComponents(`polyListComponentConversion -ff -tvf $MergedFace`);
+int $i=0;
+string $MergedFaceVtxs[];
+for ($i=0; $i<size($MergedFaceVtxFaces); $i++)
+	{	
+	string $currentVtx[] = `polyListComponentConversion -fvf -tv $MergedFaceVtxFaces[$i]`;
+	$MergedFaceVtxs[$i] = $currentVtx[0]; 
+	}
+
+//finding next vertex in line with the first vertex of SharedEdge
+
+int $nextVtxAindex = matchItem($SharedEdgeVtxs[0],$MergedFaceVtxs);
+string $nextVtxsA;
+if ($nextVtxAindex+1<size($MergedFaceVtxs))
+$nextVtxA = $MergedFaceVtxs[$nextVtxAindex+1];
+else
+$nextVtxA = $MergedFaceVtxs[0];
+
+//finding next vertex in line with the first vertex of SharedEdge
+
+int $nextVtxBindex = matchItem($SharedEdgeVtxs[1],$MergedFaceVtxs);
+string $nextVtxsB;
+if ($nextVtxBindex+1<size($MergedFaceVtxs))
+$nextVtxB = $MergedFaceVtxs[$nextVtxBindex+1];
+else
+$nextVtxB = $MergedFaceVtxs[0];
+
+//getting SplitEdgeA and relative num from vertices
+
+string $SplitEdgeA[] = `polyListComponentConversion -fv -te -in $SharedEdgeVtxs[0] $nextVtxA`;
+int $SplitEdgeANum = convert2Num($SplitEdgeA[0]);
+//getting SplitEdgeB and relative num from vertices
+
+string $SplitEdgeB[] = `polyListComponentConversion -fv -te -in $SharedEdgeVtxs[1] $nextVtxB`;
+int $SplitEdgeBNum = convert2Num($SplitEdgeB[0]);
+
+//getting the SplitEdgeAVal
+
+string $infoVtxs[] = polyInfo("-ev", $SplitEdgeA);
+string $infoVtxsToked[];
+	tokenize($infoVtxs[0], " ", $infoVtxsToked);
+string $infoVtxsCheck[];
+$infoVtxsCheck[0] = $infoVtxsToked[2];
+$infoVtxsCheck[1] = $infoVtxsToked[3];
+int $SplitEdgeAVal = matchItem(convert2Num($nextVtxA),$infoVtxsCheck);
+
+//getting the SplitEdgeBVal
+
+string $infoVtxs[] = polyInfo("-ev", $SplitEdgeB);
+string $infoVtxsToked[];
+	tokenize($infoVtxs[0], " ", $infoVtxsToked);
+string $infoVtxsCheck[];
+$infoVtxsCheck[0] = $infoVtxsToked[2];
+$infoVtxsCheck[1] = $infoVtxsToked[3];
+int $SplitEdgeBVal = matchItem(convert2Num($nextVtxB),$infoVtxsCheck);
+
+SplitFace($SplitEdgeANum, $SplitEdgeAVal,$SplitEdgeBNum,$SplitEdgeBVal,$MergedFaceVtxs);
+
+}
+
+//variouse procedures to have easier life...
+
+//match an item into a string and gives the index value (it is supposed that the match, if exists,
+//happen only once
+
+global proc int matchItem (string $what , string $where[])
+
+{
+int $i=0;
+for ($i=0; $i<size($where); $i++)
+	{
+	if ($what == $where[$i])
+		{
+		return $i;
+		}
+	}
+
+return -1;
+
+}
+
+//get the component number
+
+global proc int convert2Num(string $what)
+{
+	string $Num[];
+	tokenize($what, "[]", $Num);
+	return int($Num[1]);
+}
+
+//global proc int convert2Num (string $what)
+//
+//{
+//string $Num[];
+//$Num[0] = `match "[0-9]+" $what`;
+//return int($Num[0]);
+//}
+
+// checking components type
+
+global proc string whatComponent (string $whatisthis)
+{
+string $thisis[];
+	tokenize($whatisthis, ".[", $thisis);
+	return $thisis[1];	
+}
+
+//get the fully unfiltered components (this works only for vtxs, edges, faces, faceVtxs
+
+global proc string[] unfilterComponents (string $filtered[])
+{
+int $mask;
+if (whatComponent($filtered[0])=="vtx")
+$mask=31;
+else if (whatComponent($filtered[0])=="e")
+$mask=32;
+else if (whatComponent($filtered[0])=="f")
+$mask=34;
+else if (whatComponent($filtered[0])=="vtxFace")
+$mask=70;
+
+string $unfiltered[] = `filterExpand -sm $mask $filtered`;
+return $unfiltered;
+}
+
+
+
+

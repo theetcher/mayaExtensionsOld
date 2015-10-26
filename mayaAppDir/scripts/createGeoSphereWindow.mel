@@ -1,0 +1,81 @@
+global proc createGeo ()
+	{
+	int $frequency = 1;
+	float $radius = 1;
+	int $primitive;
+	
+	//---------------------------------Query Frequency Radius Primitive Type from window ---------------------------------
+	if (`control -exists frequencySlider`)
+		{
+		//print ("Frequenz-Control vorhanden\n");
+		$frequency = (`intSliderGrp -q -v  frequencySlider`);
+		}
+	if (`control -exists radiusSlider`)
+		{
+		//print ("Radius-Control vorhanden\n");
+		$radius = (`floatSliderGrp -q -v  radiusSlider`);
+		}
+	if(`control -exists polySelect`)
+		{
+		$primitive = (`radioButtonGrp -q -sl polySelect`);
+		}
+	//print ("Frequenz: " + $frequency + "\n");
+	//print ("Radius: " + $radius + "\n");
+	GeoSphere $frequency $radius $primitive;
+	}
+
+
+//------------------------ Main Procedure: Create window for Input Data ----------------------------------------------
+global proc createGeoSphereWindow()
+	{
+	string $windowname = "GeoSphereWindow";
+	int $segments;
+	float $radius;
+			
+	if ( `window -exists GeoSphereWindow` )
+		{
+		deleteUI -window GeoSphereWindow;
+		}
+
+	string $octacommand = "GeoSphere ";
+	
+	window -wh 388 94 -t "Eyeron Factories - Geosphere 0.2 beta - 04-30-02" -mnb off -mxb off -tlc 110 40 -rtf true $windowname;
+	
+		columnLayout -adj true -cal "left" baseData;
+				iconTextButton -style "iconOnly" -w 200 -h 69 -i1 "EFBgMaya.bmp" -c "InfoWindow ()";
+				print ("text ok\n");
+				radioButtonGrp -numberOfRadioButtons 3 -label "Primitive Type" -cl4 "left" "left" "left" "left" -cw4 80 90 90 90 -labelArray3 "Tetrahedron" "Octahedron" "Icosahedron" -sl 2 polySelect; 
+				print ("radiobutton ok\n");
+				intSliderGrp -label "Frequency:" -cl3 "left" "left" "left" -cw3 80 45 280 -min 1 -max 20 -fmn 1 -fmx 20 -value 4 -f true frequencySlider;
+				print ("intslider ok\n");
+				floatSliderGrp -label "Radius:" -cl3 "left" "left" "left" -cw3 80 45 280 -min 0.001 -max 20.0 -fmn 0.001 -fmx 20.0 -value 4 -f true radiusSlider;
+				
+				rowLayout -ad3 2 -nc 3 -cw3 110 110 110 -ct3 "both" "both" "both" -cl3 "center" "center" "center" buttons;
+					button -l "Apply and Close" -c "createGeo (); deleteUI -window GeoSphereWindow";
+					button -l "Apply" -c "createGeo ()";
+					button -l "Close Window" -c "deleteUI -window GeoSphereWindow";
+					setParent ..;
+				setParent ..;
+		
+		showWindow $windowname;
+	}
+
+global proc InfoWindow()
+	{
+	if ( `window -exists InfoWindow` )
+		{
+		deleteUI -window GeoSphereWindow;
+		}
+	window -wh 240 120 -t "Info on GeoSphere" -rtf true InfoWindow;
+		columnLayout -adj false -cal "center" -w 200;
+			text -l "GeoSphere 0.2 beta - Version Date 04-20-02";
+			text -l "Programmed by T. Elser";
+			text -l "based on c program code created by Rick Bono";
+			text -l "feel free to drop me a note:";
+			text -l "t.elser@web.de";
+			button -l "Close" -w 240 -al "center" -c "deleteUI -window InfoWindow";
+			setParent..;
+		setParent..;
+	showWindow InfoWindow;
+	}
+	

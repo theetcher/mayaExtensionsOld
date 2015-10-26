@@ -1,0 +1,180 @@
+// - select several vertices (target vertices)
+// - select vertex which normal will be recomputed (main vertex)
+// - run the script
+// - main vertex normal will be average between target vertices normals accroding to distance to them:
+//				closer to target vertex - more its influense on main vertex
+
+global proc fix_vertNormalBlendToNeighbours( )
+{
+
+	global string $blends[];
+	global string $targets[];
+	
+	clear ($blends);
+	clear ($targets);
+
+	string $mainWin = "fix_vertNormalBlendToNeighboursWin";
+	
+	if (`window -exists $mainWin`)
+			deleteUI $mainWin;
+
+	int $winWidth = 300;
+	int $separatorWidth = $winWidth - 7;
+	
+	$mainWin = `window 
+		-t "Blend Vertices Normals to Neighbours"
+		-s 0
+		-mnb 1
+		-mxb 0
+		$mainWin`;
+
+	columnLayout
+		-rowSpacing 2
+
+	;
+		
+		separator -style "none" -height 2;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 4;
+
+		rowLayout
+			-nc 3
+			-columnWidth 1 242
+			-columnWidth 2 5
+			-columnWidth 3 45
+			-columnAlign3 "center" "left" "center"
+			-columnAttach3 "both" "both" "both"
+		;
+
+
+			button
+				-label "Set Vertices to Blend"
+				-command ("$blends = `ls -sl -l -fl`;" +
+							"if (size($blends) != 0) text -e -fn \"boldLabelFont\" -l \"SET\" -en 1 ui_blends_status_text;" +
+							"else text -e -fn \"plainLabelFont\" -l \"none\" -en 0 ui_blends_status_text;" +
+							"select -cl;" +
+							"refresh;")
+				ui_set_blends_btn
+			;
+			
+			separator -style "none";
+
+			text
+				-label "none"
+				-enable 0
+				ui_blends_status_text
+			;
+	
+		setParent ..;
+		
+		rowLayout
+			-nc 3
+			-columnWidth 1 242
+			-columnWidth 2 5
+			-columnWidth 3 45
+			-columnAlign3 "center" "left" "center"
+			-columnAttach3 "both" "both" "both"
+		;
+
+			button
+				-label "Set Target Vertices"
+				-command ("$targets = `ls -sl -l -fl`;" +
+							"if (size($targets) != 0) text -e -fn \"boldLabelFont\" -l \"SET\" -en 1 ui_targets_status_text;" +
+							"else text -e -fn \"plainLabelFont\" -l \"none\" -en 0 ui_targets_status_text;" +
+							"select -cl;")
+				ui_set_targets_btn
+			;
+			
+			separator -style "none";
+			
+			text
+				-label "none"
+				-enable 0
+				ui_targets_status_text
+			;
+		setParent ..;
+		
+		separator -style "none" -height 4;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 2;
+
+		rowLayout
+			-nc 3
+			-columnWidth 1 98
+			-columnWidth 2 98
+			-columnWidth 3 98
+			-columnAlign3 "center" "center" "center"
+			-columnAttach3 "both" "both" "both"
+		;
+
+			button
+				-label "Blend"
+				-command ("if ( ( size($blends) ) && ( size($targets) ) ) perform_vertNormalBlendToNeighbours ($blends, $targets);")
+				ui_blend_btn
+			;
+			
+			button
+				-label "Apply"
+				-command ("if ( ( size($blends) ) && ( size($targets) ) ) perform_vertNormalBlendToNeighbours ($blends, $targets);" +
+							"text -e -fn \"plainLabelFont\" -l \"none\" -en 0 ui_blends_status_text;" +
+							"text -e -fn \"plainLabelFont\" -l \"none\" -en 0 ui_targets_status_text;" +
+							"clear($blends);" +
+							"clear($targets);")
+				ui_apply_btn
+			;
+	
+			button
+				-label "Cancel"
+				-command ("deleteUI " + $mainWin)
+				ui_cancel_btn
+			;
+
+		setParent ..;
+		
+	showWindow $mainWin;
+
+	window -e -w $winWidth -h 130 $mainWin; // width and height works only after window has been shown		
+
+}
+
+global proc perform_vertNormalBlendToNeighbours (string $blends[], string $targets[])
+{
+	
+	vector $blendPos;
+	vector $targetPos;
+	vector $blendNormal;
+	float $targetWeightsSum;
+	float $targetWeights[];
+	float $targetNormal[];
+	int $i = 0;
+
+	$targets = stringArrayRemove($blends, $targets);
+
+	for ($blend in $blends) {
+		$blendPos = `pointPosition -w $blend`;
+		
+		// calculate "weights = 1 / distance".
+		// sum is not normalized. normalization will be performed in "perform blend normal" by subdividing on $targetWeightsSum
+		$targetWeightsSum = 0;
+		$i = 0;
+		for ($target in $targets) {
+			$targetPos = `pointPosition -w (polyListComponentConversion("-tv", $target))`;
+			$targetWeights[$i] = 1 / sqrt ( dot( ($blendPos - $targetPos), ($blendPos - $targetPos) ) );
+			$targetWeightsSum += $targetWeights[$i];
+			$i++;
+		}
+
+		// perform blend normal
+		polyNormalPerVertex -xyz 0 0 0 $blend;
+
+		$blendNormal = <<0, 0, 0>>;
+		for ($i=0; $i < size($targetWeights); $i++) {
+			$targetNormal = `polyNormalPerVertex -q -xyz $targets[$i]`;
+			watchFloatArr($targetNormal, "$targetNormal");
+			$blendNormal = $blendNormal +  <<$targetNormal[0], $targetNormal[1], $targetNormal[2]>> * ( $targetWeights[$i] / $targetWeightsSum);
+			watchVec($blendNormal, "$blendNormal");
+		}
+		polyNormalPerVertex -xyz ($blendNormal.x) ($blendNormal.y) ($blendNormal.z) $blend;
+	}
+	
+}

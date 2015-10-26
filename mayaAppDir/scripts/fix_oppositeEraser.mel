@@ -1,0 +1,59 @@
+global proc fix_oppositeEraser( )
+{
+	
+	string $targets[];
+	string $initSelection[] = `ls -sl -l`;
+	
+	if ( size(`selectedNodes`) <= 0) $targets = `ls -l -type mesh`;
+		else $targets = `ls -sl -l -dag -ap -type mesh`;
+	
+	if ($targets[0] == "")
+		{
+		confirmDialog ("-title","Error !!!",
+					"-message","No polygon objects selected.",
+					"-button","OK");
+		error "No polygon objects selected.";
+		}
+
+
+	string $cmd;
+	int $counter = 0;
+	
+
+	float $amount = 0;
+	float $MaxAmount = size ($targets);
+	progressWindow
+	-title "Working"
+	-status "Checking opposite flags"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+	for ($tmp in $targets)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		$cmd = "getAttr "+$tmp+".opposite";
+		int $opFlag = eval($cmd);
+		if ($opFlag == 1)
+			{
+			$counter++;
+			polyNormal -nm 0 -ch 0 $tmp;
+			$cmd = "setAttr "+$tmp+".opposite 0";
+			eval ($cmd);
+			}
+		}
+		
+	/////////////////////
+
+	progressWindow -endProgress;
+	
+	if ( size(`selectedNodes`) <= 0)
+		confirmDialog ("-title","Information","-message","Found "+$counter+" Opposite Flags","-button","OK");
+	else print ("Found "+$counter+" Opposite Flags\n");
+	
+	select $initSelection;
+	
+}

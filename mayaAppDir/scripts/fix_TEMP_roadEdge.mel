@@ -1,0 +1,67 @@
+// CRAZY SHIT !!!! I WAS UNABLE TO CONSTRUCT ARRAY SORTING PROCEDURE :((((((
+
+global proc fix_TEMP_roadEdge (float $vertScale)
+{
+
+string $points[] = `ls -sl -fl -l`;
+float $pointsY[];
+
+int $i = 0;
+for ($point in $points) {	
+	$pos = `pointPosition $point`;
+	$pointsY[$i] = $pos[1];
+	$i++;
+}
+
+//watchFloatArr ($pointsY,"$pointsY");
+
+
+if ($pointsY[0] < $pointsY[1]) {
+	if ($pointsY[0] < $pointsY[2]) {
+		if ($pointsY[1] < $pointsY[2]) {
+			// 0 1 2
+			$pos = `pointPosition $points[0]`;
+			move -ws -y ($pos[1]+0.2143) 0 0 $points[1];
+			move -ws -y ($pos[1]+0.3276) 0 0 $points[2];
+			scale -pivot $pos[0] $pos[1] $pos[2] 1 $vertScale 1 $points[1] $points[2];
+		} else {
+			// 0 2 1
+			$pos = `pointPosition $points[0]`;
+			move -ws -y ($pos[1]+0.2143) 0 0 $points[2];
+			move -ws -y ($pos[1]+0.3276) 0 0 $points[1];
+			scale -pivot $pos[0] $pos[1] $pos[2] 1 $vertScale 1 $points[1] $points[2];
+		}
+	} else {
+		// 2 0 1
+			$pos = `pointPosition $points[2]`;
+			move -ws -y ($pos[1]+0.2143) 0 0 $points[0];
+			move -ws -y ($pos[1]+0.3276) 0 0 $points[1];
+			scale -pivot $pos[0] $pos[1] $pos[2] 1 $vertScale 1 $points[0] $points[1];
+	}
+} else {
+	if ($pointsY[1] < $pointsY[2]) {
+		if ($pointsY[0] < $pointsY[2]) {
+			// 1 0 2
+			$pos = `pointPosition $points[1]`;
+			move -ws -y ($pos[1]+0.2143) 0 0 $points[0];
+			move -ws -y ($pos[1]+0.3276) 0 0 $points[2];
+			scale -pivot $pos[0] $pos[1] $pos[2] 1 $vertScale 1 $points[0] $points[2];
+		} else {
+			// 1 2 0
+			$pos = `pointPosition $points[1]`;
+			move -ws -y ($pos[1]+0.2143) 0 0 $points[2];
+			move -ws -y ($pos[1]+0.3276) 0 0 $points[0];
+			scale -pivot $pos[0] $pos[1] $pos[2] 1 $vertScale 1 $points[0] $points[2];
+		}
+	} else {
+		// 2 1 0
+			$pos = `pointPosition $points[2]`;
+			move -ws -y ($pos[1]+0.2143) 0 0 $points[1];
+			move -ws -y ($pos[1]+0.3276) 0 0 $points[0];
+			scale -pivot $pos[0] $pos[1] $pos[2] 1 $vertScale 1 $points[0] $points[1];
+	}
+}
+
+
+
+}

@@ -1,0 +1,192 @@
+/*
+MEL SCRIPT FILE
+---------------
+
+SCRIPT NAME: AErayDiffuseTemplate.mel
+VERSION: 1.0
+(C) 2001-2002 Light Engine 3d
+
+AUTHOR: Mark Davies
+lightengine3d@hotmail.com
+
+MODIFIED: 10.17.02
+
+DESCRIPTION: AE template for rayDiffuse node
+
+USAGE:
+    
+INPUTS:
+
+RETURN: none
+
+NOTES:
+*/
+
+
+global proc AErayDiffuseInvSampNew( string $attribute )
+{
+	setUITemplate -pst attributeEditorTemplate;
+		checkBoxGrp
+		-numberOfCheckBoxes 1
+		-label ""
+		-label1 "Inverse Sampling"
+		-v1 0
+		invSampCBG;
+	setUITemplate -ppt;
+
+AErayDiffuseInvSampReplace( $attribute );
+}
+
+
+global proc AErayDiffuseInvSampReplace( string $attribute )
+{
+	connectControl -index 2 invSampCBG $attribute;
+}
+
+
+global proc AErayDiffuseShMskNew( string $attribute )
+{
+	setUITemplate -pst attributeEditorTemplate;
+		checkBoxGrp
+		-numberOfCheckBoxes 1
+		-label ""
+		-label1 "Shadow Masking"
+		-v1 0
+		shMskCBG;
+	setUITemplate -ppt;
+
+AErayDiffuseShMskReplace( $attribute );
+}
+
+
+global proc AErayDiffuseShMskReplace( string $attribute )
+{
+	connectControl -index 2 shMskCBG $attribute;
+}
+
+
+global proc AErayDiffuseDirManipNew(string $nodeName)
+{
+	setUITemplate -pst attributeEditorTemplate;
+	rowLayout -nc 2;
+		text -l "Direction Manip" dirManipTX;
+		button -l "Create" -c ("AErayDiffuseUtils 0 "+$nodeName) dirManipBTN;
+	setParent ..;
+	setUITemplate -ppt;
+
+AErayDiffuseRDIRDimControl $nodeName;
+}
+
+
+global proc AErayDiffuseDirManipReplace(string $nodeName)
+{
+	button -e -c ("AErayDiffuseUtils 0 "+$nodeName) dirManipBTN;
+}
+
+
+global proc AErayDiffuseRDIRDimControl( string $nodeName )
+{
+string $nodeNameBase[];
+tokenize($nodeName, ".", $nodeNameBase);
+
+	if (`getAttr ($nodeNameBase[0]+".useRayDirection")`)
+	{
+	editorTemplate -dimControl $nodeName "rayDirection" 0;
+	text -e -en 1 dirManipTX;
+	button -e -en 1 dirManipBTN;
+	editorTemplate -dimControl $nodeName "directionBlend" 0;
+	}
+	else
+	{
+	editorTemplate -dimControl $nodeName "rayDirection" 1;
+	text -e -en 0 dirManipTX;
+	button -e -en 0 dirManipBTN;
+	editorTemplate -dimControl $nodeName "directionBlend" 1;
+	}
+}
+
+
+global proc AErayDiffuseBntNormDimControl( string $nodeName )
+{
+string $nodeNameBase[];
+tokenize($nodeName, ".", $nodeNameBase);
+
+	if (`getAttr ($nodeNameBase[0]+".outputBentNormals")`)
+	editorTemplate -dimControl $nodeName "normalMode" 0;
+	else
+	editorTemplate -dimControl $nodeName "normalMode" 1;
+}
+
+
+global proc AErayDiffuseUtils(string $mode, string $nodeName)
+{
+string $node;
+	if ($mode == 0)
+	{
+	$node = `shadingNode -asLight directionalLight`;
+	$node = `rename $node "rd_dirManip#"`;
+	setAttr ($node+".rotateX") -90;
+	setAttr ($node+".intensity") 0;
+	string $nodeNameBase[];
+	tokenize($nodeName, ".", $nodeNameBase);
+	connectAttr -f ($node+".lightData.lightDirection") ($nodeNameBase[0]+".rayDirection");
+	setAttr ($nodeNameBase[0]+".useRayDirection") 1;
+	select -r $nodeNameBase[0];
+	}
+}
+
+
+global proc AErayDiffuseTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	// Diffuse Properties
+	editorTemplate -beginLayout "Diffuse Properties" -collapse 0;
+		editorTemplate -addControl "baseColor";
+		editorTemplate -addControl "diffuseColor";
+		editorTemplate -addControl "density";
+		editorTemplate -addControl "threshold";
+	editorTemplate -endLayout;
+
+	// Ray Sampling
+	editorTemplate -beginLayout "Ray Sampling" -collapse 0;
+		editorTemplate -addControl "jitter";
+		editorTemplate -addControl "lockSamples";
+		editorTemplate -addControl "samples";
+		editorTemplate -addControl "maxSamples";
+		editorTemplate -addControl "contrast";
+		editorTemplate -addControl "distance";
+		editorTemplate -addControl "spread";
+		editorTemplate -suppress "inverseSampling";
+		editorTemplate -callCustom "AErayDiffuseInvSampNew"
+					"AErayDiffuseInvSampReplace"
+					"inverseSampling";
+		editorTemplate -suppress "shadowMasking";
+		editorTemplate -callCustom "AErayDiffuseShMskNew"
+					"AErayDiffuseShMskReplace"
+					"shadowMasking";
+
+		// Ray Direction
+		editorTemplate -beginLayout "Ray Direction" -collapse 0;
+			editorTemplate -addControl "useRayDirection" "AErayDiffuseRDIRDimControl";
+			editorTemplate -callCustom "AErayDiffuseDirManipNew"
+					"AErayDiffuseDirManipReplace"
+					"nodeName";
+			editorTemplate -addControl "rayDirection";
+			editorTemplate -addControl "directionBlend";
+		editorTemplate -endLayout;
+
+	editorTemplate -endLayout;
+
+	// Bent Normals
+	editorTemplate -beginLayout "Bent Normals" -collapse 1;
+		editorTemplate -addControl "outputBentNormals" "AErayDiffuseBntNormDimControl";
+		editorTemplate -addControl "normalMode";
+	editorTemplate -endLayout;
+
+	AEdependNodeTemplate $nodeName;
+
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}

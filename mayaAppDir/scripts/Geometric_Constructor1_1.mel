@@ -1,0 +1,1913 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: Geometric Constructor v1.1
+''    Author: King Markuz
+''    Last Updated: May 4, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=modeling#1347
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//
+//Creation Date:		3.5.2002
+//Autor:			King Markuz
+//Size:			1897 lines, ca. 71,5 kb
+//
+//Description:
+//		This script builds a perfect tetrahedron with a xz-planar trigonal base and an 
+//		octaeder, a trigonometric bipyramid, a "cube" and an Icosaeder.
+//
+//-------------------------------------------------------------
+//
+
+if ( (`window -ex chooserWindow`) == true) deleteUI chooserWindow;
+//CHOOSE MENU
+global proc chooserWindow() {
+
+window
+	-width 200
+	-height 120
+	-title "Geometric Constructor by King Markuz"
+	-s true
+chooserWindow;
+
+columnLayout
+	-columnAttach "both" 5
+	-rowSpacing 10
+	-columnWidth 230
+columnLayout;
+
+button
+	-label "Create Terahedron"
+	-width 100
+	-command "tetraWindow; deleteUI chooserWindow"
+tetraButton;
+
+button
+	-label "Create Trigonometric Bipyramid"
+	-width 100
+	-command "trigoWindow; deleteUI chooserWindow"
+trigoButton;
+
+button
+	-label "Create Octaeder"
+	-width 100
+	-command "octaWindow; deleteUI chooserWindow"
+octaButton;
+
+button
+	-label "Create Cube"
+	-width 100
+	-command "cubeWindow; deleteUI chooserWindow"
+cubeButton;
+
+button
+	-label "Create Isocaeder"
+	-width 100
+	-command "IsocWindow; deleteUI chooserWindow"
+IsocButton;
+
+	setParent..;
+
+showWindow chooserWindow;
+
+}
+
+//Start the Cooser-Window:
+
+chooserWindow;
+
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//Tetrahedron
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//Clean up any existing tetraWindows
+if ( (`window -ex tetraWindow`) == true) deleteUI tetraWindow;
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//create the tetraWindow
+global proc tetraWindow() {
+
+
+window
+	-width 200
+	-height 120
+	-title "Tetrahedron Constructor by King Markuz"
+	-s true
+tetraWindow;
+
+columnLayout
+	-columnAttach "both" 5
+	-rowSpacing 10
+	-columnWidth 380
+columnLayout;
+
+button
+	-label "Back to Main Menu"
+	-width 100
+	-command "chooserWindow; deleteUI tetraWindow"
+backbutton;
+
+floatSliderGrp
+	-label "Centre - Edge Distance:"
+	-field true
+	-minValue 0.01
+	-maxValue 20
+	-fieldMinValue 0.001
+	-fieldMaxValue 200
+	-value 2
+cedSlider;
+
+floatSliderGrp
+	-label "Sphere Radius:"
+	-field true
+	-minValue 0.1
+	-maxValue 10
+	-fieldMinValue 0.001
+	-fieldMaxValue 10
+	-value 0.3
+radiusSlider;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "OPTIONS:"
+	-labelArray2 "Con. Curves" "Group"
+	-v1 true
+	-v2 true
+Options;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "Spheres:"
+	-labelArray2 "Spheres" "Poly-Spheres"
+	-v1 true
+Spheres;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "Surfaces:"
+	-labelArray2 "Outer Surfaces" "Inner Surfaces"
+Surfaces;
+
+
+
+button
+	-label "Create Terahedron"
+	-width 100
+	-command "GetSliderInfo"
+button;
+
+	setParent..;
+
+showWindow tetraWindow;
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Get tetraWindow Information and execute CreateTetra Procedure with these values
+global proc GetSliderInfo() {
+
+float $ced = `floatSliderGrp -query -value tetraWindow|columnLayout|cedSlider`;
+int $cb = `checkBoxGrp -query -v1 tetraWindow|columnLayout|Options`;
+int $group = `checkBoxGrp -query -v2 tetraWindow|columnLayout|Options`;
+int $PoNu = `checkBoxGrp -query -v2 tetraWindow|columnLayout|Spheres`;
+int $surf = `checkBoxGrp -query -v1 tetraWindow|columnLayout|Surfaces`;
+float $rad = `floatSliderGrp -query -value tetraWindow|columnLayout|radiusSlider`;
+int $spheres = `checkBoxGrp -query -v1 tetraWindow|columnLayout|Spheres`;
+int $innersurf = `checkBoxGrp -query -v2 tetraWindow|columnLayout|Surfaces`;
+
+CreateTetra ($ced, $cb, $group, $PoNu, $rad, $surf, $spheres, $innersurf);
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+global proc CreateTetra(float $ced, int $cb, int $group, int $PoNu, float $rad, int $surf, int $spheres, int $innersurf){
+
+//Create The Centre Sphere
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n Centre -r $rad; move 0 0 0;}
+	else {
+		polySphere -n Centre -r $rad; move 0 0 0;}
+	}
+float $len = $ced;
+//-------------------------------------------------------------
+//Create The Top Sphere with a ty-Value of len
+
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n Top -r $rad; move 0 $len 0;}
+	else {
+		polySphere -n Top -r $rad; move 0 $len 0;}
+	}
+
+//-------------------------------------------------------------
+//Set up Variables-Set1
+//2 * (atand(sqrt(2))) is the Tetraederangle of about 109,47°
+
+float $d = sind ((180 - (2 * (atand(sqrt(2))))) / 2) * $len;
+float $c = sqrt($len * $len - $d * $d);
+float $x1 = $d / $len * $c * 2;
+float $b = $len * $len - $x1 * $x1;
+float $y1 = (-1) * (sqrt($b));
+
+//Create the 1st Sphere to position and move it to x1 y1 0
+
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n sp1 -r $rad; move $x1 $y1 0;}
+	else {
+		polySphere -n sp1 -r $rad; move $x1 $y1 0;}
+	}
+
+//-------------------------------------------------------------
+//Set up Variables-Set2
+
+float $fsz = $x1 * $x1 - $c * $c;
+float $x2 = (-1) * (sqrt($fsz));
+
+//Create 2nd Sphere to position and move to x2 y1 z
+
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n sp2 -r $rad; move $x2 $y1 $c;}
+	else {
+		polySphere -n sp2 -r $rad; move $x2 $y1 $c;}
+	}
+
+//-------------------------------------------------------------
+//Set up Variables-Set3
+
+float $z2 = (-1) * $c;
+
+//Create the 3rd Sphere to position and move to x2 y1 z2
+
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n sp3 -r $rad; move $x2 $y1 $z2;}
+	else {
+		polySphere -n sp3 -r $rad; move $x2 $y1 $z2;}
+	}
+
+//-------------------------------------------------------------
+//-------------------------------------------------------------
+//Now create curves that connects the spheres
+
+if ($cb == 1)
+	{
+	curve -n c1 -d 1 -p 0 0 0 -p 0 $len 0;
+	curve -n c2 -d 1 -p 0 0 0 -p $x1 $y1 0;
+	curve -n c3 -d 1 -p 0 0 0 -p $x2 $y1 $c;
+	curve -n c4 -d 1 -p 0 0 0 -p $x2 $y1 $z2;
+	curve -n c5 -d 1 -p 0 $len 0 -p $x1 $y1 0;
+	curve -n c6 -d 1 -p 0 $len 0 -p $x2 $y1 $c;
+	curve -n c7 -d 1 -p 0 $len 0 -p $x2 $y1 $z2;
+	curve -n c8 -d 1 -p $x1 $y1 0 -p $x2 $y1 $c;
+	curve -n c9 -d 1 -p $x1 $y1 0 -p $x2 $y1 $z2;
+	curve -n c10 -d 1 -p $x2 $y1 $c -p $x2 $y1 $z2;
+	}
+
+if (($surf == 1) && ($cb == 1))
+	{
+	planarSrf -n ps1 -ch false c5 c8 c6;
+	planarSrf -n ps2 -ch false c7 c9 c5;
+	planarSrf -n ps3 -ch false c6 c10 c7;
+	planarSrf -n ps4 -ch false c8 c9 c10;
+	}
+else if (($surf == 1) && ($cb == 0))
+	{
+	string $Error = "Surfaces won't be created. Please undo, check the [Con. Curves]-CheckBox and retry!";
+	print $Error;
+	}
+
+if (($innersurf == 1) && ($cb == 1))
+	{
+	planarSrf -n is1 -ch false c3 c2 c8;
+	planarSrf -n is2 -ch false c2 c4 c9;
+	planarSrf -n is3 -ch false c4 c3 c10;
+	planarSrf -n is4 -ch false c4 c1 c7;
+	planarSrf -n is5 -ch false c3 c1 c6;
+	planarSrf -n is6 -ch false c2 c1 c5;
+	}
+else if (($surf == 1) && ($cb == 0))
+	{
+	string $Error = "Surfaces won't be created. Please undo, check the [Con. Curves]-CheckBox and retry!";
+	print $Error;
+	}
+
+//Grouping created objects
+if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n Spheres Centre Top sp1 sp2 sp3;
+	group -n Surfaces ps1 ps2 ps3 ps4;
+	group -n InnerSurfaces is1 is2 is3 is4 is5 is6;
+	group -n Tetraeder Connections Spheres Surfaces InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($spheres == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n Spheres Centre Top sp1 sp2 sp3;
+	group -n Surfaces ps1 ps2 ps3 ps4;
+	group -n Tetraeder Connections Spheres Surfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n Spheres Centre Top sp1 sp2 sp3;
+	group -n InnerSurfaces is1 is2 is3 is4 is5 is6;
+	group -n Tetraeder Connections Spheres InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n Surfaces ps1 ps2 ps3 ps4;
+	group -n InnerSurfaces is1 is2 is3 is4 is5 is6;
+	group -n Tetraeder Connections Surfaces InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($spheres == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n Surfaces ps1 ps2 ps3 ps4;
+	group -n Spheres Centre Top sp1 sp2 sp3;
+	group -n Tetraeder Connections Surfaces Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n InnerSurfaces is1 is2 is3 is4 is5 is6;
+	group -n Spheres Centre Top sp1 sp2 sp3;
+	group -n Tetraeder Connections Surfaces Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n InnerSurfaces is1 is2 is3 is4 is5 is6;
+	group -n Tetraeder Connections InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($spheres == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n Spheres Centre Top sp1 sp2 sp3;
+	group -n Tetraeder Connections Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($spheres == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n Spheres Centre Top sp1 sp2 sp3;
+	group -n Tetraeder Connections Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n Surfaces ps1 ps2 ps3 ps4;
+	group -n Tetraeder Connections Surfaces;
+	}
+else if (($group == 1) && ($cb == 1))
+	{
+	group -n Connections c1 c2 c3 c4 c5 c6 c7 c8 c9 c10;
+	group -n Tetraeder Connections;
+	}
+else if (($group == 1) && ($spheres == 1))
+	{
+	group -n Spheres Centre Top sp1 sp2 sp3;
+	group -n Tetraeder Spheres;
+	}
+
+}
+
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//Trigometric Bipyramide
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//Clean up any existing tetraWindows
+if ( (`window -ex trigoWindow`) == true) deleteUI trigoWindow;
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//create the trigoWindow
+global proc trigoWindow() {
+
+window
+	-width 500
+	-height 320
+	-title "Trigonometric Bipyramid Constructor by King Markuz"
+	-s true
+trigoWindow;
+
+columnLayout
+	-columnAttach "both" 5
+	-rowSpacing 10
+	-columnWidth 380
+columnLayout;
+
+button
+	-label "Back to Main Menu"
+	-width 100
+	-command "chooserWindow; deleteUI trigoWindow"
+backbutton;
+
+floatSliderGrp
+	-label "Centre - Edge Distance:"
+	-field true
+	-minValue 0.01
+	-maxValue 20
+	-fieldMinValue 0.001
+	-fieldMaxValue 200
+	-value 2
+cedSlider;
+
+floatSliderGrp
+	-label "Sphere Radius:"
+	-field true
+	-minValue 0.1
+	-maxValue 10
+	-fieldMinValue 0.001
+	-fieldMaxValue 10
+	-value 0.3
+radiusSlider;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "OPTIONS:"
+	-labelArray2 "Con. Curves" "Group"
+	-v1 true
+	-v2 true
+Options;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "Spheres:"
+	-labelArray2 "Spheres" "Poly-Spheres"
+	-v1 true
+Spheres;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "Surfaces:"
+	-labelArray2 "Outer Surfaces" "Inner Surfaces"
+Surfaces;
+
+button
+	-label "Create Trigometric bipyramid"
+	-width 180
+	-command "GetTrigoSliderInfo"
+button;
+
+	setParent..;
+
+showWindow trigoWindow;
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Get trigoWindow Information and execute CreateTrigo Procedure with these values
+global proc GetTrigoSliderInfo() {
+
+float $ced = `floatSliderGrp -query -value trigoWindow|columnLayout|cedSlider`;
+int $cb = `checkBoxGrp -query -v1 trigoWindow|columnLayout|Options`;
+int $group = `checkBoxGrp -query -v2 trigoWindow|columnLayout|Options`;
+int $PoNu = `checkBoxGrp -query -v2 trigoWindow|columnLayout|Spheres`;
+int $surf = `checkBoxGrp -query -v1 trigoWindow|columnLayout|Surfaces`;
+float $rad = `floatSliderGrp -query -value trigoWindow|columnLayout|radiusSlider`;
+int $spheres = `checkBoxGrp -query -v1 trigoWindow|columnLayout|Spheres`;
+int $innersurf = `checkBoxGrp -query -v2 trigoWindow|columnLayout|Surfaces`;
+
+CreateTrigo ($ced, $cb, $group, $PoNu, $rad, $surf, $spheres, $innersurf);
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+global proc CreateTrigo(float $ced, int $cb, int $group, int $PoNu, float $rad, int $surf, int $spheres, int $innersurf){
+//position the first 4 Spheres to 0 0 0 (Centre), 0 r 0 (Top) and 0 -r 0 (Bottom) and 0 0 r (the first Edge in the basis) 
+//Centre (0 0 0)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n tr_Centre -r $rad; move 0 0 0;}
+	else {
+		polySphere -n tr_Centre -r $rad; move 0 0 0;}
+	}
+float $len = $ced;
+//Top (0 $len 0)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n tr_Top -r $rad; move 0 $len 0;}
+	else {
+		polySphere -n tr_Top -r $rad; move 0 $len 0;}
+	}
+//Bottom (0 $mlen 0)
+float $mlen = (-1) * $len;
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n tr_Bottom -r $rad; move 0 $mlen 0;}
+	else {
+		polySphere -n tr_Bottom -r $rad; move 0 $mlen 0;}
+	}
+//1st planar Edge (0 0 $len)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n tr_PE1 -r $rad; move 0 0 $len;}
+	else {
+		polySphere -n tr_PE1 -r $rad; move 0 0 $len;}
+	}
+//2nd planar Edge ($c 0 $d)
+//Set up Variables-Set1
+float $d = ((sind (30)) * $len) * (-1);
+float $sqrfc = $len * $len - $d * $d;
+float $c = sqrt($sqrfc);
+
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n tr_PE2 -r $rad; move $c 0 $d;}
+	else {
+		polySphere -n tr_PE2 -r $rad; move $c 0 $d;}
+	}
+//3rd planar Edge ($c2 0 $d)
+float $c2 = (-1) * $c;
+
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n tr_PE3 -r $rad; move $c2 0 $d;}
+	else {
+		polySphere -n tr_PE3 -r $rad; move $c2 0 $d;}
+	}
+
+if ($cb == 1)
+	{
+	curve -n tr_c1 -d 1 -p 0 0 0 -p 0 $len 0;
+	curve -n tr_c2 -d 1 -p 0 0 0 -p 0 $mlen 0;
+	curve -n tr_c3 -d 1 -p 0 0 0 -p 0 0 $len;
+	curve -n tr_c4 -d 1 -p 0 0 0 -p $c 0 $d;
+	curve -n tr_c5 -d 1 -p 0 0 0 -p $c2 0 $d;
+	curve -n tr_c6 -d 1 -p 0 $len 0 -p 0 0 $len;
+	curve -n tr_c7 -d 1 -p 0 $len 0 -p $c 0 $d;
+	curve -n tr_c8 -d 1 -p 0 $len 0 -p $c2 0 $d;
+	curve -n tr_c9 -d 1 -p 0 $mlen 0 -p 0 0 $len;
+	curve -n tr_c10 -d 1 -p 0 $mlen 0 -p $c 0 $d;
+	curve -n tr_c11 -d 1 -p 0 $mlen 0 -p $c2 0 $d;
+	curve -n tr_c12 -d 1 -p $c 0 $d -p 0 0 $len;
+	curve -n tr_c13 -d 1 -p $c2 0 $d -p $c 0 $d;
+	curve -n tr_c14 -d 1 -p $c2 0 $d -p 0 0 $len;
+	}
+
+if (($surf == 1) && ($cb == 1))
+	{
+	planarSrf -n tr_ps1 -ch false tr_c6 tr_c7 tr_c12;
+	planarSrf -n tr_ps2 -ch false tr_c8 tr_c13 tr_c7;
+	planarSrf -n tr_ps3 -ch false tr_c6 tr_c14 tr_c8;
+	planarSrf -n tr_ps4 -ch false tr_c9 tr_c14 tr_c11;
+	planarSrf -n tr_ps5 -ch false tr_c10 tr_c9 tr_c12;
+	planarSrf -n tr_ps6 -ch false tr_c11 tr_c10 tr_c13;
+	}
+else if (($surf == 1) && ($cb == 0))
+	{
+	string $Error = "Surfaces won't be created. Please undo, check the [Con. Curves]-CheckBox and retry!";
+	print $Error;
+	}
+
+if (($innersurf == 1) && ($cb == 1))
+	{
+	planarSrf -n tr_is1 -ch false tr_c5 tr_c13 tr_c4;
+	planarSrf -n tr_is2 -ch false tr_c3 tr_c14 tr_c5;
+	planarSrf -n tr_is3 -ch false tr_c4 tr_c12 tr_c3;
+	planarSrf -n tr_is4 -ch false tr_c1 tr_c7 tr_c4;
+	planarSrf -n tr_is5 -ch false tr_c1 tr_c6 tr_c3;
+	planarSrf -n tr_is6 -ch false tr_c1 tr_c8 tr_c5;
+	planarSrf -n tr_is7 -ch false tr_c2 tr_c11 tr_c5;
+	planarSrf -n tr_is8 -ch false tr_c2 tr_c10 tr_c4;
+	planarSrf -n tr_is9 -ch false tr_c2 tr_c9 tr_c3;
+	}
+else if (($surf == 1) && ($cb == 0))
+	{
+	string $Error = "Surfaces won't be created. Please undo, check the [Con. Curves]-CheckBox and retry!";
+	print $Error;
+	}
+
+//Grouping created objects
+if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_Spheres tr_Centre tr_Top tr_Bottom tr_PE1 tr_PE2 tr_PE3;
+	group -n tr_Surfaces tr_ps1 tr_ps2 tr_ps3 tr_ps4 tr_ps5 tr_ps6;
+	group -n tr_InnerSurfaces tr_is1 tr_is2 tr_is3 tr_is4 tr_is5 tr_is6 tr_is7 tr_is8 tr_is9;
+	group -n TrigonometricBipyramid tr_Connections tr_Spheres tr_Surfaces tr_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($spheres == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_Spheres tr_Centre tr_Top tr_Bottom tr_PE1 tr_PE2 tr_PE3;
+	group -n tr_Surfaces tr_ps1 tr_ps2 tr_ps3 tr_ps4 tr_ps5 tr_ps6;
+	group -n TrigonometricBipyramid tr_Connections tr_Spheres tr_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_Spheres tr_Centre tr_Top tr_Bottom tr_PE1 tr_PE2 tr_PE3;
+	group -n tr_InnerSurfaces tr_is1 tr_is2 tr_is3 tr_is4 tr_is5 tr_is6 tr_is7 tr_is8 tr_is9;
+	group -n TrigonometricBipyramid tr_Connections tr_Spheres tr_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_Surfaces tr_ps1 tr_ps2 tr_ps3 tr_ps4 tr_ps5 tr_ps6;
+	group -n tr_InnerSurfaces tr_is1 tr_is2 tr_is3 tr_is4 tr_is5 tr_is6 tr_is7 tr_is8 tr_is9;
+	group -n TrigonometricBipyramid tr_Connections tr_Surfaces tr_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($spheres == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_Surfaces tr_ps1 tr_ps2 tr_ps3 tr_ps4 tr_ps5 tr_ps6;
+	group -n tr_Spheres tr_Centre tr_Top tr_Bottom tr_PE1 tr_PE2 tr_PE3;
+	group -n TrigonometricBipyramid tr_Connections tr_Surfaces tr_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_InnerSurfaces tr_is1 tr_is2 tr_is3 tr_is4 tr_is5 tr_is6 tr_is7 tr_is8 tr_is9;
+	group -n tr_Spheres tr_Centre tr_Top tr_Bottom tr_PE1 tr_PE2 tr_PE3;
+	group -n TrigonometricBipyramid tr_Connections tr_Surfaces tr_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_InnerSurfaces tr_is1 tr_is2 tr_is3 tr_is4 tr_is5 tr_is6 tr_is7 tr_is8 tr_is9;
+	group -n TrigonometricBipyramid tr_Connections tr_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($spheres == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_Spheres tr_Centre tr_Top tr_Bottom tr_PE1 tr_PE2 tr_PE3;
+	group -n TrigonometricBipyramid tr_Connections tr_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($spheres == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_Spheres tr_Centre tr_Top tr_Bottom tr_PE1 tr_PE2 tr_PE3;
+	group -n TrigonometricBipyramid tr_Connections tr_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n tr_Surfaces tr_ps1 tr_ps2 tr_ps3 tr_ps4 tr_ps5 tr_ps6;
+	group -n TrigonometricBipyramid tr_Connections tr_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1))
+	{
+	group -n tr_Connections tr_c1 tr_c2 tr_c3 tr_c4 tr_c5 tr_c6 tr_c7 tr_c8 tr_c9 tr_c10 tr_c11 tr_c12 tr_c13 tr_c14;
+	group -n TrigonometricBipyramid tr_Connections;
+	}
+else if (($group == 1) && ($spheres == 1))
+	{
+	group -n tr_Spheres tr_Centre tr_Top tr_Bottom tr_PE1 tr_PE2 tr_PE3;
+	group -n TrigonometricBipyramid tr_Spheres;
+	}
+
+}
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//Octaeder
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+if ( (`window -ex octaWindow`) == true) deleteUI octaWindow;
+//create the octaWindow
+global proc octaWindow() {
+
+window
+	-width 500
+	-height 320
+	-title "Octaeder Constructor by King Markuz"
+	-s true
+octaWindow;
+
+columnLayout
+	-columnAttach "both" 5
+	-rowSpacing 10
+	-columnWidth 380
+columnLayout;
+
+button
+	-label "Back to Main Menu"
+	-width 100
+	-command "chooserWindow; deleteUI octaWindow"
+backbutton;
+
+floatSliderGrp
+	-label "Centre - Edge Distance:"
+	-field true
+	-minValue 0.01
+	-maxValue 20
+	-fieldMinValue 0.001
+	-fieldMaxValue 200
+	-value 2
+cedSlider;
+
+floatSliderGrp
+	-label "Sphere Radius:"
+	-field true
+	-minValue 0.1
+	-maxValue 10
+	-fieldMinValue 0.001
+	-fieldMaxValue 10
+	-value 0.3
+radiusSlider;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "OPTIONS:"
+	-labelArray2 "Con. Curves" "Group"
+	-v1 true
+	-v2 true
+Options;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "Spheres:"
+	-labelArray2 "Spheres" "Poly-Spheres"
+	-v1 true
+Spheres;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "Surfaces:"
+	-labelArray2 "Outer Surfaces" "Inner Surfaces"
+Surfaces;
+
+button
+	-label "Create Octaeder"
+	-width 180
+	-command "GetOctaSliderInfo"
+button;
+
+	setParent..;
+
+showWindow octaWindow;
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Get octaWindow Information and execute CreateOcta Procedure with these values
+global proc GetOctaSliderInfo() {
+
+float $ced = `floatSliderGrp -query -value octaWindow|columnLayout|cedSlider`;
+int $cb = `checkBoxGrp -query -v1 octaWindow|columnLayout|Options`;
+int $group = `checkBoxGrp -query -v2 octaWindow|columnLayout|Options`;
+int $PoNu = `checkBoxGrp -query -v2 octaWindow|columnLayout|Spheres`;
+int $surf = `checkBoxGrp -query -v1 octaWindow|columnLayout|Surfaces`;
+float $rad = `floatSliderGrp -query -value octaWindow|columnLayout|radiusSlider`;
+int $spheres = `checkBoxGrp -query -v1 octaWindow|columnLayout|Spheres`;
+int $innersurf = `checkBoxGrp -query -v2 octaWindow|columnLayout|Surfaces`;
+
+CreateOcta ($ced, $cb, $group, $PoNu, $rad, $surf, $spheres, $innersurf);
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+global proc CreateOcta(float $ced, int $cb, int $group, int $PoNu, float $rad, int $surf, int $spheres, int $innersurf){
+//Position and create the first 3 spheres: oCentre (0 0 0), oTop (0 r 0) and oBottom (0 -r 0)
+//Centre (0 0 0)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n oc_Centre -r $rad; move 0 0 0;}
+	else {
+		polySphere -n oc_Centre -r $rad; move 0 0 0;}
+	}
+
+float $len = $ced;
+
+//Top (0 $len 0)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n oc_Top -r $rad; move 0 $len 0;}
+	else {
+		polySphere -n oc_Top -r $rad; move 0 $len 0;}
+	}
+
+//Bottom (0 $mlen 0)
+float $mlen = (-1) * $len;
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n oc_Bottom -r $rad; move 0 $mlen 0;}
+	else {
+		polySphere -n oc_Bottom -r $rad; move 0 $mlen 0;}
+	}
+
+//1st planarbase Edge
+//Variables Setup1
+
+float $xp = ( sind(45) ) * $len;
+float $xm = (-1) * $xp;
+
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n oc_PE1 -r $rad; move $xp 0 $xp;}
+	else {
+		polySphere -n oc_PE1 -r $rad; move $xp 0 $xp;}
+	}
+
+//2nd planarbase Edge
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n oc_PE2 -r $rad; move $xm 0 $xp;}
+	else {
+		polySphere -n oc_PE2 -r $rad; move $xm 0 $xp;}
+	}
+
+//3rd planarbase Edge
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n oc_PE3 -r $rad; move $xm 0 $xm;}
+	else {
+		polySphere -n oc_PE3 -r $rad; move $xm 0 $xm;}
+	}
+
+//4th planarbase Edge
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n oc_PE4 -r $rad; move $xp 0 $xm;}
+	else {
+		polySphere -n oc_PE4 -r $rad; move $xp 0 $xm;}
+	}
+//All 6 poses: oc_Centre (0 0 0), oc_Top (0 $len 0), oc_Bottom (0 $mlen 0), 
+//oc_PE1 ($xp 0 $xp), oc_PE2 ($xm 0 $xp), oc_PE3 ($xm 0 $xm), oc_PE4 ($xp 0 $xm)
+
+if ($cb == 1)
+	{
+	curve -n oc_c1 -d 1 -p 0 0 0 -p $xp 0 $xp;
+	curve -n oc_c2 -d 1 -p 0 0 0 -p $xm 0 $xp;
+	curve -n oc_c3 -d 1 -p 0 0 0 -p $xm 0 $xm;
+	curve -n oc_c4 -d 1 -p 0 0 0 -p $xp 0 $xm;
+	curve -n oc_c5 -d 1 -p 0 0 0 -p 0 $len 0;
+	curve -n oc_c6 -d 1 -p 0 0 0 -p 0 $mlen 0;
+	curve -n oc_c7 -d 1 -p 0 $len 0 -p $xp 0 $xp;
+	curve -n oc_c8 -d 1 -p 0 $len 0 -p $xm 0 $xp;
+	curve -n oc_c9 -d 1 -p 0 $len 0 -p $xm 0 $xm;
+	curve -n oc_c10 -d 1 -p 0 $len 0 -p $xp 0 $xm;
+	curve -n oc_c11 -d 1 -p 0 $mlen 0 -p $xp 0 $xp;
+	curve -n oc_c12 -d 1 -p 0 $mlen 0 -p $xm 0 $xp;
+	curve -n oc_c13 -d 1 -p 0 $mlen 0 -p $xm 0 $xm;
+	curve -n oc_c15 -d 1 -p 0 $mlen 0 -p $xp 0 $xm;//
+	curve -n oc_c16 -d 1 -p $xm 0 $xm -p $xp 0 $xm;
+	curve -n oc_c17 -d 1 -p $xm 0 $xm -p $xm 0 $xp;
+	curve -n oc_c18 -d 1 -p $xp 0 $xp -p $xp 0 $xm;
+	curve -n oc_c19 -d 1 -p $xp 0 $xp -p $xm 0 $xp;
+	}
+
+if (($surf == 1) && ($cb == 1))
+	{
+	planarSrf -n oc_ps1 -ch false oc_c10 oc_c18 oc_c7;
+	planarSrf -n oc_ps2 -ch false oc_c9 oc_c16 oc_c10;
+	planarSrf -n oc_ps3 -ch false oc_c8 oc_c17 oc_c9;
+	planarSrf -n oc_ps4 -ch false oc_c7 oc_c19 oc_c8;
+	planarSrf -n oc_ps5 -ch false oc_c11 oc_c19 oc_c12;
+	planarSrf -n oc_ps6 -ch false oc_c15 oc_c11 oc_c18;
+	planarSrf -n oc_ps7 -ch false oc_c13 oc_c16 oc_c15;
+	planarSrf -n oc_ps8 -ch false oc_c12 oc_c17 oc_c13;
+	}
+else if (($surf == 1) && ($cb == 0))
+	{
+	string $Error = "Surfaces won't be created. Please undo, check the [Con. Curves]-CheckBox and retry!";
+	print $Error;
+	}
+
+if (($innersurf == 1) && ($cb == 1))
+	{
+	planarSrf -n oc_is1 -ch false oc_c2 oc_c17 oc_c3;
+	planarSrf -n oc_is2 -ch false oc_c1 oc_c19 oc_c2;
+	planarSrf -n oc_is3 -ch false oc_c4 oc_c18 oc_c1;
+	planarSrf -n oc_is4 -ch false oc_c3 oc_c16 oc_c4;
+	planarSrf -n oc_is5 -ch false oc_c5 oc_c9 oc_c3;
+	planarSrf -n oc_is6 -ch false oc_c5 oc_c8 oc_c2;
+	planarSrf -n oc_is7 -ch false oc_c5 oc_c7 oc_c1;
+	planarSrf -n oc_is8 -ch false oc_c5 oc_c10 oc_c4;
+	planarSrf -n oc_is9 -ch false oc_c6 oc_c15 oc_c4;
+	planarSrf -n oc_is10 -ch false oc_c6 oc_c11 oc_c1;
+	planarSrf -n oc_is11 -ch false oc_c6 oc_c12 oc_c2;
+	planarSrf -n oc_is12 -ch false oc_c6 oc_c13 oc_c3;
+	}
+else if (($surf == 1) && ($cb == 0))
+	{
+	string $Error = "Surfaces won't be created. Please undo, check the [Con. Curves]-CheckBox and retry!";
+	print $Error;
+	}
+
+//Grouping created objects
+if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_Spheres oc_Centre oc_Top oc_Bottom oc_PE1 oc_PE2 oc_PE3 oc_PE4;
+	group -n oc_Surfaces oc_ps1 oc_ps2 oc_ps3 oc_ps4 oc_ps5 oc_ps6 oc_ps7 oc_ps8;
+	group -n oc_InnerSurfaces oc_is1 oc_is2 oc_is3 oc_is4 oc_is5 oc_is6 oc_is7 oc_is8 oc_is9 oc_is10 oc_is11 oc_is12;
+	group -n Octaeder oc_Connections oc_Spheres oc_Surfaces oc_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($spheres == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_Spheres oc_Centre oc_Top oc_Bottom oc_PE1 oc_PE2 oc_PE3 oc_PE4;
+	group -n oc_Surfaces oc_ps1 oc_ps2 oc_ps3 oc_ps4 oc_ps5 oc_ps6 oc_ps7 oc_ps8;
+	group -n Octaeder oc_Connections oc_Spheres oc_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_Spheres oc_Centre oc_Top oc_Bottom oc_PE1 oc_PE2 oc_PE3 oc_PE4;
+	group -n oc_InnerSurfaces oc_is1 oc_is2 oc_is3 oc_is4 oc_is5 oc_is6 oc_is7 oc_is8 oc_is9;
+	group -n Octaeder oc_Connections oc_Spheres oc_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_Surfaces oc_ps1 oc_ps2 oc_ps3 oc_ps4 oc_ps5 oc_ps6 oc_ps7 oc_ps8;
+	group -n oc_InnerSurfaces oc_is1 oc_is2 oc_is3 oc_is4 oc_is5 oc_is6 oc_is7 oc_is8 oc_is9;
+	group -n Octaeder oc_Connections oc_Surfaces oc_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($spheres == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_Surfaces oc_ps1 oc_ps2 oc_ps3 oc_ps4 oc_ps5 oc_ps6 oc_ps7 oc_ps8;
+	group -n oc_Spheres oc_Centre oc_Top oc_Bottom oc_PE1 oc_PE2 oc_PE3 oc_PE4;
+	group -n Octaeder oc_Connections oc_Surfaces oc_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_InnerSurfaces oc_is1 oc_is2 oc_is3 oc_is4 oc_is5 oc_is6 oc_is7 oc_is8 oc_is9;
+	group -n oc_Spheres oc_Centre oc_Top oc_Bottom oc_PE1 oc_PE2 oc_PE3 oc_PE4;
+	group -n Octaeder oc_Connections oc_Surfaces oc_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_InnerSurfaces oc_is1 oc_is2 oc_is3 oc_is4 oc_is5 oc_is6 oc_is7 oc_is8 oc_is9;
+	group -n Octaeder oc_Connections oc_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($spheres == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_Spheres oc_Centre oc_Top oc_Bottom oc_PE1 oc_PE2 oc_PE3 oc_PE4;
+	group -n Octaeder oc_Connections oc_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($spheres == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_Spheres oc_Centre oc_Top oc_Bottom oc_PE1 oc_PE2 oc_PE3 oc_PE4;
+	group -n Octaeder oc_Connections oc_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n oc_Surfaces oc_ps1 oc_ps2 oc_ps3 oc_ps4 oc_ps5 oc_ps6 oc_ps7 oc_ps8;
+	group -n Octaeder oc_Connections oc_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1))
+	{
+	group -n oc_Connections oc_c1 oc_c2 oc_c3 oc_c4 oc_c5 oc_c6 oc_c7 oc_c8 oc_c9 oc_c10 oc_c11 oc_c12 oc_c13 oc_c15 oc_c16 oc_c17 oc_c18 oc_c19;
+	group -n Octaeder oc_Connections;
+	}
+else if (($group == 1) && ($spheres == 1))
+	{
+	group -n oc_Spheres oc_Centre oc_Top oc_Bottom oc_PE1 oc_PE2 oc_PE3 oc_PE4;
+	group -n Octaeder oc_Spheres;
+	}
+}
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//Isocaeder
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+if ( (`window -ex IsocWindow`) == true) deleteUI IsocWindow;
+
+//create the IsocWindow
+global proc IsocWindow() {
+
+window
+	-width 500
+	-height 320
+	-title "Isocaeder Constructor by King Markuz"
+	-s true
+IsocWindow;
+
+columnLayout
+	-columnAttach "both" 5
+	-rowSpacing 10
+	-columnWidth 380
+columnLayout;
+
+button
+	-label "Back to Main Menu"
+	-width 100
+	-command "chooserWindow; deleteUI IsocWindow"
+backbutton;
+
+floatSliderGrp
+	-label "Centre - Edge Distance:"
+	-field true
+	-minValue 0.01
+	-maxValue 20
+	-fieldMinValue 0.001
+	-fieldMaxValue 200
+	-value 2
+cedSlider;
+
+floatSliderGrp
+	-label "Sphere Radius:"
+	-field true
+	-minValue 0.1
+	-maxValue 10
+	-fieldMinValue 0.001
+	-fieldMaxValue 10
+	-value 0.3
+radiusSlider;
+
+checkBoxGrp
+    	-numberOfCheckBoxes 1
+    	-label "Conn. Curves"
+	-v1 1
+Connections;
+
+checkBoxGrp
+    	-numberOfCheckBoxes 1
+    	-label "Surface"
+	-v1 1
+Surface;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "Spheres:"
+	-labelArray2 "Spheres" "Poly-Spheres"
+	-v1 true
+Spheres;
+
+button
+	-label "Create Isocaeder"
+	-width 180
+	-command "GetIsocSliderInfo"
+button;
+
+	setParent..;
+
+showWindow IsocWindow;
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Get IsocWindow Information and execute CreateIsoc Procedure with these values
+global proc GetIsocSliderInfo() {
+
+float $ced = `floatSliderGrp -query -value IsocWindow|columnLayout|cedSlider`;
+float $rad = `floatSliderGrp -query -value IsocWindow|columnLayout|radiusSlider`;
+int $PoNu = `checkBoxGrp -query -v2 IsocWindow|columnLayout|Spheres`;
+int $spheres = `checkBoxGrp -query -v1 IsocWindow|columnLayout|Spheres`;
+int $Conn = `checkBoxGrp -query -v1 IsocWindow|columnLayout|Connections`;
+int $Surf = `checkBoxGrp -query -v1 IsocWindow|columnLayout|Surface`;
+
+CreateIsoc ($ced, $rad, $PoNu, $spheres, $Conn, $Surf);
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+global proc CreateIsoc(float $ced, float $rad, int $PoNu, int $spheres, int $Conn, int $Surf){
+
+//Setup Variables Set1
+float $alpha = 360 / 5;
+float $a = $ced;
+float $c = sind(($alpha)/(2)) * $a * 2;
+float $d = cosd(($alpha)/(2)) * $a;
+
+float $neunzigminbeta = 90 - (180 - 90 - ($alpha)/(2));
+float $x1 = (cosd($neunzigminbeta)) * $c;
+float $sqy1 = ($a * $a) - ($x1 * $x1);
+float $y1 = sqrt($sqy1);
+
+float $sqH = ($c * $c) - ((($c)/(2)) * (($c)/(2)));
+float $H = sqrt($sqH);
+float $sqe = ($H * $H) - ($d * $d);
+float $e = sqrt($sqe);
+float $y2 = $a - $d;
+float $sqx2 = ($H * $H) - ($y2 * $y2);
+float $x2 = sqrt($sqx2);
+
+float $mx2h = (-1) * (($x2) / (2));
+float $px2h = (($x2) / (2));
+float $my1 = (-1) * $y1;
+float $mx1 = (-1) * $x1;
+float $mch = (-1) * (($c) / (2));
+float $pch = (($c) / (2));
+float $md = (-1) * $d;
+float $ma = (-1) * $a;
+float $px2hpe = $px2h + $e;
+float $mx2hme = $mx2h - $e;
+
+//CentreTop (0 0 $px2hpe)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_CentreTop -r $rad; move 0 0 $px2hpe;}
+	else {
+		polySphere -n cu_CentreTop -r $rad; move 0 0 $px2hpe;}
+	}
+
+//1P1 (0 $a $mx2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_1P1 -r $rad; move 0 $a $mx2h;}
+	else {
+		polySphere -n cu_1P1 -r $rad; move 0 $a $mx2h;}
+	}
+
+//1P2 ($mx1 $y1 $mx2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_1P2 -r $rad; move $mx1 $y1 $mx2h;}
+	else {
+		polySphere -n cu_1P2 -r $rad; move $mx1 $y1 $mx2h;}
+	}
+
+//1P3 ($mch $md $mx2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_1P3 -r $rad; move $mch $md $mx2h;}
+	else {
+		polySphere -n cu_1P3 -r $rad; move $mch $md $mx2h;}
+	}
+
+//1P4 ($pch $md $mx2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_1P4 -r $rad; move $pch $md $mx2h;}
+	else {
+		polySphere -n cu_1P4 -r $rad; move $pch $md $mx2h;}
+	}
+
+//1P5 ($x1 $y1 $mx2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_1P5 -r $rad; move $x1 $y1 $mx2h;}
+	else {
+		polySphere -n cu_1P5 -r $rad; move $x1 $y1 $mx2h;}
+	}
+
+//2P1 (0 $ma $px2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_2P1 -r $rad; move 0 $ma $px2h;}
+	else {
+		polySphere -n cu_2P1 -r $rad; move 0 $ma $px2h;}
+	}
+
+//2P2 ($x1 $my1 $px2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_2P2 -r $rad; move $x1 $my1 $px2h;}
+	else {
+		polySphere -n cu_2P2 -r $rad; move $x1 $my1 $px2h;}
+	}
+
+//2P3 ($pch $d $px2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_2P3 -r $rad; move $pch $d $px2h;}
+	else {
+		polySphere -n cu_2P3 -r $rad; move $pch $d $px2h;}
+	}
+
+//2P4 ($mch $d $px2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_2P4 -r $rad; move $mch $d $px2h;}
+	else {
+		polySphere -n cu_2P4 -r $rad; move $mch $d $px2h;}
+	}
+
+//2P5 ($mx1 $my1 $px2h)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_2P5 -r $rad; move $mx1 $my1 $px2h;}
+	else {
+		polySphere -n cu_2P5 -r $rad; move $mx1 $my1 $px2h;}
+	}
+
+
+//CentreBottom (0 0 $mx2hme)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_CentreBottom -r $rad; move 0 0 $mx2hme;}
+	else {
+		polySphere -n cu_CentreBottom -r $rad; move 0 0 $mx2hme;}
+	}
+
+if (($Conn == 1) && ($Surf == 0))
+	{
+	curve -n ic_c1 -d 1 -p 0 0 $px2hpe -p 0 $ma $px2h;
+	curve -n ic_c2 -d 1 -p 0 0 $px2hpe -p $x1 $my1 $px2h;
+	curve -n ic_c3 -d 1 -p 0 0 $px2hpe -p $pch $d $px2h;
+	curve -n ic_c4 -d 1 -p 0 0 $px2hpe -p $mch $d $px2h;
+	curve -n ic_c5 -d 1 -p 0 0 $px2hpe -p $mx1 $my1 $px2h;
+	curve -n ic_c6 -d 1 -p 0 0 $mx2hme -p 0 $a $mx2h;
+	curve -n ic_c7 -d 1 -p 0 0 $mx2hme -p $mx1 $y1 $mx2h;
+	curve -n ic_c8 -d 1 -p 0 0 $mx2hme -p $mch $md $mx2h;
+	curve -n ic_c9 -d 1 -p 0 0 $mx2hme -p $pch $md $mx2h;
+	curve -n ic_c10 -d 1 -p 0 0 $mx2hme -p $x1 $y1 $mx2h;
+	curve -n ic_c11 -d 1 -p 0 $a $mx2h -p $pch $d $px2h;
+	curve -n ic_c12 -d 1 -p 0 $a $mx2h -p $mch $d $px2h;
+	curve -n ic_c13 -d 1 -p 0 $a $mx2h -p $x1 $y1 $mx2h;
+	curve -n ic_c14 -d 1 -p 0 $a $mx2h -p $mx1 $y1 $mx2h;
+	curve -n ic_c15 -d 1 -p 0 $ma $px2h -p $pch $md $mx2h;
+	curve -n ic_c16 -d 1 -p 0 $ma $px2h -p $mch $md $mx2h;
+	curve -n ic_c17 -d 1 -p 0 $ma $px2h -p $mx1 $my1 $px2h;
+	curve -n ic_c18 -d 1 -p 0 $ma $px2h -p $x1 $my1 $px2h;
+	curve -n ic_c19 -d 1 -p $x1 $y1 $mx2h -p $x1 $my1 $px2h;
+	curve -n ic_c20 -d 1 -p $x1 $y1 $mx2h -p $pch $d $px2h;
+	curve -n ic_c21 -d 1 -p $x1 $y1 $mx2h -p $pch $md $mx2h;
+	curve -n ic_c22 -d 1 -p $mx1 $y1 $mx2h -p $mx1 $my1 $px2h;
+	curve -n ic_c23 -d 1 -p $mx1 $y1 $mx2h -p $mch $d $px2h;
+	curve -n ic_c24 -d 1 -p $mx1 $y1 $mx2h -p $mch $md $mx2h;
+	curve -n ic_c25 -d 1 -p $pch $d $px2h -p $x1 $my1 $px2h;
+	curve -n ic_c26 -d 1 -p $x1 $my1 $px2h -p $pch $md $mx2h;
+	curve -n ic_c27 -d 1 -p $pch $md $mx2h -p $mch $md $mx2h;
+	curve -n ic_c28 -d 1 -p $mch $md $mx2h -p $mx1 $my1 $px2h;
+	curve -n ic_c29 -d 1 -p $mx1 $my1 $px2h -p $mch $d $px2h;
+	curve -n ic_c30 -d 1 -p $mch $d $px2h -p $pch $d $px2h;
+	}
+
+else if (($Surf == 1) && ($Conn == 1))
+	{
+	curve -n ic_c1 -d 1 -p 0 0 $px2hpe -p 0 $ma $px2h;
+	curve -n ic_c2 -d 1 -p 0 0 $px2hpe -p $x1 $my1 $px2h;
+	curve -n ic_c3 -d 1 -p 0 0 $px2hpe -p $pch $d $px2h;
+	curve -n ic_c4 -d 1 -p 0 0 $px2hpe -p $mch $d $px2h;
+	curve -n ic_c5 -d 1 -p 0 0 $px2hpe -p $mx1 $my1 $px2h;
+	curve -n ic_c6 -d 1 -p 0 0 $mx2hme -p 0 $a $mx2h;
+	curve -n ic_c7 -d 1 -p 0 0 $mx2hme -p $mx1 $y1 $mx2h;
+	curve -n ic_c8 -d 1 -p 0 0 $mx2hme -p $mch $md $mx2h;
+	curve -n ic_c9 -d 1 -p 0 0 $mx2hme -p $pch $md $mx2h;
+	curve -n ic_c10 -d 1 -p 0 0 $mx2hme -p $x1 $y1 $mx2h;
+	curve -n ic_c11 -d 1 -p 0 $a $mx2h -p $pch $d $px2h;
+	curve -n ic_c12 -d 1 -p 0 $a $mx2h -p $mch $d $px2h;
+	curve -n ic_c13 -d 1 -p 0 $a $mx2h -p $x1 $y1 $mx2h;
+	curve -n ic_c14 -d 1 -p 0 $a $mx2h -p $mx1 $y1 $mx2h;
+	curve -n ic_c15 -d 1 -p 0 $ma $px2h -p $pch $md $mx2h;
+	curve -n ic_c16 -d 1 -p 0 $ma $px2h -p $mch $md $mx2h;
+	curve -n ic_c17 -d 1 -p 0 $ma $px2h -p $mx1 $my1 $px2h;
+	curve -n ic_c18 -d 1 -p 0 $ma $px2h -p $x1 $my1 $px2h;
+	curve -n ic_c19 -d 1 -p $x1 $y1 $mx2h -p $x1 $my1 $px2h;
+	curve -n ic_c20 -d 1 -p $x1 $y1 $mx2h -p $pch $d $px2h;
+	curve -n ic_c21 -d 1 -p $x1 $y1 $mx2h -p $pch $md $mx2h;
+	curve -n ic_c22 -d 1 -p $mx1 $y1 $mx2h -p $mx1 $my1 $px2h;
+	curve -n ic_c23 -d 1 -p $mx1 $y1 $mx2h -p $mch $d $px2h;
+	curve -n ic_c24 -d 1 -p $mx1 $y1 $mx2h -p $mch $md $mx2h;
+	curve -n ic_c25 -d 1 -p $pch $d $px2h -p $x1 $my1 $px2h;
+	curve -n ic_c26 -d 1 -p $x1 $my1 $px2h -p $pch $md $mx2h;
+	curve -n ic_c27 -d 1 -p $pch $md $mx2h -p $mch $md $mx2h;
+	curve -n ic_c28 -d 1 -p $mch $md $mx2h -p $mx1 $my1 $px2h;
+	curve -n ic_c29 -d 1 -p $mx1 $my1 $px2h -p $mch $d $px2h;
+	curve -n ic_c30 -d 1 -p $mch $d $px2h -p $pch $d $px2h;
+	planarSrf -n ic_s1 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c6" "ic_c13" "ic_c10";
+	planarSrf -n ic_s2 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c6" "ic_c14" "ic_c7";
+	planarSrf -n ic_s3 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c14" "ic_c12" "ic_c23";
+	planarSrf -n ic_s4 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c12" "ic_c11" "ic_c30";
+	planarSrf -n ic_s5 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c11" "ic_c13" "ic_c20";
+	planarSrf -n ic_s6 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c4" "ic_c30" "ic_c3";
+	planarSrf -n ic_s7 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c3" "ic_c25" "ic_c2";
+	planarSrf -n ic_s8 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c19" "ic_c20" "ic_c25";
+	planarSrf -n ic_s9 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c21" "ic_c19" "ic_c26";
+	planarSrf -n ic_s10 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c9" "ic_c10" "ic_c21";
+	planarSrf -n ic_s11 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c8" "ic_c24" "ic_c7";
+	planarSrf -n ic_s12 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c24" "ic_c28" "ic_c22";
+	planarSrf -n ic_s13 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c22" "ic_c29" "ic_c23";
+	planarSrf -n ic_s14 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c4" "ic_c29" "ic_c5";
+	planarSrf -n ic_s15 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c1" "ic_c5" "ic_c17";
+	planarSrf -n ic_s16 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c2" "ic_c1" "ic_c18";
+	planarSrf -n ic_s17 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c18" "ic_c15" "ic_c26";
+	planarSrf -n ic_s18 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c8" "ic_c9" "ic_c27";
+	planarSrf -n ic_s19 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c16" "ic_c27" "ic_c15";
+	planarSrf -n ic_s20 -ch 1 -d 3 -ko 0 -tol 0.01 -rn 0 -po 0 "ic_c17" "ic_c28" "ic_c16";
+	}
+
+
+}
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//Cube
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+if ( (`window -ex cubeWindow`) == true) deleteUI cubeWindow;
+//create the cubeWindow
+global proc cubeWindow() {
+
+window
+	-width 500
+	-height 320
+	-title "Cube Constructor by King Markuz"
+	-s true
+cubeWindow;
+
+columnLayout
+	-columnAttach "both" 5
+	-rowSpacing 10
+	-columnWidth 380
+columnLayout;
+
+button
+	-label "Back to Main Menu"
+	-width 100
+	-command "chooserWindow; deleteUI cubeWindow"
+backbutton;
+
+floatSliderGrp
+	-label "Centre - Edge Distance:"
+	-field true
+	-minValue 0.01
+	-maxValue 20
+	-fieldMinValue 0.001
+	-fieldMaxValue 200
+	-value 2
+cedSlider;
+
+floatSliderGrp
+	-label "Sphere Radius:"
+	-field true
+	-minValue 0.1
+	-maxValue 10
+	-fieldMinValue 0.001
+	-fieldMaxValue 10
+	-value 0.3
+radiusSlider;
+
+floatSliderGrp
+	-label "Centre-Surf.Centre Multif.:"
+	-field true
+	-minValue -5
+	-maxValue 20
+	-fieldMinValue -20
+	-fieldMaxValue 100
+	-value 1
+CSCMSlider;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "OPTIONS:"
+	-labelArray2 "Con. Curves" "Group"
+	-v1 true
+	-v2 true
+Options;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "Spheres:"
+	-labelArray2 "Spheres" "Poly-Spheres"
+	-v1 true
+Spheres;
+
+checkBoxGrp
+	-numberOfCheckBoxes 2
+	-label "Surfaces:"
+	-labelArray2 "Outer Surfaces" "Inner Surfaces"
+Surfaces;
+
+checkBoxGrp
+    	-numberOfCheckBoxes 1
+    	-label "Create Surface Centres"
+	-v1 0
+SurfCentre;
+    
+
+button
+	-label "Create Cube"
+	-width 180
+	-command "GetCubeSliderInfo"
+button;
+
+	setParent..;
+
+showWindow cubeWindow;
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Get cubeWindow Information and execute CreateCube Procedure with these values
+global proc GetCubeSliderInfo() {
+
+float $ced = `floatSliderGrp -query -value cubeWindow|columnLayout|cedSlider`;
+int $cb = `checkBoxGrp -query -v1 cubeWindow|columnLayout|Options`;
+int $group = `checkBoxGrp -query -v2 cubeWindow|columnLayout|Options`;
+int $PoNu = `checkBoxGrp -query -v2 cubeWindow|columnLayout|Spheres`;
+int $surf = `checkBoxGrp -query -v1 cubeWindow|columnLayout|Surfaces`;
+float $rad = `floatSliderGrp -query -value cubeWindow|columnLayout|radiusSlider`;
+int $spheres = `checkBoxGrp -query -v1 cubeWindow|columnLayout|Spheres`;
+int $innersurf = `checkBoxGrp -query -v2 cubeWindow|columnLayout|Surfaces`;
+int $sc = `checkBoxGrp -query -v1 cubeWindow|columnLayout|SurfCentre`;
+float $cscm = `floatSliderGrp -query -value cubeWindow|columnLayout|CSCMSlider`;
+
+CreateCube ($ced, $cb, $group, $PoNu, $rad, $surf, $spheres, $innersurf, $sc, $cscm);
+
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+global proc CreateCube(float $ced, int $cb, int $group, int $PoNu, float $rad, int $surf, int $spheres, int $innersurf, int $sc, float $cscm){
+//Centre (0 0 0)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_Centre -r $rad; move 0 0 0;}
+	else {
+		polySphere -n cu_Centre -r $rad; move 0 0 0;}
+	}
+
+float $len = $ced;
+
+//Setup Variables Set1
+float $c2 = (sqrt(2) * 4 * $len * $len) / (8 + sqrt(2));
+float $cp = sqrt($c2) / 2;
+float $cm = (-1) * $cp;
+
+//Top1 ($cp $cp $cp)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_TopE1 -r $rad; move $cp $cp $cp;}
+	else {
+		polySphere -n cu_TopE1 -r $rad; move $cp $cp $cp;}
+	}
+
+//Top2 ($cp $cp $cm)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_TopE2 -r $rad; move $cp $cp $cm;}
+	else {
+		polySphere -n cu_TopE2 -r $rad; move $cp $cp $cm;}
+	}
+
+//Top3 ($cm $cp $cm)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_TopE3 -r $rad; move $cm $cp $cm;}
+	else {
+		polySphere -n cu_TopE3 -r $rad; move $cm $cp $cm;}
+	}
+
+//Top4 ($cm $cp $cp)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_TopE4 -r $rad; move $cm $cp $cp;}
+	else {
+		polySphere -n cu_TopE4 -r $rad; move $cm $cp $cp;}
+	}
+
+//Bottom1 ($cp $cm $cp)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_BottomE1 -r $rad; move $cp $cm $cp;}
+	else {
+		polySphere -n cu_BottomE1 -r $rad; move $cp $cm $cp;}
+	}
+
+//Bottom2 ($cp $cm $cm)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_BottomE2 -r $rad; move $cp $cm $cm;}
+	else {
+		polySphere -n cu_BottomE2 -r $rad; move $cp $cm $cm;}
+	}
+
+//Bottom3 ($cm $cm $cm)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_BottomE3 -r $rad; move $cm $cm $cm;}
+	else {
+		polySphere -n cu_BottomE3 -r $rad; move $cm $cm $cm;}
+	}
+
+//Bottom4 ($cm $cm $cp)
+if ($spheres == 1)
+	{
+	if ($PoNu == 0) {
+		sphere -n cu_BottomE4 -r $rad; move $cm $cm $cp;}
+	else {
+		polySphere -n cu_BottomE4 -r $rad; move $cm $cm $cp;}
+	}
+
+//SurfaceCentres
+if ($sc == 1)
+	{
+	$cscdp = $cscm * $cp;
+	$cscdm = $cscm * $cm;
+	if ($spheres == 1)
+		{
+		if ($PoNu == 0) {
+			sphere -n cu_SurfCentre1 -r $rad; move $cscdp 0 0;}
+		else {
+			polySphere -n cu_SurfCentre1 -r $rad; move $cscdp 0 0;}
+		}
+	if ($spheres == 1)
+		{
+		if ($PoNu == 0) {
+			sphere -n cu_SurfCentre2 -r $rad; move $cscdm 0 0;}
+		else {
+			polySphere -n cu_SurfCentre2 -r $rad; move $cscdm 0 0;}
+		}
+	if ($spheres == 1)
+		{
+		if ($PoNu == 0) {
+			sphere -n cu_SurfCentre3 -r $rad; move 0 0 $cscdp;}
+		else {
+			polySphere -n cu_SurfCentre3 -r $rad; move 0 0 $cscdp;}
+		}
+	if ($spheres == 1)
+		{
+		if ($PoNu == 0) {
+			sphere -n cu_SurfCentre4 -r $rad; move 0 0 $cscdm;}
+		else {
+			polySphere -n cu_SurfCentre4 -r $rad; move 0 0 $cscdm;}
+		}
+	if ($spheres == 1)
+		{
+		if ($PoNu == 0) {
+			sphere -n cu_SurfCentre5 -r $rad; move 0 $cscdm 0;}
+		else {
+			polySphere -n cu_SurfCentre5 -r $rad; move 0 $cscdm 0;}
+		}
+	if ($spheres == 1)
+		{
+		if ($PoNu == 0) {
+			sphere -n cu_SurfCentre6 -r $rad; move 0 $cscdp 0;}
+		else {
+			polySphere -n cu_SurfCentre6 -r $rad; move 0 $cscdp 0;}
+		}
+	}
+
+//All poses: Centre(0 0 0), TopE1($cp $cp $cp), TopE2($cp $cp $cm), TopE3($cm $cp $cm)
+//TopE4($cm $cp $cp), BottomE1($cp $cm $cp), BottomE2($cp $cm $cm), BottomE3($cm $cm $cm),
+//BottomE4($cm $cm $cp)
+
+if (($cb == 1) && ($sc == 1))
+	{
+	$cscdp = $cscm * $cp;
+	$cscdm = $cscm * $cm;
+	curve -n cu_c1 -d 1 -p 0 0 0 -p $cp $cp $cp;
+	curve -n cu_c2 -d 1 -p 0 0 0 -p $cp $cp $cm;
+	curve -n cu_c3 -d 1 -p 0 0 0 -p $cm $cp $cm;
+	curve -n cu_c4 -d 1 -p 0 0 0 -p $cm $cp $cp;
+	curve -n cu_c5 -d 1 -p 0 0 0 -p $cp $cm $cp;
+	curve -n cu_c6 -d 1 -p 0 0 0 -p $cp $cm $cm;
+	curve -n cu_c6 -d 1 -p 0 0 0 -p $cm $cm $cm;
+	curve -n cu_c6 -d 1 -p 0 0 0 -p $cm $cm $cp;
+	curve -n cu_c7 -d 1 -p $cp $cp $cp -p $cp $cp $cm;
+	curve -n cu_c8 -d 1 -p $cp $cp $cp -p $cm $cp $cp;
+	curve -n cu_c9 -d 1 -p $cp $cp $cp -p $cp $cm $cp;
+	curve -n cu_c10 -d 1 -p $cm $cp $cm -p $cp $cp $cm;
+	curve -n cu_c11 -d 1 -p $cm $cp $cm -p $cm $cp $cp;
+	curve -n cu_c12 -d 1 -p $cm $cp $cm -p $cm $cm $cm;
+	curve -n cu_c13 -d 1 -p $cp $cm $cm -p $cm $cm $cm;
+	curve -n cu_c14 -d 1 -p $cp $cm $cm -p $cp $cm $cp;
+	curve -n cu_c15 -d 1 -p $cp $cm $cm -p $cp $cp $cm;
+	curve -n cu_c16 -d 1 -p $cm $cm $cp -p $cp $cm $cp;
+	curve -n cu_c17 -d 1 -p $cm $cm $cp -p $cm $cm $cm;
+	curve -n cu_c18 -d 1 -p $cm $cm $cp -p $cm $cp $cp;
+	curve -n cu_c19 -d 1 -p $cscdp 0 0 -p $cp $cp $cp;
+	curve -n cu_c20 -d 1 -p $cscdp 0 0 -p $cp $cp $cm;
+	curve -n cu_c21 -d 1 -p $cscdp 0 0 -p $cp $cm $cp;
+	curve -n cu_c22 -d 1 -p $cscdp 0 0 -p $cp $cm $cm;//surfCentre1
+	curve -n cu_c23 -d 1 -p $cscdm 0 0 -p $cm $cp $cm;
+	curve -n cu_c24 -d 1 -p $cscdm 0 0 -p $cm $cp $cp;
+	curve -n cu_c25 -d 1 -p $cscdm 0 0 -p $cm $cm $cm;
+	curve -n cu_c26 -d 1 -p $cscdm 0 0 -p $cm $cm $cp;//surfCentre2
+	curve -n cu_c27 -d 1 -p 0 0 $cscdp -p $cp $cp $cp;
+	curve -n cu_c28 -d 1 -p 0 0 $cscdp -p $cm $cp $cp;
+	curve -n cu_c29 -d 1 -p 0 0 $cscdp -p $cp $cm $cp;
+	curve -n cu_c30 -d 1 -p 0 0 $cscdp -p $cm $cm $cp;//surfCentre3
+	curve -n cu_c31 -d 1 -p 0 0 $cscdm -p $cp $cp $cm;
+	curve -n cu_c32 -d 1 -p 0 0 $cscdm -p $cm $cp $cm;
+	curve -n cu_c33 -d 1 -p 0 0 $cscdm -p $cp $cm $cm;
+	curve -n cu_c34 -d 1 -p 0 0 $cscdm -p $cm $cm $cm;//surfCentre4
+	curve -n cu_c35 -d 1 -p 0 $cscdm 0 -p $cp $cm $cp;
+	curve -n cu_c36 -d 1 -p 0 $cscdm 0 -p $cp $cm $cm;
+	curve -n cu_c37 -d 1 -p 0 $cscdm 0 -p $cm $cm $cm;
+	curve -n cu_c38 -d 1 -p 0 $cscdm 0 -p $cm $cm $cp;//surfCentre5
+	curve -n cu_c39 -d 1 -p 0 $cscdp 0 -p $cp $cp $cp;
+	curve -n cu_c40 -d 1 -p 0 $cscdp 0 -p $cp $cp $cm;
+	curve -n cu_c41 -d 1 -p 0 $cscdp 0 -p $cm $cp $cm;
+	curve -n cu_c42 -d 1 -p 0 $cscdp 0 -p $cm $cp $cp;//surfCentre6
+	}
+else if ($cb == 1)
+	{
+	curve -n cu_c1 -d 1 -p 0 0 0 -p $cp $cp $cp;
+	curve -n cu_c2 -d 1 -p 0 0 0 -p $cp $cp $cm;
+	curve -n cu_c3 -d 1 -p 0 0 0 -p $cm $cp $cm;
+	curve -n cu_c4 -d 1 -p 0 0 0 -p $cm $cp $cp;
+	curve -n cu_c5 -d 1 -p 0 0 0 -p $cp $cm $cp;
+	curve -n cu_c6 -d 1 -p 0 0 0 -p $cp $cm $cm;
+	curve -n cu_c6 -d 1 -p 0 0 0 -p $cm $cm $cm;
+	curve -n cu_c6 -d 1 -p 0 0 0 -p $cm $cm $cp;
+	curve -n cu_c7 -d 1 -p $cp $cp $cp -p $cp $cp $cm;
+	curve -n cu_c8 -d 1 -p $cp $cp $cp -p $cm $cp $cp;
+	curve -n cu_c9 -d 1 -p $cp $cp $cp -p $cp $cm $cp;
+	curve -n cu_c10 -d 1 -p $cm $cp $cm -p $cp $cp $cm;
+	curve -n cu_c11 -d 1 -p $cm $cp $cm -p $cm $cp $cp;
+	curve -n cu_c12 -d 1 -p $cm $cp $cm -p $cm $cm $cm;
+	curve -n cu_c13 -d 1 -p $cp $cm $cm -p $cm $cm $cm;
+	curve -n cu_c14 -d 1 -p $cp $cm $cm -p $cp $cm $cp;
+	curve -n cu_c15 -d 1 -p $cp $cm $cm -p $cp $cp $cm;
+	curve -n cu_c16 -d 1 -p $cm $cm $cp -p $cp $cm $cp;
+	curve -n cu_c17 -d 1 -p $cm $cm $cp -p $cm $cm $cm;
+	curve -n cu_c18 -d 1 -p $cm $cm $cp -p $cm $cp $cp;
+	}
+
+if (($surf == 1) && ($cb == 1) && ($sc == 1) && ($cscm != 1))
+	{
+	planarSrf -n cu_ps1 -ch false cu_c33 cu_c34 cu_c12;
+	planarSrf -n cu_ps2 -ch false cu_c34 cu_c36 cu_c14;
+	planarSrf -n cu_ps3 -ch false cu_c35 cu_c36 cu_c15;
+	planarSrf -n cu_ps4 -ch false cu_c33 cu_c35 cu_c17;//SurfCenter4
+	planarSrf -n cu_ps5 -ch false cu_c32 cu_c30 cu_c20;
+	planarSrf -n cu_ps6 -ch false cu_c30 cu_c29 cu_c10;
+	planarSrf -n cu_ps7 -ch false cu_c29 cu_c31 cu_c11;
+	planarSrf -n cu_ps8 -ch false cu_c31 cu_c18 cu_c32;//SurfCenter3
+	planarSrf -n cu_ps9 -ch false cu_c21 cu_c22 cu_c9;
+	planarSrf -n cu_ps10 -ch false cu_c22 cu_c24 cu_c17;
+	planarSrf -n cu_ps11 -ch false cu_c24 cu_c16 cu_c23;
+	planarSrf -n cu_ps12 -ch false cu_c23 cu_c21 cu_c11;//SurfCenter1
+	planarSrf -n cu_ps13 -ch false cu_c26 cu_c28 cu_c20;
+	planarSrf -n cu_ps14 -ch false cu_c25 cu_c26 cu_c13;
+	planarSrf -n cu_ps15 -ch false cu_c25 cu_c27 cu_c14;
+	planarSrf -n cu_ps16 -ch false cu_c28 cu_c27 cu_c19;//SurfCenter2
+	planarSrf -n cu_ps17 -ch false cu_c44 cu_c41 cu_c10;
+	planarSrf -n cu_ps18 -ch false cu_c41 cu_c9 cu_c42;
+	planarSrf -n cu_ps19 -ch false cu_c42 cu_c12 cu_c43;
+	planarSrf -n cu_ps20 -ch false cu_c43 cu_c13 cu_c44;//SurfCenter6
+	planarSrf -n cu_ps21 -ch false cu_c39 cu_c40 cu_c19;
+	planarSrf -n cu_ps22 -ch false cu_c39 cu_c38 cu_c15;
+	planarSrf -n cu_ps23 -ch false cu_c38 cu_c37 cu_c16;
+	planarSrf -n cu_ps24 -ch false cu_c37 cu_c40 cu_c18;//SurfCenter5
+	}
+else if (($surf == 1) && ($cb == 1) && ($cscm == 1))
+	{
+	planarSrf -n cu_ps1 -ch false cu_c11 cu_c18 cu_c20 cu_c10;
+	planarSrf -n cu_ps2 -ch false cu_c11 cu_c16 cu_c17 cu_c9;
+	planarSrf -n cu_ps3 -ch false cu_c17 cu_c15 cu_c14 cu_c12;
+	planarSrf -n cu_ps4 -ch false cu_c14 cu_c19 cu_c20 cu_c13;
+	planarSrf -n cu_ps5 -ch false cu_c13 cu_c10 cu_c9 cu_c12;
+	planarSrf -n cu_ps6 -ch false cu_c19 cu_c15 cu_c16 cu_c18;
+	}
+else if (($surf == 1) && ($cb == 1))
+	{
+	planarSrf -n cu_ps1 -ch false cu_c11 cu_c18 cu_c20 cu_c10;
+	planarSrf -n cu_ps2 -ch false cu_c11 cu_c16 cu_c17 cu_c9;
+	planarSrf -n cu_ps3 -ch false cu_c17 cu_c15 cu_c14 cu_c12;
+	planarSrf -n cu_ps4 -ch false cu_c14 cu_c19 cu_c20 cu_c13;
+	planarSrf -n cu_ps5 -ch false cu_c13 cu_c10 cu_c9 cu_c12;
+	planarSrf -n cu_ps6 -ch false cu_c19 cu_c15 cu_c16 cu_c18;
+	}
+else if (($surf == 1) && ($cb == 0))
+	{
+	string $Error = "Surfaces won't be created. Please undo, check the [Con. Curves]-CheckBox and retry!";
+	print $Error;
+	}
+
+if (($innersurf == 1) && ($cb == 1))
+	{
+	planarSrf -n cu_is1 -ch false cu_c1 cu_c5 cu_c11;
+	planarSrf -n cu_is2 -ch false cu_c2 cu_c6 cu_c17;
+	planarSrf -n cu_is3 -ch false cu_c7 cu_c14 cu_c3;
+	planarSrf -n cu_is4 -ch false cu_c8 cu_c20 cu_c4;
+	planarSrf -n cu_is5 -ch false cu_c8 cu_c19 cu_c7;
+	planarSrf -n cu_is6 -ch false cu_c8 cu_c18 cu_c5;
+	planarSrf -n cu_is7 -ch false cu_c5 cu_c16 cu_c6;
+	planarSrf -n cu_is8 -ch false cu_c6 cu_c15 cu_c7;
+	planarSrf -n cu_is9 -ch false cu_c3 cu_c4 cu_c13;
+	planarSrf -n cu_is10 -ch false cu_c3 cu_c12 cu_c2;
+	planarSrf -n cu_is11 -ch false cu_c2 cu_c9 cu_c1;
+	planarSrf -n cu_is12 -ch false cu_c1 cu_c10 cu_c4;
+	}
+else if (($surf == 1) && ($cb == 0))
+	{
+	string $Error = "Surfaces won't be created. Please undo, check the [Con. Curves]-CheckBox and retry!";
+	print $Error;
+	}
+
+//Grouping created objects
+if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1) && ($spheres == 1) && ($sc == 1) && ($cscm != 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6 cu_ps7 cu_ps8 cu_ps9 cu_ps10 cu_ps11 cu_ps12 cu_ps13 cu_ps14 cu_ps15 cu_ps16 cu_ps17 cu_ps18 cu_ps19 cu_ps20 cu_ps21 cu_ps22 cu_ps23 cu_ps24;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_Spheres cu_Surfaces cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1) && ($sc == 1) && ($cscm != 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6 cu_ps7 cu_ps8 cu_ps9 cu_ps10 cu_ps11 cu_ps12 cu_ps13 cu_ps14 cu_ps15 cu_ps16 cu_ps17 cu_ps18 cu_ps19 cu_ps20 cu_ps21 cu_ps22 cu_ps23 cu_ps24;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_Surfaces cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($sc == 1) && ($spheres == 1) && ($cscm != 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6 cu_ps7 cu_ps8 cu_ps9 cu_ps10 cu_ps11 cu_ps12 cu_ps13 cu_ps14 cu_ps15 cu_ps16 cu_ps17 cu_ps18 cu_ps19 cu_ps20 cu_ps21 cu_ps22 cu_ps23 cu_ps24;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;	
+	group -n Cube cu_Connections cu_Spheres cu_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($sc == 1) && ($cscm != 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6 cu_ps7 cu_ps8 cu_ps9 cu_ps10 cu_ps11 cu_ps12 cu_ps13 cu_ps14 cu_ps15 cu_ps16 cu_ps17 cu_ps18 cu_ps19 cu_ps20 cu_ps21 cu_ps22 cu_ps23 cu_ps24;
+	group -n Cube cu_Connections cu_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1) && ($sc == 1) && ($cscm != 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;	
+	group -n Cube cu_Connections cu_Spheres cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($sc == 1) && ($cscm != 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($sc == 1) && ($spheres == 1) && ($cscm != 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;
+	group -n Cube cu_Connections cu_Spheres;
+	}
+else if (($group == 1) && ($sc == 1) && ($spheres == 1) && ($cscm != 1))
+	{
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;
+	group -n Cube cu_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($sc == 1) && ($cscm != 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n Cube cu_Connections;
+	}
+
+
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1) && ($spheres == 1) && ($sc == 1) && ($cscm == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_Spheres cu_Surfaces cu_InnerSurfaces;	
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1) && ($sc == 1) && ($cscm == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_Surfaces cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($sc == 1) && ($spheres == 1) && ($cscm == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;	
+	group -n Cube cu_Connections cu_Spheres cu_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($sc == 1) && ($cscm == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6;
+	group -n Cube cu_Connections cu_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1) && ($sc == 1) && ($cscm == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;	
+	group -n Cube cu_Connections cu_Spheres cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($sc == 1) && ($cscm == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($sc == 1) && ($spheres == 1) && ($cscm == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;
+	group -n Cube cu_Connections cu_Spheres;
+	}
+else if (($group == 1) && ($sc == 1) && ($spheres == 1) && ($cscm == 1))
+	{
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;
+	group -n Cube cu_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($sc == 1) && ($cscm == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20 cu_c21 cu_c22 cu_c23 cu_c24 cu_c25 cu_c26 cu_c27 cu_c28 cu_c29 cu_c30 cu_c31 cu_c32 cu_c33 cu_c34 cu_c35 cu_c36 cu_c37 cu_c38 cu_c39 cu_c40 cu_c41 cu_c42 cu_c43 cu_c44;
+	group -n Cube cu_Connections;
+	}
+
+
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_Spheres cu_Surfaces cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($spheres == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6;
+	group -n Cube cu_Connections cu_Spheres cu_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_Spheres cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($innersurf == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_Surfaces cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1) && ($spheres == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4;
+	group -n Cube cu_Connections cu_Surfaces cu_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1) && ($spheres == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4;
+	group -n Cube cu_Connections cu_Surfaces cu_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($innersurf == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_InnerSurfaces cu_is1 cu_is2 cu_is3 cu_is4 cu_is5 cu_is6 cu_is7 cu_is8 cu_is9 cu_is10 cu_is11 cu_is12;
+	group -n Cube cu_Connections cu_InnerSurfaces;
+	}
+else if (($group == 1) && ($cb == 1) && ($spheres == 1) && ($sc == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4 cu_SurfCentre1 cu_SurfCentre2 cu_SurfCentre3 cu_SurfCentre4 cu_SurfCentre5 cu_SurfCentre6;
+	group -n Cube cu_Connections cu_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($spheres == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4;
+	group -n Cube cu_Connections cu_Spheres;
+	}
+else if (($group == 1) && ($cb == 1) && ($surf == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n cu_Surfaces cu_ps1 cu_ps2 cu_ps3 cu_ps4 cu_ps5 cu_ps6;
+	group -n Cube cu_Connections cu_Surfaces;
+	}
+else if (($group == 1) && ($cb == 1))
+	{
+	group -n cu_Connections cu_c1 cu_c2 cu_c3 cu_c4 cu_c5 cu_c6 cu_c7 cu_c8 cu_c9 cu_c10 cu_c11 cu_c12 cu_c13 cu_c14 cu_c15 cu_c16 cu_c17 cu_c18 cu_c19 cu_c20;
+	group -n Cube cu_Connections;
+	}
+else if (($group == 1) && ($spheres == 1))
+	{
+	group -n cu_Spheres cu_Centre cu_TopE1 cu_TopE2 cu_TopE3 cu_TopE4 cu_BottomE1 cu_BottomE2 cu_BottomE3 cu_BottomE4;
+	group -n Cube cu_Spheres;
+	}
+}

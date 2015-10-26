@@ -1,0 +1,24 @@
+//	mcToInterCaps		by Milo D. Cooper
+//
+//	Converts a string to interCaps format.
+
+global proc string mcToInterCaps(string $sString) {
+	string $sUpper;
+
+	while ($sString != `substitute "_" $sString " "`) $sString = `substitute "_" $sString " "`;
+	while ($sString != `substitute "  +" $sString " "`) $sString = `substitute "  +" $sString " "`;
+	$sString = `substitute " $" $sString ""`;
+
+	while (true) {
+		string $sLower = `match " ." $sString`;
+		if ($sLower != "") {
+			$sUpper = strip(`toupper $sLower`);
+			$sString = `substitute $sLower $sString $sUpper`;
+		} else {
+			break;
+		}
+	}
+
+	return $sString;
+}
+

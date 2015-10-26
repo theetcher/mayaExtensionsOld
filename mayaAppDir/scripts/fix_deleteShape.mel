@@ -1,0 +1,7 @@
+global proc fix_deleteShape( )
+{
+
+string $fullPathName[] = `ls -sl -l`;
+delete (`listRelatives -s $fullPathName`);
+
+}

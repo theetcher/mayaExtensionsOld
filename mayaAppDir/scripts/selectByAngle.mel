@@ -1,0 +1,148 @@
+//Author: Henry Korol ( mail@henrykorol.com )
+//Written: 4 August, 06
+// a small script to wrap maya's selection constraint functionality
+// Usage:
+//	Select face/s and run the script. It will select all the faces in the same angle tolerance. 
+//	Interactively adjust angle slider to pick the right angle
+//	Hit apply button once you're satisfied with the result or click cancel to get back to previous selection.
+
+global proc float[] HKGetVertexNormal(string $Component[], string $Shape)
+{
+string $HKLTTweakName[];
+float $Normal[3];
+float $RNormal[3] = {0,0,0};
+float $TmpNormal[3] = {0,0,0};
+string $Vtx[]; string $cur;
+if( `size $Component` != 0 )
+{
+$Vtx = `polyListComponentConversion -tvf $Component`;
+$SbdVtx = `subdListComponentConversion -tv $Component`; 
+$Nrbs = `filterExpand -sm 28 $Component`;
+$Vtx = `ls -fl $Vtx`; 
+string $NormalChangeNode[1];
+if( size ($Vtx ) > 0 )
+{
+if ( `size $Component` < 2)
+{
+$CompEdges = `polyListComponentConversion -te $Component`;
+$NormalChangeNode = `polySoftEdge -a 0 -ch 1 $CompEdges`;
+}
+for ( $cur in $Vtx )
+{
+$Normal = `polyNormalPerVertex -q -xyz $cur`;
+$TmpNormal[0] += $Normal[0];
+$TmpNormal[1] += $Normal[1];
+$TmpNormal[2] += $Normal[2];
+}
+if ( `size $Component` < 2)
+{
+delete $NormalChangeNode;
+}
+int $Size = `size $Vtx`;
+
+$TmpNormal[0] = $TmpNormal[0]/$Size;
+$TmpNormal[1] = $TmpNormal[1]/$Size;
+$TmpNormal[2] = $TmpNormal[2]/$Size;
+
+if( `objExists HKLocalToolsCalculator`)
+delete HKLocalToolsCalculator;
+
+createNode -n "HKLocalToolsCalculator" vectorProduct;
+setAttr HKLocalToolsCalculator.operation 3;
+setAttr "HKLocalToolsCalculator.normalizeOutput" 0;
+setAttr "HKLocalToolsCalculator.i1" $TmpNormal[0] $TmpNormal[1] $TmpNormal[2];
+
+connectAttr -f ($Shape+".worldMatrix[0]") HKLocalToolsCalculator.m;
+
+$TmpNormal = `getAttr HKLocalToolsCalculator.o`;
+delete HKLocalToolsCalculator;	
+}
+else if( size ( $SbdVtx ) > 0 || size ( $Nrbs ) > 0 )
+{
+$SbdVtx = `ls -fl $SbdVtx`; 
+$Nrbs = `ls -fl $Nrbs`; 
+string $cur1, $cur;
+for ( $cur1 in $Nrbs )
+$SbdVtx[ `size $SbdVtx` ] = $cur1;
+for ( $cur in $SbdVtx )
+{
+
+$InitPos = `pointPosition $cur`; 
+undoInfo -swf 0;
+moveVertexAlongDirection -n 1 $cur;
+$AfterPos = `pointPosition $cur`;
+move -a $InitPos[0] $InitPos[1] $InitPos[2] $cur;
+undoInfo -swf 1;
+
+$Normal[0] = $AfterPos[0] - $InitPos[0]; 
+$Normal[1] = $AfterPos[1] - $InitPos[1];
+$Normal[2] = $AfterPos[2] - $InitPos[2];
+$TmpNormal[0] += $Normal[0];
+$TmpNormal[1] += $Normal[1];
+$TmpNormal[2] += $Normal[2];
+}
+int $Size = `size $SbdVtx`; 
+
+$TmpNormal[0] = $TmpNormal[0]/$Size; 
+$TmpNormal[1] = $TmpNormal[1]/$Size;
+$TmpNormal[2] = $TmpNormal[2]/$Size;
+}
+}
+else
+{
+$TmpNormal = { 0, 1, 0 };
+}
+
+return $TmpNormal; 
+}
+
+global proc selectByAngle(){
+
+global string $HKSBApreviousState; 
+$HKSBApreviousState = `polySelectConstraint -q -sts`;
+global string $HKSBApreviousSelection[]; 
+$HKSBApreviousSelection = `ls -sl`;
+
+$selectedFaces = `filterExpand -sm 34`;
+if (size ($selectedFaces) == 0)
+error "Select by angle: Please select some faces";
+
+$shape = `ls -hl`;
+float $normal[] = HKGetVertexNormal($selectedFaces, $shape[0]);
+
+if( `window -ex SelectByAngleOptionsWnd`)
+deleteUI SelectByAngleOptionsWnd;
+
+window -wh 396 129 -title "Select by angle: " SelectByAngleOptionsWnd;
+string $Form = `formLayout`;
+string $col = `columnLayout -adj 1`;
+string $frame = `frameLayout -mh 2 -cll 0 -bs "etchedIn" -l "Options:"`;	
+floatSliderGrp -fmx 180 -max 90 -min 0 -v 20 -f 1 -l "Angle:" -cc "HKSBAupdateAngleSelection()" -dc "HKSBAupdateAngleSelection()" HKSBAAngleSlider;	
+setParent..;
+setParent..;	
+
+button -bgc 0.5501 0.5952 0.9788 -h 24 -l "Apply" -c "resetPolySelectConstraint; deleteUI SelectByAngleOptionsWnd;" HKIFActionButton;
+$CloseBut = `button -h 24 -l "Cancel" -c "resetPolySelectConstraint; select -r $HKSBApreviousSelection; deleteUI SelectByAngleOptionsWnd;"`;
+setParent..;	
+
+formLayout -e 
+-af HKIFActionButton bottom 2
+-af HKIFActionButton left 3
+-ap HKIFActionButton right 2 52
+
+-af $CloseBut right 3
+-af $CloseBut bottom 2
+-ac $CloseBut left 2 HKIFActionButton 
+-ac $col bottom 5 HKIFActionButton
+-af $col top 3 
+$Form;
+
+showWindow;
+
+polySelectConstraint -t 0x0008 -m 3 -orient 1 -ob 0 20 -oa $normal[0] $normal[1] $normal[2];
+}
+
+global proc HKSBAupdateAngleSelection(){
+float $angle = `floatSliderGrp -q -v HKSBAAngleSlider`;
+polySelectConstraint -ob 0 $angle;
+}

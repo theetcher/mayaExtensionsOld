@@ -1,0 +1,677 @@
+/* takBlender.mel 
+
+//
+// COPY RIGHT TAKUMI TAKAHASHI 2002
+//
+// DISCLAIMER :
+// TAKUMI TAKAHASHI DISCLAIMS ALL WARRANTIES WITH REGARD TO 
+// THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF 
+// MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL TAKUMI TAKAHASHI
+// BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR
+// ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, 
+// NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR 
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.	
+//
+
+Author :		Takumi [Tak] Takahashi <tak@aw.sgi.com>
+Creation Date:		Feb 18, 2002
+Modification Date:	Feb 22, 2002 - NGC public Demo version
+Revision Date:		March 14, 2002 - bugfix 1 version
+Version :		0.9.1 beta 
+Idea Originated by :	Ken Taki + Yuko Isoda
+
+Revision History :	--- bugfix 1 --- 
+			If slave or master object with 
+			the same DAG node are selected,
+			takBlender failed due to the naming
+			clashing between them, the Maya 
+			will try to return the hierarchical 
+			node name by attaching "|" character
+			with immediate parent name. This caused 
+			the original script to fail since the
+			names used in master DAG is used to create
+			weight attributes on the slave.
+			Now this is fixed so that the "|" character
+			is stripped on attribute name creation.
+			(tak - March 14, 2002)
+			--- bugfix 1 end ---
+
+*** Be sure to place "generateChannelMenu.mel" script
+in the scripts directory, in order to use this script.
+
+///////////////////////////////////////////////////////////
+//
+// source at initial set-up in very beginning 
+//	or
+//  place this script along with "generateChannelMenu.mel"
+//  in Maya's script path directory. (otherwise just sourcing it 
+//  after channel Menu displayed won't work)
+// This set-up overrides AW's "generateChannelMenu.mel" script
+//
+////////////////////////////////////////////////////////////
+
+LIMITATION
+	Cannot perform motion-path object to be constrained (slave)
+	RIGHT AFTER making the motion-path object a master using
+	Tak Blend Key ...
+
+WORKAROUND
+	Bake first ?
+	(investigating)
+
+LIMITATION
+	cannot perform deletion of Maya's point constraint first 
+	on the slave object followed by takBlend on other object
+	and re-execution of takBlend on point constrainer.
+WORKAROUND
+	use Dependency Graph to delete blendColors node
+	and delete Attributes for takBlend weights attributes
+	and delete Maya's constraint node manually.
+
+
+///////////////////////////////////////////////////////////
+//  usage - blendColor node
+///////////////////////////////////////////////////////////
+
+// CREATION ///
+
+select master and slave objects
+select attribute labels in channelbox (for slave attributes)
+channel Pop-up menu -"Tak Blend Key"
+
+	// --- behind the scenes --- //
+	slave's attr existing connections are disconnected 
+	  and now connected to blendColors.color1.colorRGB
+	master's attr are connected to blendColors.color2.colorRGB
+	blendColors.output are connected to slave attrs.
+	slave has a new attrs "master_attrs_n_takBlend",
+		connecting to blendColors.blend
+	// --- behind the scenes end --- //
+
+slave now has new attribute "master_attrs_blendColors#_tb",
+	which drives blend attribute on blendColor node's blender
+	attribute - acts like a weight attribute for Maya's constraints..
+
+	(master = name of master node,
+	 attrs = name of attributes,
+	 # = a number from blendColor node)
+
+keyframe between 0 - 1 (0 means slave/ 1 means master) on 
+the weight attribute (above) to see the effect,
+
+
+/// DELETION ///
+
+select slave
+select "master_attrs_blendColors#_tb" label in channelBox
+channel Pop-up menu -"Tak Blend Delete"
+
+	// --- behind the scenes --- //
+	blendColor.color1.colorRGB's existing connections are disconnected
+		and now re-connected to slave's attrs (or where output are connected)
+ 	blendColors.color2.colorRGB's existing connection (master's attr) 
+		are disconnected
+	blendColors.output connected to slave attrs are disconnected
+	slave's attrs "master_attrs_blendColors#_tb" are disconnected
+		and deleted
+	blendColor node is deleted
+	// --- behind the scenes end --- //
+
+slave's original connection is restored
+"master_attrs_blendColors#_tb" attr is deleted
+master-slave connections are no longer in effect (diconnected).
+
+--------------------------------------------------------------
+An Objective :
+	Create utility node to blend/override existing animation curves
+--------------------------------------------------------------
+*/
+
+//////////////////////////////////////////////////////////// 
+// takBlend.mel - multi-attributes blending to a single attr 
+////////////////////////////////////////////////////////////
+
+global proc takBlender()
+{
+//
+	takBlender_2002_3_14();
+}
+
+global proc takBlender_2002_3_14()
+{	     
+	if(size(`ls -sl`)==2)
+	{
+		if(size(`channelBox -q -sma mainChannelBox`)!=0)
+		{
+			takBlend_applyBypass;
+		}else{
+			warning "Select attributes in CHANNEL BOX ... aborting";
+		}
+	}else{
+		warning "Select master and slave objects ... aborting";
+	}
+}
+
+global proc takBlend_applyBypass()
+{
+	print "///// applyBypass begin ... \n";
+
+
+	//
+	// find out the lead (slave) object 
+	// (lead = the last selected item = slave)
+	// ... $selectedObj = `channelBox -q -mol mainChannelBox`;
+	//      doesn't work since in alphabetical order
+	//
+
+	string $selectedObj[];
+	$selectedObj = `ls -sl`;
+
+	//
+	// define master + slave object (for Utility Node method)
+	//
+	// the last selected object (hilighted in green) will always be slave
+	// 
+	// in a case of Utility method, master will be immediate previous
+	// selected object (the one selected right before slave).
+	//
+	// For Expression method, all selected object except the last 
+	// selected object will be masters.
+	//
+	string $masterObj = $selectedObj[size($selectedObj)-2];
+	string $slaveObj = $selectedObj[size($selectedObj)-1];
+
+
+	//
+	// Btw - is ChannelBox visible ?
+	//
+
+	if(`isChannelBoxVisible`)
+	{
+
+		//
+		// check channelBox attr selection ...
+		//
+
+		string $channelBoxAttrs[];
+		$channelBoxAttrs = `channelBox -q -sma mainChannelBox`;
+
+
+		//
+		// convert short names to long names
+		//
+
+		for($i=0;$i<size($channelBoxAttrs);$i++)
+		{
+			$channelBoxAttrs[$i]= tak_shortToLongNameAttr($slaveObj,  $channelBoxAttrs[$i]);
+		}
+		
+
+		//
+		// are attributes selected in channel box ?
+		//
+
+		if(size($channelBoxAttrs))
+		{
+
+			string $connectedAttrs[];	// = will have connected attrs name 
+			int $connected = 0;
+
+
+			//
+			// are slave's attrs connected ? connection count
+			//
+
+			for($i=0;$i<size($channelBoxAttrs);$i++)
+			{
+
+				string $slaveAttr = $slaveObj+"."+$channelBoxAttrs[$i];
+				string $conns[];
+				$conns = `listConnections -c on $slaveAttr`;
+				if(size($conns)!=0)
+				{
+					// it is connected
+					$connectedAttrs[$connected] = $channelBoxAttrs[$i];
+					$connected++;	// = a nunmber of DG connection in channelBox attr selection
+				}else{
+					// it is NOT connected - issue a warning
+					warning "Attribute(s) do not seemed to have existing connection to bypass .. skipping\n";
+				}
+			}
+			// print $connected
+			if($connected!=0)
+			{
+				//
+				// utility node = blendColors
+				//
+				// check to see how many attrs selected
+				// if more than 3, blendColors will be multiple.
+				// (meaning it will have 3 attributes max in a single blendColors node)
+
+				for($i=0;$i<$connected;$i++)
+				{
+					//
+					// count attrs in 3's and create blendColors Node etc.
+					//
+					string $bypassTmp[];
+					for($count=0;($count<3)&&($i<$connected);$count++)
+					{
+						$bypassTmp[$count] = $connectedAttrs[$i];
+						print ("$count="+$count+"\n");
+						$i++;
+						print ("$i="+$i+"\n");
+					}
+					// adjust for for-loop $i increment
+					$i--;
+					//print $connectedAttrs
+					takBlend_createBypassAnimatedU( $masterObj, $slaveObj, $bypassTmp);
+					print ("$bypassTmp:\n");
+					print $bypassTmp;
+					clear $bypassTmp;
+					// print $masterObj
+					// print $slaveObj
+				}
+			}else{
+				warning "NO attributes seemed to have existing connection to bypass ... aborted !";
+			}
+		}else{
+			warning "no attributes selected in channel box ... takBlend applyBypass aborted";
+		}
+	}else{
+		warning "channelBox not visible ... takBlend applyBypass aborted";
+	}
+}
+
+/////////////////////////////////////////////////////////
+//
+// constrain animated node with Utility node blending
+//
+//
+// args: 	$master means an object constrains slave object
+//
+//		$slave means an object to be constrained to the master object
+//
+//		$bypassAttrs[] means an array of 3 elements (index : 0 - 2)
+//			containing 3 common names (in a long name form) for 
+//			both master and slave objects
+//			ie., translateX translateY translateZ 
+//
+// example args:
+//
+//		string $bypassAttrsCall[] = {"translateX","translateY","translateZ"};
+//		takBlend_createBypassAnimatedU(
+//			"nurbsSphere1", "wristIK_L", $bypassAttrsCall );
+//
+// CAUTION : 
+//		Both master and slave attributes to be bypassed MUST have
+//		DG node connected to all attributes.
+//		
+//		$bypassAttrs' elements must be 3.
+//
+//		in a case of rotational attributes which sometimes utilizes unit-conversion nodes
+//		will NOT be take into a consideration, and simply will be skipped over,
+//		and the original connection plug before the unit-conversion will be referenced
+//		as source plugs.
+//
+
+global proc takBlend_createBypassAnimatedU( 	string $master, 
+							string $slave,
+							string $bypassAttrs[] )
+{
+	// debug
+	print "---takBlend_createBypassAnimatedU---\n";
+	print ("$master = "+$master+"\n");
+	print ("$slave  = "+$slave+"\n");
+	print ("$bypassAttrs["+(size($bypassAttrs))+"] = ");
+	print "\n";
+	print $bypassAttrs;
+	print	"\n";
+
+	// --- behind the scenes --- //
+	//
+	//	slave's attr existing connections are disconnected 
+	//		and now connected to blendColors.color1.colorRGB
+	//	master's attr are connected to blendColors.color2.colorRGB
+	//	blendColors.output are connected to slave attrs.
+	//	slave has a new attrs "master_attrs_blendNodeName_takBlend",
+	//		connecting to blendColors.blend
+	//
+	// --- behind the scenes end --- //
+
+	// debug here 2002/3/14
+
+	string	$blendNode = `createNode blendColors`;
+	string	$blendNodeAttrBase1 = $blendNode+".color1.color1";
+	string	$blendNodeAttrBase2 = $blendNode+".color2.color2";
+	string	$blendNodeblendAttr = $blendNode+".blender";
+	string	$blendNodeOutputAttrBase = $blendNode+".output";
+
+	// check to validate master + slave objects names are
+	// valid to be used as attribute names
+	// 
+	// ie. if pipe characters are used (|) then omit it
+
+	// master
+	// $master = $masterObj
+	string $masterN;	// these vars will be used for weight attributes names only
+	string $slaveN;
+	
+	if(`gmatch $master "*|*"`)
+	{
+		$masterN = tt_validNodeName( $master);
+	}else{
+		$masterN = $master;
+	}
+
+	// $slave = $slaveObj		
+
+	if(`gmatch  $slave "*|*"`)
+	{
+		$slaveN = tt_validNodeName( $slave);		
+	}else{
+		$slaveN = $slave;
+	}
+
+
+	// add slave node a constrain switch attribute
+	string $constAttrName = $masterN+"_"+$bypassAttrs[0]+"_"+$blendNode+"_tb";
+	string $constObjAttrName = $slave+"."+$constAttrName;
+	addAttr -smn 0.0 -smx 1.0  -ln $constAttrName -at "float" $slave;
+	setAttr -keyable on $constObjAttrName;
+
+	// debug here 2002/3/14
+
+	///////////////////////////////
+	//
+	// bypassAttrs array must have 0-2 elements
+	// 
+	// lists connected attributes of $slave node attrs
+	// followed by destination node
+	// 
+	string $listConnectionsResults[] = `listConnections -p 1 -c on -scn 1 $slave`;
+	//listConnections  -c 1 -p 1 -scn 1
+	string $connectedPlugs[];
+	string $connectPlugs[];
+	for ($i=0;$i<size($listConnectionsResults);$i+=2)
+	{
+		for($j=0;$j<size($bypassAttrs);$j++)
+		{
+			if (($slave+"."+$bypassAttrs[$j]) == ($listConnectionsResults[$i]))
+			{
+				$connectedPlugs[$j] = $listConnectionsResults[$i];
+				$connectPlugs[$j] = $listConnectionsResults[$i+1];
+				// $connectPlugs[$j] = `connectionInfo -sfd $connectedPlugs[(int)($i/2.0)]`;
+			}
+		}
+	}
+	//
+	// debug print
+	//
+	print "connectedPlugs: ";
+	print $connectedPlugs;
+	print "\n";
+	print "connectPlugs";
+	print $connectPlugs;
+	print "\n";
+
+	//
+	// disconnect and connect to colorBlend
+	//
+	int $i, $j;
+	for($i=0; $i<size($bypassAttrs);$i++)
+	{
+		for($j=0;$j<size($connectedPlugs);$j++)
+		{
+			if(($slave+"."+$bypassAttrs[$i]) == $connectedPlugs[$j])
+			{
+				string $component;
+				if($i==0)
+					$component = "R";
+				else if($i==1)
+					$component = "G";
+				else if($i==2)
+					$component = "B";
+	
+				// src --x-- dest
+				disconnectAttr $connectPlugs[$j] $connectedPlugs[$i];
+
+				// src > blendColors1
+				connectAttr $connectPlugs[$j] ($blendNodeAttrBase2+$component);
+	
+				// blendColors1 > dest
+				connectAttr ($blendNodeOutputAttrBase+$component) $connectedPlugs[$i];
+				// debug
+				print ("thru\n");
+			}
+		}
+		string $component;
+		if($i==0)
+			$component = "R";
+		else if($i==1)
+			$component = "G";
+		else if($i==2)
+			$component = "B";
+
+		connectAttr ($master+"."+$bypassAttrs[$i]) ($blendNodeAttrBase1+$component);
+		// debug
+		print ("thru Master ... "+$master+"."+$bypassAttrs[$i]+"\n");
+		//
+	}
+	print ("connectAttr -f "+$constObjAttrName+" "+$blendNodeblendAttr+"\n");
+	connectAttr -f $constObjAttrName $blendNodeblendAttr;
+	print ("connectAttr -f "+$constObjAttrName+" "+$blendNodeblendAttr+" SUCCESS\n");
+}
+
+/////////////////////////////////////////////////////////////////////////
+//
+// Bake Simulations
+//	+ clean up attrs
+//
+// select a single object to bake animation
+//
+// Script finds the weight attribute named "*blendColors*_tb"
+//	and its connected animCurves, delete nodes/attributes.
+//
+// bake simulation option box must be set via
+//	Edit > Keys > Bake Simulation Option box, and set setting there
+// (or this script will not work since bake timing is critical)
+//
+// 
+global proc takBlendBake()
+{
+	string $selObj[];
+	$selObj = `ls -sl`;
+	if(size($selObj)==1)
+	{
+		// DO not open option box !
+		// Just bake it now.
+		BakeSimulation;
+		
+		//
+		// find names of takBlend weight attributes
+		//
+		string $attrs[];
+		$attrs = `listAttr -ud -st "*blendColors*_tb" $selObj[0]`; 
+		if(size($attrs))
+		{
+			for($i=0;$i<size($attrs);$i++)
+			{
+
+				//
+				// delete animCurves if connected to weight attribute
+				//
+				string $animCurve[];
+				$animCurve = `listConnections -p 1 ($selObj[0]+"."+$attrs[$i])`;
+				if($animCurve[0]!="")
+				{
+					delete $animCurve[0];
+					print ($animCurve[0]+" DELETED\n");
+				}
+
+				//
+				// delete the weight attributes
+				//
+				deleteAttr ($selObj[0]+"."+$attrs[$i]);
+				print ($selObj[0]+"."+$attrs[$i]+" attribute DELETED\n");			}
+		}else{
+			warning("No valid takBlend weight attributes to delete ... aborting");
+		}
+	}else{
+		warning "please selct a single object for takBlend Bake ... aborting...";
+	}
+}
+
+
+///////////////////////////////////////////////////////////////
+//
+// delete immediate takBlend-ing
+//	+ restore previous connection
+//
+// select weight attribute and do delete Tak Blend
+//
+global proc deleteTakBlend(){
+	string $selObj[];
+	$selObj = `ls -sl`;
+	if(size($selObj)==1)
+	{
+		string $selAttrs[];
+		$selAttrs = `channelBox -q -sma mainChannelBox`;
+		if(size($selAttrs)!=0)
+		{
+			//
+			// are selected attributes takBlend weight ?
+			//
+			for($i=0; $i<size($selAttrs);$i++)
+			{
+				if(`gmatch $selAttrs[$i] "*_blendColors*_tb"`)
+				{
+
+					//
+					// obtain names of blendColors node
+					//
+
+					// tokenize with "_" and get 3rd element
+					string $tmpbuf[];
+					tokenize $selAttrs[$i] "_" $tmpbuf;
+					// count from last characters
+					int $indexTmp = (size($tmpbuf))-2;
+					string $bcNode = $tmpbuf[$indexTmp];
+
+					//
+					// obtain old (pre-takBlend) connection 
+					//
+					//  color2.color2R/G/B
+					//  skip unit conversion nodes for rotate type
+
+					string $oldAttrs[];
+					string $tmpSA[];
+					//
+					// check to see connections present, 
+					// and if so store to oldAttrs array
+					//
+					$tmpSA = `listConnections -p 1 -scn 1 ($bcNode+".color2.color2R")`;
+					if($tmpSA[0]!="")
+						$oldAttrs[0] = $tmpSA[0];
+					$tmpSA = `listConnections -p 1 -scn 1 ($bcNode+".color2.color2G")`;
+					if($tmpSA[0]!="")
+						$oldAttrs[1] = $tmpSA[0];
+					$tmpSA = `listConnections -p 1 -scn 1 ($bcNode+".color2.color2B")`;
+					if($tmpSA[0]!="")
+						$oldAttrs[2] = $tmpSA[0];
+
+					//
+					// re-connect from old output plugs to 
+					// current output destination  on current selected object
+					//
+					string $slaveInputAttrs[];
+					$tmpSA = `listConnections -p 1 -scn 1 ($bcNode+".outputR")`;
+					if($tmpSA[0]!="")
+						$slaveInputAttrs[0] = $tmpSA[0];
+					$tmpSA = `listConnections -p 1 -scn 1 ($bcNode+".outputG")`;
+					if($tmpSA[0]!="")
+						$slaveInputAttrs[1] = $tmpSA[0];
+					$tmpSA = `listConnections -p 1 -scn 1 ($bcNode+".outputB")`;
+					if($tmpSA[0]!="")
+						$slaveInputAttrs[2] = $tmpSA[0];
+
+					//
+					// connect 
+					//
+					for($j=0;$j<size($oldAttrs);$j++)
+						connectAttr -f $oldAttrs[$j] $slaveInputAttrs[$j];
+					// delete blendColor Node
+					if(`objExists $bcNode`)
+						delete $bcNode;
+
+					// delete weight Attr for blend
+					deleteAttr ($selObj[0]+"."+$selAttrs[$i]);
+				}
+			}
+		}else{
+			warning "Select attributes in channel box ... aborting";
+		}
+	}else{
+		warning "Must select a single object ... aborting";
+	}	
+}
+
+////////////////////////////////////////////
+//
+// Utilities
+//
+////////////////////////////////////////////
+
+global proc string tak_shortToLongNameAttr(string $node, string $attrShortName)
+{
+	// I looked around but I cannot find the way to
+	// lookup long name of an attribute from 
+	// its short name counterpart.
+	// A reason why I wanted this function was to
+	// get this "channelBox -q -sma mainChannelBox" 
+	// command to return the long name, but it didn't.
+	// so here it is...
+
+	// author :	Tak Takahashi 
+	// date : 		Feb 20, 2002
+
+	string $shortNames[];
+	string $longNames[];
+	$shortNames = `listAttr -sn $node`;
+	$longNames = `listAttr $node`;
+	string $longReturn = "";
+	for($i=0;$i < size($shortNames); $i++)
+	{
+		if($shortNames[$i] == $attrShortName)
+			$longReturn = $longNames[$i];
+	}
+	clear $shortNames;
+	clear $longNames;
+	return $longReturn;
+}
+
+
+global proc string tt_validNodeName(string $name)
+{
+	string $newName = "";
+	for($i=1;$i<=size($name);$i++)
+	{
+		string $singleChar = substring($name, $i, $i);
+		if(!`gmatch $singleChar "[a-z]"`)
+		{
+			if(!`gmatch $singleChar "[A-Z]"`)
+			{
+				if(!`gmatch $singleChar "[0-9]"`)
+				{
+					if(!`gmatch $singleChar "_"`)
+					{
+						$singleChar = "";
+					}
+				}
+			}
+		}
+		$newName += $singleChar;		
+	}
+	return $newName;
+}
+

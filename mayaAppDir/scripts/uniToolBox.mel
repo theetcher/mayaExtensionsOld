@@ -1,0 +1,390 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: uniToolBox v1.3
+''    Author: Edvard Toth
+''    Last Updated: December 2, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=interface#2033
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+
+//=====================================
+// uniToolBox v1.3 (11/2002)
+// by Edvard Toth 
+// 
+// The script is freeware. Non-commercial redistribution is permitted as long as this header remains included and unmodified.
+// Your feedback is always appreciated - if you find the script useful or if you have questions, comments, suggestions, requests 
+// or bug-reports please contact me at:
+//
+// contact@edvardtoth.com
+// http://www.edvardtoth.com
+// 
+//=====================================
+// INSTALLATION: Copy the script into your Maya script-directory and start it with the uniToolBox; command.
+//
+// COMPATIBILITY NOTE: Tested only with Maya4.0
+//
+// DESCRIPTION:
+// The script creates a Swiss Army-knife style unified interface featuring contols grouped in collapsible frames 
+// for a number of functions and operations. It includes a comprehensive collection of display-property controls, 
+// selection conversion, UV-mapping and prelighting commands. 
+//
+// Please note that right-clicking on most items will bring up additional sub-commands and/or options. 
+//
+// Important note about commands with adjustable settings: the buttons will always execute their assigned command using 
+// the most recent settings for that particular command. You can access the command's options-window and modify its settings
+// by right-clicking on the button or by locating its option-box within the standard Maya-interface.
+//
+// After executing the script the wireframe-on-shaded toggle, the Xray-toggle, the triangle-count and texture-reload 
+// subroutines can be accessed separately using the following commands:
+//
+// toggleWOS;
+// toggleXray;
+// triangleCount;
+// reloadTextures;
+//
+
+global proc uniToolBox()
+{
+
+global string $toolwin = "uniToolBox";
+
+   if (`window -ex $toolwin`) 
+   {
+      deleteUI $toolwin;
+   }
+
+window -t "uniToolBox" -rtf 1 -w 100 -h 100 -s 1 -mnb 1 -mxb 0 $toolwin;
+
+columnLayout -w 100 -columnWidth 100 -rowSpacing 3 -columnAlign "center" -co "both" 2 MainColumn;
+
+/// DISPLAY
+frameLayout -label " Display" -bv 0 -collapse true -collapsable true DisplayButtons;
+		 columnLayout -adjustableColumn false -rowSpacing 1 DisplayColumn;
+
+button -w 100 -label "Grid" -command "ToggleGrid";
+popupMenu;
+
+menuItem -label "Grid Options" -c "performGridOptions 1";
+
+button -w 100 -label "WireOnShaded" -command "toggleWOS()";
+button -w 100 -label "XRay" -command "toggleXray()";
+
+separator -h 3 -st "none";
+
+text -w 100 -label "BackFaceCulling";
+popupMenu;
+menuItem -label "BackFaceCulling On" -c "polyOptions -fb";
+menuItem -label "BackFaceCulling Off" -c "polyOptions -bc";
+
+text -w 100 -label "MiscDisplayItems";
+popupMenu;
+menuItem -label "Vertices" -command "polyOptions -r -dv false";
+menuItem -label "NurbsCVs" -command "ToggleCVs";
+menuItem -label "TextureBorders" -command "polyOptions -r -dmb false";
+menuItem -label "NonPlanarFaces" -command "polyOptions -r -dw false";
+
+text -w 100 -label "Show/Hide";
+popupMenu;
+menuItem -label "ShowSelection" -command "ShowSelectedObjects";
+menuItem -label "HideSelection" -command "HideSelectedObjects";
+menuItem -label "ShowLastHidden" -command "ShowLastHidden";
+menuItem -label "HideUnselected" -command "HideUnselectedObjects";
+
+
+setParent MainColumn;
+
+/// NORMALS
+
+frameLayout -label " Normals" -bv 0 -collapse true -collapsable true NormalButtons;
+		 columnLayout -adjustableColumn false -rowSpacing 1 NormalColumn;
+
+button -w 100 -label "FaceNormals" -command "polyOptions -r -dn false -f";
+popupMenu;
+menuItem -label "Short Normals" -c "setNormalsSize .16";
+menuItem -label "Medium Normals" -c "setNormalsSize .4";
+menuItem -label "Long Normals" -c "setNormalsSize 1";
+
+button -w 100 -label "VertexNormals" -command "polyOptions -r -dn false -pt";
+popupMenu;
+
+menuItem -label "Short Normals" -c "setNormalsSize .16";
+menuItem -label "Medium Normals" -c "setNormalsSize .4";
+menuItem -label "Long Normals" -c "setNormalsSize 1";
+
+button -w 100 -label "ReverseNormals" -command "polyNormal -normalMode 3 -ch 1";
+button -w 100 -label "ConformNormals" -command "polyNormal -normalMode 4 -ch 1";
+button -w 100 -label "AverageNormals" -command "performPolyAverageNormal 0";
+popupMenu;
+
+menuItem -label "AverageNormals Options" -command "performPolyAverageNormal 1";
+
+button -w 100 -label "UnlockNormals" -command "polyNormalPerVertex -ufn true";
+
+setParent MainColumn;
+
+/// EDGES
+
+frameLayout -label " Edges" -bv 0 -collapse true -collapsable true EdgeButtons;
+		 columnLayout -adjustableColumn false -rowSpacing 1 EdgeColumn;
+
+button -w 100 -label "MakeHardEdges" -command "polySoftEdge -a 0 -ch 1";
+button -w 100 -label "MakeSoftEdges" -command "polySoftEdge -a 180 -ch 1";
+
+separator -h 3 -st "none";
+
+text -w 100 -label "EdgeDisplay";
+popupMenu;
+menuItem -label "DisplayAllEdges" -command "polyOptions -ae";
+menuItem -label "DisplayHardEdges" -command "polyOptions -he";
+menuItem -label "DisplaySoftEdges" -command "polyOptions -se";
+
+setParent MainColumn;
+
+/// TRIANGLES
+
+frameLayout -label " Triangles" -bv 0 -collapse true -collapsable true TriangleButtons;
+		 columnLayout -adjustableColumn false -rowSpacing 1 TriangleColumn;
+
+button -w 100 -label "DisplayTriangles" -command "polyOptions -r -dt false";
+button -w 100 -label "Triangulate" -command "polyTriangulate -ch 1";
+button -w 100 -label "Quadrangulate" -command "performPolyQuadrangulate 0";
+popupMenu;
+menuItem -label "Quadrangulate Options" -command "performPolyQuadrangulate 1";
+
+button -w 100 -label "FlipTriangleEdge" -command "polyFlipEdge";
+
+separator -h 3 -st "none";
+
+button -w 100 -label "TriangleCount" -command "triangleCount()";
+
+setParent MainColumn;
+
+/// SELECTION
+
+frameLayout -label " Selection" -bv 0 -collapse true -collapsable true SelectionButtons;
+		 columnLayout -adjustableColumn false -rowSpacing 1 SelectionColumn;
+
+button -w 100 -label "GrowSelection" -command "GrowPolygonSelectionRegion";
+button -w 100 -label "ShrinkSelection" -command "ShrinkPolygonSelectionRegion";
+
+button -w 100 -label "Extract" -command "ExtractFace";
+popupMenu;
+menuItem -label "Extract Options" -command "ExtractFaceOptions";
+menuItem -label "Separate" -command "SeparatePolygon";
+
+button -w 100 -label "SelectContEdges" -command "performSelContiguousEdges 0";
+popupMenu;
+menuItem -label "SelectContEdges Options" -command "performSelContiguousEdges 1";
+
+separator -h 3 -st "none";
+
+text -w 100 -label "ConvertSelectionTo";
+popupMenu;
+
+menuItem -label "Faces" -command "PolySelectConvert 1";
+menuItem -label "Edges" -command "PolySelectConvert 2";
+menuItem -label "Vertices" -command "PolySelectConvert 3";
+menuItem -label "UVs" -command "PolySelectConvert 4";
+menuItem -label "Shell" -command "polySelectBorderShell 0";
+menuItem -label "Border" -command "polySelectBorderShell 1";
+menuItem -label "Boundary" -command "SelectPolygonSelectionBoundary;";
+
+setParent MainColumn;
+
+/// UV MAPPING
+
+frameLayout -label " UV Mapping" -bv 0 -collapse true -collapsable true UVButtons;
+		 columnLayout -adjustableColumn false -rowSpacing 1 UVColumn;
+
+button -w 100 -label "PlanarMapping" -command "projPlanar";
+popupMenu;
+menuItem -label "PlanarMapping Options" -command "projPlanarO";
+
+button -w 100 -label "CylindricalMapping" -command "projCylindrical";
+popupMenu;
+menuItem -label "CylindricalMapping Options" -command "projCylindricalO";
+
+button -w 100 -label "AutomaticMapping" -command "performPolyAutoProj 0";
+popupMenu;
+menuItem -label "AutomaticMapping Options" -command "performPolyAutoProj 1";
+
+separator -h 3 -st "none";
+
+button -w 100 -label "LayoutUVs" -command "performPolyLayoutUV 0;";
+popupMenu;
+menuItem -label "LayoutUVs Options" -command "performPolyLayoutUV 1;";
+
+button -w 100 -label "RelaxUVs" -command "performPolyUntangleUV relax 0";
+popupMenu;
+menuItem -label "RelaxUVs Options" -command "performPolyUntangleUV relax 1";
+
+button -w 100 -label "NormalizeUVs" -command "performPolyForceUV normalize 0";
+popupMenu;
+menuItem -label "NormalizeUVs Options" -command "performPolyForceUV normalize 1";
+
+button -w 100 -label "UnitizeUVs" -command "polyForceUV -unitize";
+
+separator -h 3 -st "none";
+
+button -w 100 -label "FlipUVs" -command "performPolyForceUV flip 0";
+popupMenu;
+menuItem -label "FlipUVs Options" -command "performPolyForceUV flip 1";
+
+button -w 100 -label "RotateUVs" -command "performPolyRotateUVs 0";
+popupMenu;
+menuItem -label "RotateUVs Options" -command "performPolyRotateUVs 1";
+
+button -w 100 -label "CutUVs" -command "polyPerformAction polyMapCut e 0";
+
+button -w 100 -label "MergeUVs" -command "performPolyMergeUV 0";
+popupMenu;
+menuItem -label "MergeUVs Options" -command "performPolyMergeUV 1";
+
+button -w 100 -label "MoveAndSewUVs" -command "performPolyMapSewMove 0";
+popupMenu;
+menuItem -label "MoveAndSewUVs Options" -command "performPolyMapSewMove 1";
+
+separator -h 3 -st "none";
+
+button -w 100 -label "ReloadTextures" -command "reloadTextures";
+
+setParent MainColumn;
+
+/// PRELIGHTING
+
+frameLayout -label " Prelighting" -bv 0 -collapse true -collapsable true PrelightButtons;
+		 columnLayout -adjustableColumn false -rowSpacing 1 PrelightColumn;
+
+button -w 100 -label "Prelight" -command "performPrelight 0";
+popupMenu;
+menuItem -label "Prelight Options" -command "performPrelight 1";
+
+button -w 100 -label "ApplyColor" -command "performApplyColor 0";
+popupMenu;
+menuItem -label "ApplyColor Options" -command "performApplyColor 1";
+
+button -w 100 -label "BreakLightLinks" -command "BreakLightLinks";
+
+button -w 100 -label "MakeLightLinks" -command "MakeLightLinks";
+
+setParent MainColumn;
+
+
+ showWindow ; 
+
+}
+
+//
+// *** TOGGLEWOS
+//
+
+global proc toggleWOS()
+{
+	string $myWindow = `getPanel -withFocus`;
+	{
+		int $wostoggle = `modelEditor -q -wos $myWindow`;
+		switch ($wostoggle)
+		{
+			case 0: modelEditor -e -wos true $myWindow;
+				break;
+			case 1: modelEditor -e -wos false $myWindow;
+				break;
+			default: break;
+		}
+	}
+}
+
+//
+// *** TOGGLEXRAY
+//
+
+global proc toggleXray()
+{
+	string $myWindow = `getPanel -withFocus`;
+	{
+		int $xraytoggle = `modelEditor -q -xray $myWindow`;
+		switch ($xraytoggle)
+		{
+			case 0: modelEditor -e -xray true $myWindow;
+				break;
+			case 1: modelEditor -e -xray false $myWindow;
+				break;
+			default: break;
+		}
+	}
+}
+
+
+//
+// *** TRIANGLECOUNT
+//
+
+global proc triangleCount()
+{
+	string $SelectedObject [] = `ls -sl`;
+
+	if ( size ($SelectedObject [0]) == 0 )
+	{
+	print ("Select polygonal objects.");
+	return;
+	}
+
+	int $triangleSel = 0;
+	
+	int $resultSel[] = `polyEvaluate -t`;	
+	$triangleSel += $resultSel[0];
+	
+	print ( "Selected triangles: " + $triangleSel + "\n" );
+	
+}
+
+//
+// *** TEXTURE RELOAD
+//
+
+global proc reloadTextures ()
+{
+string $textures [] = `ls -tex`;
+for ($i=0; $i<size($textures); $i++)
+	{
+	print ( $textures[$i] + "\n" );
+	
+		string $id = $textures[$i] + ".fileTextureName";
+		string $name=`getAttr $id`; 
+		setAttr $id -type "string" $name;
+	
+
+	}
+}
+
+
+//
+// *** MAPPING PROCESSES
+//
+
+global proc projPlanar ()
+{
+performPolyProjectionArgList "1" {"0", "Planar", "ls -sl", "0"} "";
+}
+
+global proc projPlanarO ()
+{
+performPolyProjectionArgList "1" {"1", "Planar", "ls -sl", "0"} "";
+}
+
+global proc projCylindrical ()
+{
+performPolyProjectionArgList "1" {"0", "Cylindrical", "ls -sl", "0"} "";
+}
+
+global proc projCylindricalO ()
+{
+performPolyProjectionArgList "1" {"1", "Cylindrical", "ls -sl", "0"} "";
+}

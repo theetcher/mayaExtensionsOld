@@ -1,0 +1,77 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: MKShiftBackgroundColor v1.1
+''    Author: Mohsan Khan
+''    Last Updated: February 25, 2003
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=interface#2055
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//     Version: 1.1
+//     Created: 12 Dec, 2002
+//     Last Modified: 25 Feb, 2003
+//     Tested: Maya 4.5 - Mac OS X
+//     Script Function Call: MKShiftBackgroundColor();
+//     Will shift the background color between black-dark grey-light grey-white.
+//     Also shifting the colors to match the background for the grid, keys, selection handles, timelabels, headsup displays and active curves.
+
+
+int $ci ;
+
+	
+if( $ci == 0 )
+{
+     displayRGBColor -c background .7 .7 .7;
+     displayColor -c -dormant selectHandle 1;
+     displayRGBColor -c dormantKeyframe 0 0 0;
+     displayColor -c -dormant gridHighlight 3;
+     displayColor -c -dormant grid 3;
+     displayRGBColor -c timeLabel 0 0 0;
+     displayColor -c -dormant headsUpDisplayValues 1;
+     displayRGBColor -c activeCurve 0 0 0;
+     $ci  = 1;
+}
+else if( $ci == 1 )
+{
+     displayRGBColor -c background 1 1 1;
+     displayColor -c -dormant selectHandle 1;
+     displayRGBColor -c dormantKeyframe 0 0 0;
+     displayColor -c -dormant gridHighlight 3;
+     displayColor -c -dormant grid 3;
+     displayRGBColor -c timeLabel 0 0 0;
+     displayColor -c -dormant headsUpDisplayValues 1;
+     displayRGBColor -c activeCurve 0 0 0;
+     $ci  = 2;
+}
+else if( $ci == 2 )
+{
+     displayRGBColor -c background 0 0 0;
+     displayColor -c -dormant selectHandle 2;
+     displayRGBColor -c dormantKeyframe 1 1 1;
+     displayColor -c -dormant gridHighlight 2;
+     displayColor -c -dormant grid 2;
+     displayRGBColor -c timeLabel 0.5 0.5 0.5;
+     displayColor -c -dormant headsUpDisplayValues 3;
+     displayRGBColor -c activeCurve 0.5 0.5 0.5;
+     $ci  = 3;
+}
+else if( $ci == 3 )
+{
+     displayRGBColor -c background .1 .1 .1;
+     displayColor -c -dormant selectHandle 2;
+     displayRGBColor -c dormantKeyframe 1 1 1;
+     displayColor -c -dormant gridHighlight 2;
+     displayColor -c -dormant grid 2;
+     displayRGBColor -c timeLabel 0.5 0.5 0.5;
+     displayColor -c -dormant headsUpDisplayValues 3;
+     displayRGBColor -c activeCurve 0.5 0.5 0.5;
+     $ci  = 0;
+}
+
+print( $ci );

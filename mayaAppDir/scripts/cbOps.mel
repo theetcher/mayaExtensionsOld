@@ -1,0 +1,457 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: cbOps.mel v0.0
+''    Author: Joss
+''    Last Updated: September 14, 2001
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=interface#1236
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+// cbOps.mel, version 1.0: "channel box operations" Maya MEL script (channel box = CB in further text)
+
+// consists of three main functions:
+// 1:
+//		Randomize any selected in CB attribute, i.e. - transforms, history, input, shape attributes.
+//		Even the NURBS cv's and polyVertices ( i was wondered too, when discovered this ;)
+//		Randomization can be absolute or local, i.e. attributes will be replaced with entirely new values
+//		or some random value will be added to already defined values. Workflow is pretty simple:
+//		select some objects, select their attributes in CB, set min/max ranges in script's window,
+//		check/uncheck "abs" flag, press "Randomize button".
+// 2:
+//		Lerping. Linear interpolation of one or more attributes between objects.
+//		Example: create 10 spheres, randomize their positions in space, first select sphere,
+//		attributes of which defines the start of range (starting object), then all intermediate
+//		objects, and then ending object. Then select transform attributes in CB(in our example - transform,
+//		but you can lerp any attributes). Press "Interpolate" button. See what you've just done. ;)
+// 3:
+//		Copying and pasting attributes between multiple objects. Again - you can copy/paste
+//		not only transforms, but history, shape and input attributes. Select the source object,
+//		then few attributes in CB, press "Copy" button, then select your target objects,
+//		and simply press "Paste" button. That's all.
+//		Little note about pasting values into history, input and shape attributes:
+//		You need to "expand" this sections in CB, i.e. press mouse button on, for example,
+//		polyCube history node in CB before pasting values in it. If you don't, values
+//		will not be pasted onto _this_ node.
+
+//		Usage:
+//		bind next command to one of keys:
+//		"cbOps()"
+
+// Todo stuff:
+//		check for attribute existence needed
+//		check for target attribute min and max values
+//		rewrite this stuff to reasonable condition ;)
+
+// Notes:
+// I'm not a hardcore programmer, so this script not protected from any dumb errors(but only from some;).
+// It was written only because of lack some of vital functions(vital for me) in Maya.
+// This scripts can be very slow and unoptimized, but it works for me on NT machines, on Maya3/4,
+// looks useful for me, so i decided to share one.
+// Randomizing of 5000 polyVertices on Celeron/366 machine takes near about 30-60 seconds to be done.
+// Any comments you can post to my e-mail: org13@mail.ru
+
+// cbOps.mel, (L) Alexander "Joss" Khalyavin, all lefts reserved ;)
+// You can modify in this text whatever you want.
+
+
+global proc cb_rnd (float $minBound, float $maxBound, int $absFlag)
+{
+	string $attrList[], $objList[];
+	int $a, $i, $j, $numObjs, $attrCount, $objCount;
+    float $value;	
+
+	string $selObjs[] = `ls -sl`;
+	$numObjs = size($selObjs);
+	if (!$numObjs) error ("Nothing selected...you need to select some objects and their attributes\nin channel box to randomize.\n");
+
+	for ($a = 1; $a <= 4; $a++)
+	{
+		if ($a == 1)	// mainObjects
+		{
+			$attrList = eval ("channelBox -q -selectedMainAttributes $gChannelBoxName");
+			$objList = eval ("channelBox -q -mainObjectList $gChannelBoxName");
+		}
+		else if ($a == 2)
+		{
+			$attrList = eval ("channelBox -q -selectedShapeAttributes $gChannelBoxName");
+			$objList = eval ("channelBox -q -shapeObjectList $gChannelBoxName");
+		}
+		else if ($a == 3)
+		{
+			$attrList = eval ("channelBox -q -selectedHistoryAttributes $gChannelBoxName");
+			$objList = eval ("channelBox -q -historyObjectList $gChannelBoxName");
+		}
+		else if ($a == 4)
+		{
+			$attrList = eval ("channelBox -q -selectedOutputAttributes $gChannelBoxName");
+			$objList = eval ("channelBox -q -outputObjectList $gChannelBoxName");
+		}
+
+		$attrCount = size ($attrList);
+		$objCount = size ($objList);
+
+		for ($i = 0; $i < $objCount; $i ++) //iterating thru objList
+		{
+			for ($j = 0; $j < $attrCount; $j++) //iterating thru attrList for every object
+			{
+				if ($absFlag)
+				{
+					$value = rand ($minBound, $maxBound);
+				}
+				else
+				{
+					$value = eval ("getAttr " + $objList[$i] + "." + $attrList[$j]);
+					$value += rand ($minBound, $maxBound);
+				}
+				eval ("setAttr " + $objList[$i] + "." + $attrList[$j] + " " + $value);
+			}
+		}
+	}
+//EOS
+}
+
+//----------------------
+
+global proc cb_lerp ()
+{
+	string $selObjs[], $objList[], $objListFixed[], $attrList[], $tempAttrList[];
+	int $a, $i, $j, $numObjs, $attrCount, $objCount, $cnt;
+    float $value, $range, $rangeStep;
+
+    //GET SELECTED OBJECTS LIST
+	$selObjs = `ls -sl`;
+	$numObjs = size($selObjs);
+	if ( !$numObjs ) error ("Nothing selected. You need to select few objects and one or more\nattributes in ChannelBox to interpolate between objects.\n");
+
+	for ($a = 1; $a <= 4; $a++)
+	{
+		if ($a == 1)	// mainObjects
+		{
+			$attrList = eval ("channelBox -q -selectedMainAttributes $gChannelBoxName");
+			$objList = eval ("channelBox -q -mainObjectList $gChannelBoxName");
+		}
+		else if ($a == 2)
+		{
+			$attrList = eval ("channelBox -q -selectedShapeAttributes $gChannelBoxName");
+			$objList = eval ("channelBox -q -shapeObjectList $gChannelBoxName");
+		}
+		else if ($a == 3)
+		{
+			$attrList = eval ("channelBox -q -selectedHistoryAttributes $gChannelBoxName");
+			$objList = eval ("channelBox -q -historyObjectList $gChannelBoxName");
+		}
+		else if ($a == 4)
+		{
+			$attrList = eval ("channelBox -q -selectedOutputAttributes $gChannelBoxName");
+			$objList = eval ("channelBox -q -outputObjectList $gChannelBoxName");
+		}
+
+		$attrCount = size ($attrList);
+
+		if ( $attrCount )
+		{
+			$objListFixed = cbObjList_BugFix ( $objList );
+			$objCount = size ($objListFixed);
+			if ( $objCount < 2 ) error ("Too little objects selected.\nYou need to select MORE THEN TWO objects\nand one or more attributes in\nChannelBox to interpolate them between objects.\n");			
+
+			for ($j = 0; $j < $attrCount; $j++)		// $j - attribute enumerator
+			{
+				float $min = eval ("getAttr " + $objListFixed[0] + "." + $attrList[$j]);
+				float $max = eval ("getAttr " + $objListFixed[$objCount - 1] + "." + $attrList[$j]);
+				if ( $min == $max ) break;
+				float $a = $max > $min ? $min : $max;	// initializing ranges for keep value within
+				float $b = $max > $min ? $max : $min;
+				$range = $max - $min;
+				$rangeStep = $range / ($objCount - 1);
+				$cnt = 0;
+				for ( $value = $min; ( $value >= $a ) && ( $value <= $b ); $value += $rangeStep )
+				{
+					eval ("setAttr " + $objListFixed[$cnt] + "." + $attrList[$j] + " " + $value);
+					$cnt++;
+				}
+			}
+		}
+	}
+
+//EOS
+}
+
+//----------------------
+
+global proc string[] cbObjList_BugFix (string $in[])
+{
+	// proc for fixing a bug in "channelBox" command, when selected object list returned is not matches with `ls -sl` list,
+	// in other words, order, in which objects was selected is corrupted. (first object suddenly becomes last in array 8-0 )
+
+	int $i, $cntr;
+	string $out[];
+
+	$sz = size ( $in );
+	for ($i = 1; $i < $sz; $i++) $out[$i-1] = $in[$i];
+	$out[$sz-1] = $in[0];
+	return $out;
+}
+
+
+//----------------------
+//todo:
+// check for attribute existence needed
+// check for attribute min and max values(?)
+// counter on copied/pasted attrs
+// copy - one object, paste - multiple
+
+global string $jossCopyPasteObjAttr[];
+global string $jossCopyPasteShapeAttr[];
+global string $jossCopyPasteHistAttr[];
+global string $jossCopyPasteInAttr[];
+global float $jossCopyPasteObjValue[];
+global float $jossCopyPasteShapeValue[];
+global float $jossCopyPasteHistValue[];
+global float $jossCopyPasteInValue[];
+
+global proc cb_cp (int $cpFlag)	// 0 - copy, 1 - paste
+{
+	global string $jossCopyPasteObjAttr[];
+	global string $jossCopyPasteShapeAttr[];
+	global string $jossCopyPasteHistAttr[];
+	global string $jossCopyPasteInAttr[];
+	global float $jossCopyPasteObjValue[];
+	global float $jossCopyPasteShapeValue[];
+	global float $jossCopyPasteHistValue[];
+	global float $jossCopyPasteInValue[];
+
+	string $attrList[], $objList[], $temp;
+	int $a, $i, $numObjs, $attrCount, $objCount;
+    float $value;
+
+	if ($cpFlag == 0)	// in COPY section
+	{
+		clear $jossCopyPasteObjAttr;	// clearing global arrays...to be on the safe side...
+		clear $jossCopyPasteShapeAttr;
+		clear $jossCopyPasteHistAttr;
+		clear $jossCopyPasteInAttr;
+		clear $jossCopyPasteObjValue;
+		clear $jossCopyPasteShapeValue;
+		clear $jossCopyPasteHistValue;
+		clear $jossCopyPasteInValue;
+
+        string $selObjs[] = `ls -sl`;
+		$numObjs = size($selObjs);
+		if (!$numObjs) error ("Nothing selected to copy FROM...\nselect some object and its attributesin channel box.\n");
+		
+		for ($a = 1; $a <= 4; $a++)
+		{
+			if ($a == 1)	// objects
+			{
+				$attrList = eval ("channelBox -q -selectedMainAttributes $gChannelBoxName");
+				$objList = eval ("channelBox -q -mainObjectList $gChannelBoxName");
+				if ( size ($attrList) > 0 )
+				{
+					for ($i = 0; $i < size($attrList); $i++ )
+					{
+						$jossCopyPasteObjAttr[$i] = $attrList[$i];
+                        $jossCopyPasteObjValue[$i] = eval ("getAttr " + $objList[0] + "." + $attrList[$i]);
+					}
+				}
+			}
+			else if ($a == 2)	// shape
+			{
+				$attrList = eval ("channelBox -q -selectedShapeAttributes $gChannelBoxName");
+				$objList = eval ("channelBox -q -shapeObjectList $gChannelBoxName");
+   				if ( size ($attrList) > 0 )
+				{
+					for ($i = 0; $i < size($attrList); $i++ )
+					{
+						$jossCopyPasteShapeAttr[$i] = $attrList[$i];
+                        $jossCopyPasteShapeValue[$i] = eval ("getAttr " + $objList[0] + "." + $attrList[$i]);
+					}
+				}
+			}
+			else if ($a == 3)	// history
+			{
+				$attrList = eval ("channelBox -q -selectedHistoryAttributes $gChannelBoxName");
+				$objList = eval ("channelBox -q -historyObjectList $gChannelBoxName");
+                if ( size ($attrList) > 0 )
+				{
+					for ($i = 0; $i < size($attrList); $i++ )
+					{
+						$jossCopyPasteHistAttr[$i] = $attrList[$i];
+                        $jossCopyPasteHistValue[$i] = eval ("getAttr " + $objList[0] + "." + $attrList[$i]);
+					}
+				}
+			}
+			else if ($a == 4)	// inputs
+			{
+				$attrList = eval ("channelBox -q -selectedOutputAttributes $gChannelBoxName");
+				$objList = eval ("channelBox -q -outputObjectList $gChannelBoxName");
+                if ( size ($attrList) > 0 )
+				{
+					for ($i = 0; $i < size($attrList); $i++ )
+					{
+						$jossCopyPasteInAttr[$i] = $attrList[$i];
+                        $jossCopyPasteInValue[$i] = eval ("getAttr " + $objList[0] + "." + $attrList[$i]);
+					}
+				}
+			}
+		}
+	}
+	else if ($cpFlag == 1)
+	{
+		string $selObjs[] = `ls -sl`;
+		$numObjs = size($selObjs);
+		if (!$numObjs) error ("Nothing selected for copy TO...");
+
+		for ($a = 1; $a <= 4; $a++)
+		{
+			if ($a == 1)	// objects
+			{				
+				if ( size ($jossCopyPasteObjAttr) > 0 )
+				{
+					$objList = eval ("channelBox -q -mainObjectList $gChannelBoxName");
+					for ($temp in $objList)
+					{
+						for ($i = 0; $i < size($jossCopyPasteObjAttr); $i++ )
+						{
+							if ( objExists($temp + "." + $jossCopyPasteObjAttr[$i]) ) eval ("setAttr " + $temp + "." + $jossCopyPasteObjAttr[$i] + " " + $jossCopyPasteObjValue[$i]);
+						}
+					}
+				}
+			}
+            else if ($a == 2)	// shape
+			{				
+				if ( size ($jossCopyPasteShapeAttr) > 0 )
+				{
+					$objList = eval ("channelBox -q -shapeObjectList $gChannelBoxName");
+					for ($temp in $objList)
+					{
+						for ($i = 0; $i < size($jossCopyPasteShapeAttr); $i++ )
+						{
+							if ( objExists($temp + "." + $jossCopyPasteShapeAttr[$i]) ) eval ("setAttr " + $temp + "." + $jossCopyPasteShapeAttr[$i] + " " + $jossCopyPasteShapeValue[$i]);
+						}
+					}
+				}
+			}
+            else if ($a == 3)	// history
+			{				
+				if ( size ($jossCopyPasteHistAttr) > 0 )
+				{
+					$objList = eval ("channelBox -q -historyObjectList $gChannelBoxName");
+					for ($temp in $objList)
+					{
+						for ($i = 0; $i < size($jossCopyPasteHistAttr); $i++ )
+						{
+							if ( objExists($temp + "." + $jossCopyPasteHistAttr[$i]) ) eval ("setAttr " + $temp + "." + $jossCopyPasteHistAttr[$i] + " " + $jossCopyPasteHistValue[$i]);
+						}
+					}
+				}
+			}
+            else if ($a == 4)	// inputs
+			{				
+				if ( size ($jossCopyPasteInAttr) > 0 )
+				{
+					$objList = eval ("channelBox -q -outputObjectList $gChannelBoxName");
+					for ($temp in $objList)
+					{						
+						for ($i = 0; $i < size($jossCopyPasteInAttr); $i++ )
+						{
+							if ( objExists($temp + "." + $jossCopyPasteInAttr[$i]) ) eval ("setAttr " + $temp + "." + $jossCopyPasteInAttr[$i] + " " + $jossCopyPasteInValue[$i]);
+						}
+					}
+				}
+			}
+		}
+	}
+//EOS
+}
+
+
+//----------------------
+
+
+global proc cbOps()
+{
+	$cmd = "float $minBound = eval (\"textFieldGrp -q -text cbrndMinBound\");float $maxBound = eval (\"textFieldGrp -q -text cbrndMaxBound\");int $absFlag = eval (\"checkBox -q -value cbrndAbsMode\");cb_rnd ($minBound, $maxBound, $absFlag);";
+
+	if (`window -ex cbOpsWindow`) deleteUI cbOpsWindow;
+
+	window -title "channelBox Operations" -maximizeButton false cbOpsWindow;
+	formLayout cbOpsLayout;
+
+	textFieldGrp
+		-cw 1 75
+		-cw 2 100
+		-label "minBound:"
+		-text "-1"
+		cbrndMinBound;
+
+   	textFieldGrp
+   		-cw 1 75
+		-cw 2 100
+		-label "minBound:"
+		-text "1"
+		cbrndMaxBound;
+
+	checkBox
+		-label "abs mode"
+        -value 0
+        cbrndAbsMode;
+
+	button
+		-width 175
+		-height 25
+		-label "Randomize"
+		-command $cmd cbRndButton;
+
+	button
+		-width 175
+		-height 25
+		-label "Interpolate"
+		-command
+		"cb_lerp();" cbLerpButton;
+
+	button
+		-width 40
+		-height 25
+		-label "Copy"
+		-command 
+		"cb_cp(0)" cbCopyButton;
+
+	button
+		-width 40
+		-height 25
+		-label "Paste"
+		-command 
+		"cb_cp(1)" cbPasteButton;
+		
+	formLayout -edit
+		-attachForm cbrndMinBound "top" 5
+		-attachForm cbrndMinBound "left" 5
+
+		-attachControl cbrndMaxBound "top" 5 cbrndMinBound
+		-attachForm cbrndMaxBound "left" 5
+
+		-attachControl cbrndAbsMode "top" 5 cbrndMaxBound
+        -attachForm cbrndAbsMode "left" 5
+
+		-attachControl cbRndButton "top" 5 cbrndAbsMode
+		-attachForm cbRndButton "left" 5
+
+   		-attachControl cbLerpButton "top" 5 cbRndButton
+		-attachForm cbLerpButton "left" 5
+
+		-attachControl cbCopyButton "left" 5 cbRndButton
+        -attachControl cbCopyButton "top" 5 cbrndAbsMode
+
+		-attachControl cbPasteButton "left" 5 cbLerpButton
+		-attachControl cbPasteButton "top" 5 cbRndButton
+		cbOpsLayout;
+
+	window -edit -width 240 -height 165 cbOpsWindow;
+	showWindow cbOpsWindow;
+}

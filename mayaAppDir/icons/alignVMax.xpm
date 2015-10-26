@@ -1,0 +1,39 @@
+/* XPM */
+static char *alignVMax[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #0e0607",
+". c #c87b7a",
+"# c #a40604",
+"a c #c4c2c4",
+"b c #143495",
+"c c #645250",
+"d c #f9090a",
+"e c #4f1719",
+/* pixels */
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aabbbbbbbbbbbbbbbbbbbbaa",
+"aabbbbbbbbbbbbbbbbbbbbaa",
+"aaaaaaaaaaad.aaaaaaaaaaa",
+"aaaaaaaaaa.dd.aaaaaaaaaa",
+"aaaaaaaaaadddbaaaaaaaaaa",
+"aaaaaaaaa.dddeaaaaaaaaaa",
+"aaaaaaaaa.ddd#caaaaaaaaa",
+"aaaaaaaaadddddeaaaaaaaaa",
+"aaaaaaaaaaad`c.aaaaaaaaa",
+"aaaaaaaaaaad`aaaaaaaaaaa",
+"aaaaaaaaaaad`aaaaaaaaaaa",
+"aaaaaaaaaaad`aaaaaaaaaaa",
+"aaaaaaaaaaad`aaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa"
+};

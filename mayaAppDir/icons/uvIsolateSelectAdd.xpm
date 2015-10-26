@@ -1,0 +1,39 @@
+/* XPM */
+static char *uvIsolateSelectAdd[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #143494",
+". c #9c9a9c",
+"# c #fc0405",
+"a c #ec1e1f",
+"b c #f91011",
+"c c #c4c2c4",
+"d c #e42a2c",
+"e c #fc1614",
+/* pixels */
+"cccccccccccccccccccccccc",
+"cccccccccccccccccccccccc",
+"ccc```````````........cc",
+"ccc```````````........cc",
+"ccc``ccccccc``cccccc..cc",
+"ccc``ccccccc``cccccc..cc",
+"ccc``ccccccc``cccccc..cc",
+"ccc``ccccccc``cccccc..cc",
+"ccc``ccccccc``cccccc..cc",
+"ccc``ccccccc``cccccc..cc",
+"ccc``ccccccc``cccccc..cc",
+"ccc```````````........cc",
+"ccc```````````..bb....cc",
+"ccc..ccccccc..cc##cc..cc",
+"ccc..ccccccc..cc##cc..cc",
+"ccc..ccccccc.a#b##bbd.cc",
+"ccc..ccccccc.a######a.cc",
+"ccc..ccccccc..cc#acc..cc",
+"ccc..ccccccc..cc#bcc..cc",
+"ccc..ccccccc..cc#acc..cc",
+"ccc...................cc",
+"ccc...................cc",
+"cccccccccccccccccccccccc",
+"cccccccccccccccccccccccc"
+};

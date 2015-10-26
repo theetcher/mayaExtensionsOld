@@ -1,0 +1,407 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: dnPolyhedron v1.1
+''    Author: Danny Ngan
+''    Last Updated: June 6, 2004
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=polygon#2949
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+/*
+-------------------
+
+dnPolyhedron v1.1
+by Danny Ngan
+http://www.dannyngan.com
+
+-------------------
+
+DESCRIPTION:
+
+Creates polyhedron shapes from one of four base platonic solids:
+
+	tetrahedron (4 sides)
+	octahedron (8 sides)
+	dodecahedron (12 sides)
+	icosahedron (20 sides)
+
+(Technically, there is a fifth platonic solid: the hexahedron or cube.
+It is not included here, because the cube is already part of Maya.)
+
+-------------------
+
+Inspiration and reference from the following sources:
+
+"The MEL Companion: Maya Scripting for 3D Artists" by David Stripinis
+
+"GeoSphere.mel" by T. Elser
+
+"VB Helper Tutorial: Drawing Platonic Solids"
+	http://www.vb-helper.com/tutorial_platonic_solids.html
+
+-------------------
+
+INSTALLATION:
+
+Place "dnPolyhedron.mel" into the user scripts directory:
+
+	OSX: ~/Library/Preferences/AliasWavefront/maya/scripts/
+	Windows: My Documents/maya/scripts/
+
+The optional shelf icons can be placed in the user icons directory:
+
+	OSX: ~/Library/Preferences/AliasWavefront/maya/5.0/prefs/icons/	Windows: My Documents/maya/5.0/prefs/icons/
+	
+There are versions for both OSX (.xpm) and Windows (.bmp).
+
+-------------------
+
+USAGE:
+
+Run the following command from Maya's command line or the script editor:
+
+	dnPolyhedron;
+
+Select the options then click the Create button.
+
+Note that each level of iteration contains four times as many triangles
+as the previous iteration level. For example:
+
+	A tetrahedron with 0 iterations contains 4 faces.
+	A tetrahedron with 1 iteration contains 16 faces.
+	A tetrahedron with 2 iterations contains 64 faces.
+	and so on...
+
+-------------------
+
+VERSION HISTORY:
+
+v1.1 (June 6, 2004)
+- Added dodecahedron. (Thanks to Marius Giurgi for adding this.)
+
+v1.0 (May 23, 2004)
+- Initial release.
+
+-------------------
+*/
+
+
+
+// buildTetrahedron
+//
+// Build a 4-side shape.
+
+proc buildTetrahedron (float $radius)
+{
+	// Define the vectors for each of the shape's vertices	vector $vert_01 = << 0, 0, sqrt(3) - (1/sqrt(3)) >>;	vector $vert_02 = << -1, 0, -1/sqrt(3) >>;	vector $vert_03 = << 1, 0, -1/sqrt(3) >>;	vector $vert_04 = << 0, sqrt(3 - 1/3), 0 >>;		// To determine the vertex positions	// at the user radius		float $currRadius = $vert_01;	float $scalar = ( $radius / $currRadius );		$vert_01 = ( $vert_01 * $scalar );	$vert_02 = ( $vert_02 * $scalar );	$vert_03 = ( $vert_03 * $scalar );	$vert_04 = ( $vert_04 * $scalar );				/*	Vertex connection order	surf01 = 1 2 3	surf02 = 1 3 4	surf03 = 1 4 2	surf04 = 2 4 3	*/	
+	// Create the faces.
+		string $surf_01[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)					`					;				string $surf_02[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)					`					;				string $surf_03[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)					`					;				string $surf_04[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)					`					;				// combine all facets into a single shape	string $shape[] = `polyUnite							-constructionHistory off							$surf_01							$surf_02							$surf_03							$surf_04						`						;													int $numVerts[] = `polyEvaluate -vertex $shape[0]`;		// merge vertices	polyMergeVertex		-distance 0.01	// dn mod changed from .05 to .01		-constructionHistory off		($shape[0] + ".vtx[0:" + ($numVerts[0] - 1) + "]")	;		// select the shape instead of components	select -replace $shape[0];			// find the xforms of each vertex	float $v1[] = `xform -q -t ($shape[0] + ".vtx[0]")`;	float $v2[] = `xform -q -t ($shape[0] + ".vtx[1]")`;	float $v3[] = `xform -q -t ($shape[0] + ".vtx[2]")`;	float $v4[] = `xform -q -t ($shape[0] + ".vtx[3]")`;		// assign the xforms to vectors	vector $vert1 = << $v1[0], $v1[1], $v1[2] >>;	vector $vert2 = << $v2[0], $v2[1], $v2[2] >>;	vector $vert3 = << $v3[0], $v3[1], $v3[2] >>;	vector $vert4 = << $v4[0], $v4[1], $v4[2] >>;		// get the average of all the vectors	vector $cp = ($vert1 + $vert2 + $vert3 + $vert4) / 4;		// move the shape's pivot point to the average location	xform -pivots ($cp.x) ($cp.y) ($cp.z) $shape[0];		// move the shape to world center and freeze transforms	move -rpr 0 0 0 $shape[0];	makeIdentity -apply true $shape[0];}
+
+// end buildTetrahedron
+
+
+
+
+// buildOctahedron
+//
+// Build an 8-sided shape.
+
+proc buildOctahedron (float $radius)
+{
+	// Define the vectors for each of the shape's vertices	vector $vert_01 = << 1, 0, 0 >>;	vector $vert_02 = << 0, 1, 0 >>;	vector $vert_03 = << 0, 0, 1 >>;	vector $vert_04 = << -1, 0, 0>>;	vector $vert_05 = << 0, -1, 0>>;	vector $vert_06 = << 0, 0, -1>>;		// To determine the vertex positions	// at the user radius		float $currRadius = $vert_01;	float $scalar = ( $radius / $currRadius );		$vert_01 = ( $vert_01 * $scalar );	$vert_02 = ( $vert_02 * $scalar );	$vert_03 = ( $vert_03 * $scalar );	$vert_04 = ( $vert_04 * $scalar );	$vert_05 = ( $vert_05 * $scalar );	$vert_06 = ( $vert_06 * $scalar );			/*	Vertex connection order	surf01 = 1 2 3	surf02 = 1 3 5	surf03 = 1 5 6	surf04 = 1 6 2	surf05 = 4 3 2	surf06 = 4 2 6	surf07 = 4 6 5	surf08 = 4 5 3	*/       
+
+	// Create the faces.
+		string $surf_01[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)					`					;			string $surf_02[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)					`					;	string $surf_03[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)					`					;	string $surf_04[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)					`					;			string $surf_05[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)					`					;			string $surf_06[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)					`					;			string $surf_07[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)					`					;			string $surf_08[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)					`					;			// combine all facets into a single shape	string $shape[] = `polyUnite							-constructionHistory off							$surf_01							$surf_02							$surf_03							$surf_04							$surf_05							$surf_06							$surf_07							$surf_08						`						;														int $numVerts[] = `polyEvaluate -vertex $shape[0]`;		// merge vertices	polyMergeVertex		-distance 0.01	// dn mod changed from .05 to .01		-constructionHistory off		($shape[0] + ".vtx[0:" + ($numVerts[0] - 1) + "]")	;		// select the shape instead of components	select -replace $shape[0];	}
+
+// end buildOctahedron
+
+
+
+
+// buildDodecahedron
+//
+// Build a 12-sided shape.
+
+proc buildDodecahedron (float $radius)
+{
+	// notation (unit vector)
+	float $a = 1/sqrt(3);
+	float $b = sqrt((3-sqrt(5))/6);
+	float $c = sqrt((3+sqrt(5))/6);	
+	// List of initial vertex locations	vector $vert_01 = << $a, -$a , $a >>;
+	vector $vert_02 = << $a, $a , $a >>;
+	vector $vert_03 = << $a, -$a , -$a >>;	vector $vert_04 = << $a, $a , -$a >>;
+	vector $vert_05 = << -$a, -$a , $a >>;
+	vector $vert_06 = << -$a, $a , $a >>;
+	vector $vert_07 = << -$a, -$a , -$a >>;
+	vector $vert_08 = << -$a, $a , -$a >>;
+	vector $vert_09 = << $b, 0 , $c >>;
+	vector $vert_10 = << -$b, 0, $c >>;
+	vector $vert_11 = << $b, 0, -$c >>;
+	vector $vert_12 = << -$b, 0, -$c >>;
+	vector $vert_13 = << $c, -$b, 0 >>;
+	vector $vert_14 = << $c, $b, 0 >>;
+	vector $vert_15 = << -$c, -$b, 0 >>;
+	vector $vert_16 = << -$c, $b, 0 >>;
+	vector $vert_17 = << 0, -$c, $b >>;
+	vector $vert_18 = << 0, -$c, -$b >>;
+	vector $vert_19 = << 0, $c, $b >>;
+	vector $vert_20 = << 0, $c, -$b >>;
+
+	   	// To determine the vertex positions	// at the user radius	float $currRadius = $vert_01;	float $scalar = ( $radius / $currRadius );	$vert_01 = ( $vert_01 * $scalar );	$vert_02 = ( $vert_02 * $scalar );	$vert_03 = ( $vert_03 * $scalar );	$vert_04 = ( $vert_04 * $scalar );	$vert_05 = ( $vert_05 * $scalar );	$vert_06 = ( $vert_06 * $scalar );	$vert_07 = ( $vert_07 * $scalar );	$vert_08 = ( $vert_08 * $scalar );	$vert_09 = ( $vert_09 * $scalar );	$vert_10 = ( $vert_10 * $scalar );	$vert_11 = ( $vert_11 * $scalar );	$vert_12 = ( $vert_12 * $scalar );
+	$vert_13 = ( $vert_13 * $scalar );
+	$vert_14 = ( $vert_14 * $scalar );
+	$vert_15 = ( $vert_15 * $scalar );
+	$vert_16 = ( $vert_16 * $scalar );
+	$vert_17 = ( $vert_17 * $scalar );
+	$vert_18 = ( $vert_18 * $scalar );
+	$vert_19 = ( $vert_19 * $scalar );
+	$vert_20 = ( $vert_20 * $scalar );	
+
+	/*	Vertex connection order
+     
+	surf01 = 1 9 10 5 17
+	surf02 = 13 3 11 4 14
+	surf03 = 4 20 19 2 14
+	surf04 = 1 13 14 2 9
+	surf05 = 17 5 15 7 18
+	surf06 = 8 16 6 19 20
+	surf07 = 1 17 18 3 13
+	surf08 = 10 6 16 15 5
+	surf09 = 8 12 7 15 16
+	surf10 = 9 2 19 6 10
+	surf11 = 7 12 11 3 18
+	surf12 = 8 20 4 11 12
+	*/
+
+	// Create the faces for the shape.
+		string $surf_01[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_09.x) ($vert_09.y) ($vert_09.z)						-point ($vert_10.x) ($vert_10.y) ($vert_10.z)
+						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)
+						-point ($vert_17.x) ($vert_17.y) ($vert_17.z)					`					;		string $surf_02[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_13.x) ($vert_13.y) ($vert_13.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)						-point ($vert_11.x) ($vert_11.y) ($vert_11.z)
+						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)
+						-point ($vert_14.x) ($vert_14.y) ($vert_14.z)					`					;		string $surf_03[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_20.x) ($vert_20.y) ($vert_20.z)						-point ($vert_19.x) ($vert_19.y) ($vert_19.z)
+						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)
+						-point ($vert_14.x) ($vert_14.y) ($vert_14.z)					`					;		string $surf_04[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_13.x) ($vert_13.y) ($vert_13.z)						-point ($vert_14.x) ($vert_14.y) ($vert_14.z)
+						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)
+						-point ($vert_09.x) ($vert_09.y) ($vert_09.z)					`					;		string $surf_05[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_17.x) ($vert_17.y) ($vert_17.z)						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)						-point ($vert_15.x) ($vert_15.y) ($vert_15.z)
+						-point ($vert_07.x) ($vert_07.y) ($vert_07.z)
+						-point ($vert_18.x) ($vert_18.y) ($vert_18.z)					`					;		string $surf_06[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_08.x) ($vert_08.y) ($vert_08.z)						-point ($vert_16.x) ($vert_16.y) ($vert_16.z)						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)
+						-point ($vert_19.x) ($vert_19.y) ($vert_19.z)
+						-point ($vert_20.x) ($vert_20.y) ($vert_20.z)					`					;		string $surf_07[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_17.x) ($vert_17.y) ($vert_17.z)						-point ($vert_18.x) ($vert_18.y) ($vert_18.z)
+						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)
+						-point ($vert_13.x) ($vert_13.y) ($vert_13.z)					`					;		string $surf_08[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_10.x) ($vert_10.y) ($vert_10.z)						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)						-point ($vert_16.x) ($vert_16.y) ($vert_16.z)
+						-point ($vert_15.x) ($vert_15.y) ($vert_15.z)
+						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)					`					;		string $surf_09[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_08.x) ($vert_08.y) ($vert_08.z)						-point ($vert_12.x) ($vert_12.y) ($vert_12.z)						-point ($vert_07.x) ($vert_07.y) ($vert_07.z)
+						-point ($vert_15.x) ($vert_15.y) ($vert_15.z)
+						-point ($vert_16.x) ($vert_16.y) ($vert_16.z)					`					;		string $surf_10[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_09.x) ($vert_09.y) ($vert_09.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)						-point ($vert_19.x) ($vert_19.y) ($vert_19.z)
+						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)
+						-point ($vert_10.x) ($vert_10.y) ($vert_10.z)					`					;		string $surf_11[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_07.x) ($vert_07.y) ($vert_07.z)						-point ($vert_12.x) ($vert_12.y) ($vert_12.z)						-point ($vert_11.x) ($vert_11.y) ($vert_11.z)
+						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)
+						-point ($vert_18.x) ($vert_18.y) ($vert_18.z)					`					;		string $surf_12[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_08.x) ($vert_08.y) ($vert_08.z)						-point ($vert_20.x) ($vert_20.y) ($vert_20.z)						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)
+						-point ($vert_11.x) ($vert_11.y) ($vert_11.z)
+						-point ($vert_12.x) ($vert_12.y) ($vert_12.z)					`					;		// combine all facets into a single shape	string $shape[] = `polyUnite							-constructionHistory off							$surf_01							$surf_02							$surf_03							$surf_04							$surf_05							$surf_06							$surf_07							$surf_08							$surf_09							$surf_10							$surf_11							$surf_12						`						;		int $numVerts[] = `polyEvaluate -vertex $shape[0]`;		// merge vertices	polyMergeVertex		-distance 0.01	// dn mod changed from .05 to .01		-constructionHistory off		($shape[0] + ".vtx[0:" + ($numVerts[0] - 1) + "]")	;		// select the shape instead of components	select -replace $shape[0];}
+
+// end buildDodecahedron
+
+
+
+
+// buildIcosahedron
+//
+// Build a 20-sided shape.
+
+proc buildIcosahedron (float $radius)
+{
+	// The Golden Ratio
+	float $goldenMean = ((sqrt(5)-1)/2) ;	
+	// List of initial vertex locations.	vector $vert_01 = << 1, 0, $goldenMean >>;	vector $vert_02 = << $goldenMean, 1, 0 >>;	vector $vert_03 = << 1, 0, ((-1.0)*$goldenMean) >>;	vector $vert_04 = << $goldenMean, -1, 0 >>;	vector $vert_05 = << 0, ((-1.0)*$goldenMean), 1 >>;	vector $vert_06 = << 0, $goldenMean, 1 >>;	vector $vert_07 = << ((-1.0)*$goldenMean), 1, 0 >>;	vector $vert_08 = << 0, $goldenMean, -1 >>;	vector $vert_09 = << 0, ((-1.0)*$goldenMean), -1 >>;	vector $vert_10 = << ((-1.0)*$goldenMean), -1, 0 >>;	vector $vert_11 = << -1, 0, $goldenMean >>;	vector $vert_12 = << -1, 0, ((-1.0)*$goldenMean)>>;	   	// To determine the vertex positions	// at the user radius	float $currRadius = $vert_01;	float $scalar = ( $radius / $currRadius );	$vert_01 = ( $vert_01 * $scalar );	$vert_02 = ( $vert_02 * $scalar );	$vert_03 = ( $vert_03 * $scalar );	$vert_04 = ( $vert_04 * $scalar );	$vert_05 = ( $vert_05 * $scalar );	$vert_06 = ( $vert_06 * $scalar );	$vert_07 = ( $vert_07 * $scalar );	$vert_08 = ( $vert_08 * $scalar );	$vert_09 = ( $vert_09 * $scalar );	$vert_10 = ( $vert_10 * $scalar );	$vert_11 = ( $vert_11 * $scalar );	$vert_12 = ( $vert_12 * $scalar );	
+	// Create the faces for the shape.
+		string $surf_01[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)					`					;		string $surf_02[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)					`					;		string $surf_03[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)					`					;		string $surf_04[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)					`					;		string $surf_05[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_01.x) ($vert_01.y) ($vert_01.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)					`					;		string $surf_06[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)						-point ($vert_08.x) ($vert_08.y) ($vert_08.z)					`					;		string $surf_07[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)						-point ($vert_09.x) ($vert_09.y) ($vert_09.z)						-point ($vert_08.x) ($vert_08.y) ($vert_08.z)					`					;		string $surf_08[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_03.x) ($vert_03.y) ($vert_03.z)						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_09.x) ($vert_09.y) ($vert_09.z)					`					;		string $surf_09[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_10.x) ($vert_10.y) ($vert_10.z)						-point ($vert_09.x) ($vert_09.y) ($vert_09.z)					`					;		string $surf_10[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_04.x) ($vert_04.y) ($vert_04.z)						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)						-point ($vert_10.x) ($vert_10.y) ($vert_10.z)					`					;		string $surf_11[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)						-point ($vert_11.x) ($vert_11.y) ($vert_11.z)						-point ($vert_10.x) ($vert_10.y) ($vert_10.z)					`					;		string $surf_12[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_05.x) ($vert_05.y) ($vert_05.z)						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)						-point ($vert_11.x) ($vert_11.y) ($vert_11.z)					`					;		string $surf_13[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)						-point ($vert_07.x) ($vert_07.y) ($vert_07.z)						-point ($vert_11.x) ($vert_11.y) ($vert_11.z)					`					;		string $surf_14[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_06.x) ($vert_06.y) ($vert_06.z)						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)						-point ($vert_07.x) ($vert_07.y) ($vert_07.z)					`					;		string $surf_15[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_02.x) ($vert_02.y) ($vert_02.z)						-point ($vert_08.x) ($vert_08.y) ($vert_08.z)						-point ($vert_07.x) ($vert_07.y) ($vert_07.z)					`					;		string $surf_16[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_12.x) ($vert_12.y) ($vert_12.z)						-point ($vert_07.x) ($vert_07.y) ($vert_07.z)						-point ($vert_08.x) ($vert_08.y) ($vert_08.z)					`					;		string $surf_17[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_12.x) ($vert_12.y) ($vert_12.z)						-point ($vert_08.x) ($vert_08.y) ($vert_08.z)						-point ($vert_09.x) ($vert_09.y) ($vert_09.z)					`					;		string $surf_18[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_12.x) ($vert_12.y) ($vert_12.z)						-point ($vert_09.x) ($vert_09.y) ($vert_09.z)						-point ($vert_10.x) ($vert_10.y) ($vert_10.z)					`					;		string $surf_19[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_12.x) ($vert_12.y) ($vert_12.z)						-point ($vert_10.x) ($vert_10.y) ($vert_10.z)						-point ($vert_11.x) ($vert_11.y) ($vert_11.z)					`					;		string $surf_20[] = `polyCreateFacet						-constructionHistory off						-texture 1						-subdivision 1						-point ($vert_12.x) ($vert_12.y) ($vert_12.z)						-point ($vert_11.x) ($vert_11.y) ($vert_11.z)						-point ($vert_07.x) ($vert_07.y) ($vert_07.z)					`					;		// combine all facets into a single shape	string $shape[] = `polyUnite							-constructionHistory off							$surf_01							$surf_02							$surf_03							$surf_04							$surf_05							$surf_06							$surf_07							$surf_08							$surf_09							$surf_10							$surf_11							$surf_12							$surf_13							$surf_14							$surf_15							$surf_16							$surf_17							$surf_18							$surf_19							$surf_20						`						;		int $numVerts[] = `polyEvaluate -vertex $shape[0]`;		// merge vertices	polyMergeVertex		-distance 0.01	// dn mod changed from .05 to .01		-constructionHistory off		($shape[0] + ".vtx[0:" + ($numVerts[0] - 1) + "]")	;		// select the shape instead of components	select -replace $shape[0];}
+
+// end buildIcosahedron
+
+
+
+
+// finishShape
+//
+// Subdivides the polyhedron according the number of iterations
+// set by the user. Moves all vertices to the target radius.
+
+proc finishShape(float $radius, int $iterations)
+{
+	
+	$shape = `ls -sl`;
+	
+	// Only subdivide the shape if iterations > 0.
+	if ( $iterations > 0 )	{		for ( $i = 0; $i < $iterations; $i++ )		{			// Find how many edges and faces			// are in the geometry			int $numOfComponents[] = 				`polyEvaluate 					-edge					-face					$shape[0]`				;						// Subdivide the edges			polySubdivideEdge				-worldSpace 0				-size 0				-divisions 1				-constructionHistory off				( $shape[0]				    + ".e[0:"				    + ( $numOfComponents[0] - 1 )				    + "]")			;
+						// Triangulate the faces			polyTriangulate				-constructionHistory off				( $shape[0]				    + ".f[0:"				    + ( $numOfComponents[1] - 1 )				    + "]" )			;		}	}		// Find how many vertices are in the geometry	int $numOfComponents[] = `polyEvaluate -vertex $shape[0]`;	
+		for ( $n = 0; $n < $numOfComponents[0]; $n++ )	{		// Get the world location of each vertex.
+		float $tfa[] = `xform						-query						-worldSpace						-translation ( $shape[0] + ".vtx[" + $n + "]" )					`					;		// Generate a vector variable for the vertex location.			vector $v = << $tfa[0], $tfa[1], $tfa[2] >> ;
+		
+		// Calculate the distance to move vertex.		float $length = $v;		float $scale = ( $radius / $length );		
+		// Move the vertex to the desired radius.		xform			-worldSpace			-translation				( $tfa[0] * $scale )				( $tfa[1] * $scale )				( $tfa[2] * $scale )				( $shape[0] + ".vtx[" + $n + "]" )		;				// live updates as vertices are moved to their new locations		// leave this commented for maximum speed		//refresh;		 	}	
+	// Get the number of edges and faces.	int $numOfComponents[] = `polyEvaluate							-edge							-face							$shape[0]						`						;		// adjust shading on final shape					polySoftEdge		-angle 0		// hard edges		-constructionHistory off		( $shape[0] + ".e[0:" + ( $numOfComponents[0] - 1 ) + "]" )	;		// Reselect the shape and rename.	select -replace $shape[0];	rename $shape[0] "polyhedron1";}
+
+// end finishShape
+
+
+
+
+// buildPolyhedron
+//
+// Build the shapes.
+
+global proc buildShape(int $type, float $radius, int $iterations)
+{
+	// Build the appropriate polyhedron.
+	if ($type == 1) buildTetrahedron($radius);
+	if ($type == 2) buildOctahedron($radius);
+	if ($type == 3) buildDodecahedron($radius);
+	if ($type == 4) buildIcosahedron($radius);
+	
+	// Apply iterations to the the polyhedron
+	// and adjust smoothing.
+	finishShape($radius, $iterations);
+	print "Polyhedron created.\n";
+}
+
+
+
+
+
+// createPolyhedron
+//
+// Get values from the window and build the shapes.
+
+global proc createPolyhedron()
+{
+	int $type;
+	float $radius;
+	int $iterations;
+	
+	if (`control -exists phType`)
+	{
+		$type = (`radioButtonGrp -q -sl phType`);
+	}
+	
+	if (`control -exists phRadius`)
+	{
+		$radius = (`floatSliderGrp -q -v phRadius`);
+	}
+	
+	if (`control -exists phIterations`)
+	{
+		$iterations = (`intSliderGrp -q -v phIterations`);
+	}
+	
+	buildShape($type, $radius, $iterations);
+}
+
+
+
+
+
+// dnPolyhedronWindow
+//
+// Create the window.
+
+global proc dnPolyhedronWindow()
+{
+	if ((`window -ex dnPolyhedron`) == true) deleteUI -window dnPolyhedron;
+	
+	window
+		-title "dnPolyhedron v1.1"
+		-rtf true
+		-s false
+		-width 388
+		-height 94
+		-mnb false
+		-mxb false
+		dnPolyhedron;
+		
+		columnLayout -adj true -columnAlign "left" -cat "both" 10;
+		
+		separator -style "none" -height 10;
+
+		radioButtonGrp
+			-numberOfRadioButtons 4
+			-label "Type:"
+			-columnAlign5 "right" "left" "left" "left" "left"
+			-columnWidth5 80 96 96 108 96
+			-labelArray4 "Tetrahedron" "Octahedron" "Dodecahedron" "Icosahedron"
+			-select 4
+			phType
+		;
+		
+		floatSliderGrp
+			-label "Radius:"
+			-columnAlign3 "right" "left" "left"
+			-columnWidth3 80 48 240
+			-min 0.1 -max 20.0
+			-fmn 0.1 -fmx 20.0
+			-value 5
+			-field true
+			phRadius
+		;
+		
+		intSliderGrp
+			-label "Iterations:"
+			-columnAlign3 "right" "left" "left"
+			-columnWidth3 80 48 240
+			-min 0 -max 10
+			-fmn 0 -fmx 10
+			-value 0
+			-field true
+			phIterations
+		;
+		
+		separator -style "none" -height 5;
+		
+		rowLayout
+			-adjustableColumn3 2
+			-numberOfColumns 3
+			-columnWidth3 155 155 155
+			-columnAttach3 "both" "both" "both"
+			-columnAlign3 "center" "center" "center"
+			buttons
+		;
+			
+			button
+				-label "Apply and Close"
+				-command "createPolyhedron(); deleteUI -window dnPolyhedron"
+			;
+			
+			button
+				-label "Apply"
+				-command "createPolyhedron();"
+			;
+			
+			button
+				-label "Close Window"
+				-command "deleteUI -window dnPolyhedron"
+			;
+			
+		setParent ..;
+		
+		separator -style "none" -height 10;
+		
+		setParent ..;
+		
+	showWindow dnPolyhedron;
+	print "dnPolyhedron window created.\n";
+}
+
+
+global proc dnPolyhedron ()
+{
+	dnPolyhedronWindow;
+}
+
+// end

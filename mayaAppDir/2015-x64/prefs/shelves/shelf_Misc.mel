@@ -1,0 +1,322 @@
+global proc shelf_Misc () {
+    global string $gBuffStr;
+    global string $gBuffStr0;
+    global string $gBuffStr1;
+
+
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Duplicate Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Duplicate Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "duplicate.png" 
+        -image1 "duplicate.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Maya Duplicate Special" ( "DuplicateSpecialOptions;" )
+        -mi "E_Copy" ( "E_copy;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Distance Tool: Measure distance between two points" 
+        -enableBackground 0
+        -align "center" 
+        -label "Distance Tool" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "distanceDim.xpm" 
+        -image1 "distanceDim.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "DistanceTool" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Local Rotation Axes" 
+        -enableBackground 0
+        -align "center" 
+        -label "Local Rotation Axes" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "toggleAxis.png" 
+        -image1 "toggleAxis.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "toggle -localAxis" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "toggle -te;" 
+        -enableBackground 0
+        -align "center" 
+        -label "toggle -te;" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "toggleTemplate.png" 
+        -image1 "toggleTemplate.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "toggle -te;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Transform Randomizer" 
+        -enableBackground 0
+        -align "center" 
+        -label "Transform Randomizer" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "Randomize.png" 
+        -image1 "Randomize.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "from fxpt import fx_transformRandomizer\nreload(fx_transformRandomizer)\nfx_transformRandomizer.run()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Freeze Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Freeze Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "fridge.png" 
+        -image1 "fridge.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - - " ( "" )
+        -mi "All" ( "makeIdentity -apply true -t 1 -r 1 -s 1;\nfix_oppositeEraser;" )
+        -mi "- - - - - - - - - - - - - - - - - - - - " ( "" )
+        -mi "Translation" ( "makeIdentity -apply true -t 1 -r 0 -s 0" )
+        -mi "Rotation" ( "makeIdentity -apply true -t 0 -r 1 -s 0" )
+        -mi "Rotation To World" ( "source freezeRotToWorld;\nfreezeRotToWorld;" )
+        -mi "Scale" ( "makeIdentity -apply true -t 0 -r 0 -s 1;\nfix_oppositeEraser;" )
+        -mi "- - - - - - - - - - - - - - - - - - - - " ( "" )
+        -mi "UnFreeze" ( "makeOriginTransformed;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Align Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Align Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "alignObjectsDD.png" 
+        -image1 "alignObjectsDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - - - - - - - " ( "" )
+        -mi "Align Objects" ( "performAlignObjects 1" )
+        -mi "Align Objects Distance by All Axes" ( "align -x Dist -y Dist -z Dist;" )
+        -mi "ALI" ( "ali;\n" )
+        -mi "Align Tool" ( "setToolTo alignToolCtx;" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Rotation Axis Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Rotation Axis Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "pivotsDD.png" 
+        -image1 "pivotsDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "print(\"User defined macro\");" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - - -" ( "print(\"User defined menuItem\");" )
+        -mi "Copy Local Rotation Axises" ( "source fix_copyPivots;\nfix_copyPivots;" )
+        -mi "Align Local Rotation Axises" ( "source fix_copyAxis;\nfix_copyAxis;" )
+        -mi "Aim Axis to selected points" ( "source fix_aimAxis;\nfix_aimAxis;" )
+        -mi "Pivot Toolbox" ( "pivottoolbox;" )
+        -mi "Orient Local Rotation Axises" ( "localOrient;" )
+        -mi "Orient Pivot By 3 Points" ( "mdAlignPivot(1);" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Multitude Manager" 
+        -enableBackground 0
+        -align "center" 
+        -label "Multitude Manager" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "render_chooser.png" 
+        -image1 "render_chooser.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "multitudeManager;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Misc Dropdown" 
+        -enableBackground 0
+        -align "center" 
+        -label "Misc Dropdown" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "miscDD.png" 
+        -image1 "miscDD.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "//misc->misc drop down" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Cleanup-Rename all Materials" ( "source fix_renameCleanupAllMaterials;\nfix_renameCleanupAllMaterials;" )
+        -mi "Delete All Intermediate Objects" ( "print(size(`ls -io -g`)+\\\" intermediate node(s) found\\\\n\\\");\ndelete(`ls -io -g`);" )
+        -mi "Delete IOG" ( "source fix_deleteIOG;\nfix_deleteIOG;" )
+        -mi "Delete Shapes on Selected Objects" ( "fix_deleteShape;" )
+        -mi "f3dDuplicatorX" ( "f3dDuplicatorX;" )
+        -mi "FX Texture Manager" ( "from fxpt.fx_textureManager import fx_textureManager\nfx_textureManager.run()" )
+        -mip 6
+        -mi "FX Outliner" ( "from fx_outliner import fx_outliner\nfx_outliner.run()" )
+        -mip 7
+        -mi "FX Renamer" ( "import fx_renamer\nfx_renamer.run()\n" )
+        -mip 8
+        -mi "Lock Node" ( "source ap_LockNodes;\nap_LockNodes;\n" )
+        -mi "Move to Origin" ( "move -rpr 0 0 0;" )
+        -mi "Number of Selected Nodes" ( "print(size(`selectedNodes`)+\" node(s) selected\\n\");" )
+        -mi "Open Channel Box/Layer Editor in Separate Window" ( "source tima_channelslayerswindow;" )
+        -mi "Oposite Flag Eraser" ( "source fix_oppositeEraser;\nfix_oppositeEraser;" )
+        -mi "Print Scene Name" ( "print(`file -q -sceneName`);" )
+        -mi "Randomize Points" ( "source rndPoints;\nrndPoints;" )
+        -mi "Select Objects of Same Type" ( "source fix_selectSameType;\nfix_selectSameType();" )
+        -mi "Transform Component Type In" ( "source transformCompTypeIn;\ntransformCompTypeIn;" )
+        -mi "Untemplate All" ( "toggle -te -gl -st 0;" )
+        -mi "zooNameSpacey" ( "zooNameSpacey;" )
+        -mi "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Replace Objects with Instances" ( "source fix_replaceWithInstances;\nfix_replaceWithInstances;" )
+        -mi "Replace Objects With Locators" ( "source fix_replaceObjWithLoc;\nfix_replaceObjWithLoc;" )
+        -mi "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" ( "" )
+        -mi "Convert Animated Object to Animated Group" ( "fix_convAnimObjToGroup;" )
+        -mi "Add Shape" ( "source fix_parentShape;\nfix_parentShape(1);" )
+        -mi "Parent Shape" ( "source fix_parentShape;\nfix_parentShape(0);" )
+    ;
+
+} 

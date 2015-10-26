@@ -1,0 +1,350 @@
+///////////////////////////////////////////////////////////////
+///     this procedure is slower than alias version
+///////////////////////////////////////////////////////////////
+/*
+proc string[] getVertexLoopForFace(string $face)
+{
+
+string $vertexLoop[];
+string $tmpStrArr[];
+string $candidateVerts[];
+string $candidateVertsInFace[];
+int $arraySize, $arraySize2, $candidateVertsInFaceIndex;
+int $i, $ii;
+
+string $faceVerts[] = `ls -l -fl (polyListComponentConversion("-tv",$face))`;
+
+$vertexLoop[0] = $faceVerts[0];
+
+$arraySize = size($faceVerts);
+
+for ($i = 1; $i < $arraySize; $i++) {
+
+	$candidateVerts = `ls -l -fl (polyListComponentConversion("-tv",polyListComponentConversion("-te",$vertexLoop[$i-1])))`;
+
+	$arraySize2 = size($candidateVerts);
+	$candidateVertsInFaceIndex = 0;
+	for ($ii = 0; $ii < $arraySize2; $ii++) {
+		if (-1 != findStringArrayElem($faceVerts,$candidateVerts[$ii])) {
+			$candidateVertsInFace[$candidateVertsInFaceIndex] = $candidateVerts[$ii];
+			$candidateVertsInFaceIndex++;
+		}
+		
+	}
+
+	for ($vert in $candidateVertsInFace) {
+		if (-1 == findStringArrayElem($vertexLoop,$vert)) {
+			$vertexLoop[$i] = $vert;
+			break;
+		}
+	}
+
+}
+
+return $vertexLoop;
+
+}
+*/
+
+proc int findStringArrayElem(string $searchArray[], string $searchElem)
+{
+
+int $arraySize = size($searchArray);
+
+for ($i = 0; $i < $arraySize; $i++) {
+	if ($searchArray[$i] == $searchElem) {
+		return $i;
+	}
+}
+
+return -1;
+
+}
+
+///////////////////////////////////////////////////////////////
+
+proc int fix_polyComponentId(string $selection)
+{
+        int $id;
+        string $result[];
+        tokenize $selection "[]" $result;
+        if (size($result) < 1) return -1;
+        if ($result[1] == "") return -1;
+        $id = $result[1];
+        return $id;
+}
+
+///////////////////////////////////////////////////////////////
+
+proc int[] fix_buildEdgeTable(string $face, int $left)
+{
+        string $result[];
+        string $endVerts[];
+        
+        $result = `ls -l -fl (polyListComponentConversion("-te",$face))`;
+        
+        int $vertArr[];
+        for ($edge in $result) {
+                $endVerts = `ls -l -fl (polyListComponentConversion("-tv",$edge))`;
+                if ($left) 
+                        $vertArr[size($vertArr)] = fix_polyComponentId($endVerts[0]);
+                else 
+                        $vertArr[size($vertArr)] = fix_polyComponentId($endVerts[1]);
+        }
+        return $vertArr;
+}
+
+///////////////////////////////////////////////////////////////
+
+proc int fix_getOtherVertex(int $lArr[], int $rArr[], int $endV, int $prev)
+{
+        int $i;
+        int $limit;
+
+        //      Search through the $lArr, and 
+        //      get the corresponding element in $rArr
+
+        $i = 0;
+        $limit = size($lArr);
+        for ( ; $i < $limit; $i++) {    
+                if ( ($lArr[$i] == $endV) && ($rArr[$i] != $prev) )
+                        return $rArr[$i];
+        }
+        return -1;
+}
+
+///////////////////////////////////////////////////////////////
+
+proc string[] getVertexLoopForFace(string $face)
+{
+
+        string $outV[], $dummyArr[];
+        string $vertArr[];
+
+        // Remember the vertex Array...
+
+        $vertArr = `ls -l -fl (polyListComponentConversion("-tv",$face))`;
+        int $nVerts = size($vertArr);
+
+
+        if ($nVerts < 3) {
+                error("Unknown Error in getLoopVertices");
+        return $outV;
+        }
+
+
+        int $leftVerts[], $rightVerts[];
+        $leftVerts =  fix_buildEdgeTable($face, 1);
+        $rightVerts = fix_buildEdgeTable($face, 0);
+
+        string $result[];
+        string $v, $obj;
+
+        $v = $vertArr[0];
+
+        tokenize $v "." $result;
+        
+        
+        if (size($result) < 1) {
+                error("Unknown Error in getLoopVertices");
+                return $outV;
+        }
+      
+
+        $obj = $result[0];              // Get the poly name
+
+        int $curId, $prevId, $lv, $rv;
+        $prevId = -1;
+
+        do {
+                $outV[size($outV)] = $v;        // First in the loop
+                $curId = fix_polyComponentId($v);
+                $lv = fix_getOtherVertex($leftVerts,  $rightVerts, $curId, $prevId);
+                $rv = fix_getOtherVertex($rightVerts, $leftVerts,  $curId, $prevId);
+                if ($lv != -1 && $prevId != $lv) 
+                        $v = $obj + ".vtx[" + $lv + "]";
+                else 
+                        $v = $obj + ".vtx[" + $rv + "]";
+
+              
+		if ($lv == -1 && $rv == -1) {
+                        error("Unknown error in getLoopVertices");
+                        return $dummyArr;
+                }
+
+
+                $prevId = $curId;
+        } while (size($outV) < $nVerts);
+
+        return $outV;
+
+}
+
+///////////////////////////////////////////////////////////////
+
+proc string[] getUVsForFaceVertices(string $fVerts[], string $face)
+{
+
+string $tmpStrArr[];
+string $loopUVs[];
+int $arraySize;
+string $vertUvs[];
+
+$tmpStrArr = `polyListComponentConversion -tuv $face`;
+string $faceUVs[] = `ls -l -fl $tmpStrArr`;
+
+$arraySize = size($fVerts);
+
+for ($vertIndex = 0; $vertIndex < $arraySize; $vertIndex++) {
+	$tmpStrArr = `polyListComponentConversion -tuv $fVerts[$vertIndex]`;
+	$vertUvs = `ls -l -fl $tmpStrArr`;
+	
+	$arraySize2 = size($vertUvs);
+	for ($i = 0; $i < $arraySize2; $i++) {
+		if (-1 != findStringArrayElem($faceUVs,$vertUvs[$i])) {
+			$loopUVs[$vertIndex] = $vertUvs[$i];
+			break;
+		}
+	}
+}
+
+return $loopUVs;
+
+}
+
+///////////////////////////////////////////////////////////////
+
+
+global proc fix_polyCopyPaste(string $operation, int $operShader, int $operUV )
+{
+
+//source polyRotateUVsByVertex;
+
+global string $fix_polyCopyPaste_shader;
+global float $fix_polyCopyPaste_Us[];
+global float $fix_polyCopyPaste_Vs[];
+
+string $tmpStrArr[];
+string $loopVertices[],$loopUVs[];
+string $loopVertex, $loopUV;
+float $UVPos[];
+int $polyClipboardResult;
+
+string $selection[] = `ls -sl -l -fl`;
+string $selectionNotFlattened[] = `ls -sl -l`;
+
+string $polygons[] = `polyListComponentConversion -tf $selection`;
+$polygons = `ls -l -fl $polygons`;
+
+if (size($polygons) == 0) {
+	return;
+}
+
+
+switch ($operation) {
+
+	case "copy":
+
+		if (catch(`polyClipboard -uv -sh -cp`)) warning ("\"polyClipboard\" is no longer working.");; // if polyClipboard still working than get info from them in case of polyClipboard paste method
+
+		$fix_polyCopyPaste_shader = "";
+		clear($fix_polyCopyPaste_Us);
+		clear($fix_polyCopyPaste_Vs);
+
+		$tmpStrArr = `listSets -type 1 -ets -o $polygons[0]`;
+		$fix_polyCopyPaste_shader = $tmpStrArr[0];
+
+
+/*		
+		// ALIAS Version
+		$startTime = `timerX`;
+		select $polygons[0];
+		$loopVertices = getLoopVertices(); // ALIAS VERSION
+		print("time for getLoopVertices (Alias version) = "+(`timerX -startTime $startTime`)+"\n");
+
+		$startTime = `timerX`;
+		$loopUVs = getUVsForVertsInFace ($loopVertices,$polygons[0]);
+		print("time for getUVsForVertsInFace (Alias version) = "+(`timerX -startTime $startTime`)+"\n");
+*/
+
+///*		
+		// Fixxxer Version
+//		$startTime = `timerX`;
+		$loopVertices = getVertexLoopForFace($polygons[0]);
+//		print("time for getVertexLoopForFace (Fixxxer version) = "+(`timerX -startTime $startTime`)+"\n");
+
+		
+//		$startTime = `timerX`;
+		$loopUVs = getUVsForFaceVertices ($loopVertices,$polygons[0]); 
+//		print("time for getUVsForFaceVertices (Fixxxer version) = "+(`timerX -startTime $startTime`)+"\n");
+//*/
+
+
+
+		int $i = 0;
+		for ($loopVertex in $loopVertices) {
+			if ($loopUVs[$i] != "") {
+				$UVPos = `polyEditUV -q -u -v $loopUVs[$i]`;
+				$fix_polyCopyPaste_Us[$i] = $UVPos[0];
+				$fix_polyCopyPaste_Vs[$i] = $UVPos[1];
+			}
+			$i++;
+		}
+
+		break;
+
+	case "paste":
+
+		if ($operShader) sets -e -forceElement $fix_polyCopyPaste_shader $selectionNotFlattened;
+
+		if ($operUV){
+			
+			$mayaCommand = "No";
+			
+			if (size($polygons) > 200){
+				$mayaCommand = `confirmDialog
+							-title "Choose paste method"
+							-message (size($polygons)+" polygons selected. Use native maya polyClipboard command to paste UVs?")
+					 		-button "Yes"
+					 		-button "No"
+					 		-defaultButton "Yes"
+		 					-cancelButton "No"
+		 					-dismissString "No"`;
+			}
+
+			if ($mayaCommand == "No") {
+				
+				$startTime = `timerX`;
+
+				polyForceUV -uni $polygons; // if there is no UVs for polygons...
+				polyMapCut -ch 0 $polygons;
+				
+				for($polygon in $polygons) {
+
+//					$startTime = `timerX`;
+					$loopVertices = getVertexLoopForFace($polygon);
+//					print("time for getVertexLoopForFace = "+(`timerX -startTime $startTime`)+"\n");
+
+//					$startTime = `timerX`;
+					$loopUVs = getUVsForFaceVertices ($loopVertices,$polygon);
+//					print("time for getUVsForFaceVertices = "+(`timerX -startTime $startTime`)+"\n");
+
+					int $i = 0;
+					for ($loopUV in $loopUVs) {
+						polyEditUV -relative false -u $fix_polyCopyPaste_Us[$i] -v $fix_polyCopyPaste_Vs[$i] $loopUV;
+						$i++;
+					}
+					
+				}
+				print("time for UV pasting = "+(`timerX -startTime $startTime`)+"\n");
+
+			} else if ($mayaCommand == "Yes") polyClipboard -uv -ps;
+
+		}
+
+		break;
+}
+
+select $selection;
+
+}

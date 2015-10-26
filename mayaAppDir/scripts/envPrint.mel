@@ -1,0 +1,24 @@
+//envPrint.mel
+//
+
+global proc envPrint()
+{
+string $maya_envList[] = {
+	"PATH",
+	"MAYA_APP_DIR",
+	"MAYA_LOCATION",
+	"MAYA_MODULE_PATH",
+	"TMPDIR",
+	"MAYA_PLUG_IN_PATH",
+	"MAYA_SCRIPT_PATH",
+	"PYTHONPATH",
+	"XBMLANGPATH"
+	};
+
+	for ($env in $maya_envList)
+	{
+	string $env_var = `getenv $env`;
+	print ($env + ":\n");
+	print ("     "+$env_var + "\n");
+	}
+}

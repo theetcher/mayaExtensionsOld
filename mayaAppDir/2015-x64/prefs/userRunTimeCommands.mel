@@ -1,0 +1,424 @@
+//Maya Preference 2015 (Release 1)
+//
+//
+
+runTimeCommand
+	-annotation "Toggle Highlight Selection"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("selectPref -allowHiliteSelection (1 - `selectPref -q -allowHiliteSelection`)")
+	Toggle_Hilite_Selection;
+
+runTimeCommand
+	-annotation "Increase Brush Radius"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("increaseBrushRadius")
+	IncreaseRadius_in_JasperRunTimeCommand;
+
+runTimeCommand
+	-annotation "Decrease Brush Radius"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("decreaseBrushRadius")
+	DecreaseRadius_in_JasperRunTimeCommand;
+
+runTimeCommand
+	-annotation "Increase Maximum Displacement"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("puttyIncreaseMaxDisp")
+	IncreaseMaxDispl_in_JasperRunTimeCommand;
+
+runTimeCommand
+	-annotation "Decrease Maximum Displacement"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("puttyDecreaseMaxDisp")
+	DecreaseMaxDispl_in_JasperRunTimeCommand;
+
+runTimeCommand
+	-annotation "Render (Press)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }\npopupMenu -button 1 -ctl false -alt false -sh false -allowOptionBoxes true -parent viewPanes -mm 1 tempMM; \nsource \"menu_Render\";\n")
+	Render_Press;
+
+runTimeCommand
+	-annotation "Render (Release)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }")
+	Render_Release;
+
+runTimeCommand
+	-annotation "Create (Press)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }\npopupMenu -button 1 -ctl false -alt false -sh false -allowOptionBoxes true -parent viewPanes -mm 1 tempMM; \nsource \"menu_Create\";\n")
+	Create_Press;
+
+runTimeCommand
+	-annotation "Create (Release)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }")
+	Create_Release;
+
+runTimeCommand
+	-annotation "Editors (Press)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }\npopupMenu -button 1 -ctl false -alt false -sh false -allowOptionBoxes true -parent viewPanes -mm 1 tempMM; \nsource \"menu_Editors\";\n")
+	Editors_Press;
+
+runTimeCommand
+	-annotation "Editors (Release)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }")
+	Editors_Release;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("changeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Point\" true;")
+	SelectionMaskPoints;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("changeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"ParmPoint\" true;\r\n")
+	SelectionMaskUV;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("changeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Line\" true;\r\n")
+	SelectionMaskEdge;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("changeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Facet\" true;\r\n")
+	SelectionMaskFace;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("changeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Hull\" true;")
+	SelectionMaskHull;
+
+runTimeCommand
+	-annotation "Aligns to local X of selected object"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("OrthoAlignX")
+	Ortho_Align_X;
+
+runTimeCommand
+	-annotation "Aligns to local Y of selected object"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("OrthoAlignY")
+	Ortho_Align_Y;
+
+runTimeCommand
+	-annotation "Aligns to local Z of selected object"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("OrthoAlignZ\t")
+	Ortho_Align_Z;
+
+runTimeCommand
+	-annotation "Toggles X Ray on current panel"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("toggleShadeOptionsXray")
+	ToggleXRay;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("changeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Point\" true;\r\nsetComponentPickMask \"Line\" true;")
+	SelectionMaskPointsEdges;
+
+runTimeCommand
+	-annotation "Moves an object to the origin of target"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("parent;\r\nmove -a -ls 0 0 0 ;\r\nparent -w;\r\n")
+	MoveToObjectOrigin;
+
+runTimeCommand
+	-annotation "Toggles Wireframe On Shaded option in current view"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("toggleShadeOptionsWireOnShaded")
+	ToggleWireOnShaded;
+
+runTimeCommand
+	-annotation "ChangeMoveToWorld"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("manipMoveContext -e -mode 2 Move;")
+	ChangeMoveToWorld;
+
+runTimeCommand
+	-annotation "ChangeMoveToObject"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("manipMoveContext -e -mode 0 Move;")
+	ChangeMoveToObject;
+
+runTimeCommand
+	-annotation "ChangeMoveToLocal"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("manipMoveContext -e -mode 1 Move;")
+	ChangeMoveToLocal;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("fix_unitUVMove (\"right\")")
+	polyMoveUV_right;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("fix_unitUVMove (\"left\")")
+	polyMoveUV_left;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("fix_unitUVMove (\"up\")")
+	polyMoveUV_up;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("fix_unitUVMove (\"down\")")
+	polyMoveUV_down;
+
+runTimeCommand
+	-annotation "alignU"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("crsAlignUV -u 1 0.5;")
+	alignU;
+
+runTimeCommand
+	-annotation "alignV"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("crsAlignUV -v 1 0.5;")
+	alignV;
+
+runTimeCommand
+	-annotation "PasteUV"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("source fix_polyCopyPaste;\r\nfix_polyCopyPaste(\"paste\",0,1);")
+	PasteUV;
+
+runTimeCommand
+	-annotation "ConvertSelectionToUV"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("PolySelectConvert 4;\r\nchangeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"ParmPoint\" true;\r\n")
+	ConvertSelectionToUV;
+
+runTimeCommand
+	-annotation "CopyShader"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("polyClipboard -sh -cp;")
+	CopyShader;
+
+runTimeCommand
+	-annotation "PasteShader"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("source fix_polyCopyPaste;\r\nfix_polyCopyPaste(\"paste\",1,0);")
+	PasteShader;
+
+runTimeCommand
+	-annotation "CopyUVAndShader"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("source fix_polyCopyPaste;\r\nfix_polyCopyPaste(\"copy\",0,0);")
+	CopyUVAndShader;
+
+runTimeCommand
+	-annotation "ConvertSelectionToVertex"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("PolySelectConvert 3;\r\nchangeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Point\" true;\r\n")
+	ConvertSelectionToVertex;
+
+runTimeCommand
+	-annotation "ConvertSelectionToFace"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("PolySelectConvert 1;\r\nchangeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Facet\" true;")
+	ConvertSelectionToFace;
+
+runTimeCommand
+	-annotation "RaycastSelection"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("if (!`raycastSelectContext -q -exists raycastSelectContext1`) raycastSelectContext raycastSelectContext1; setToolTo raycastSelectContext1")
+	RaycastSelection;
+
+runTimeCommand
+	-annotation "SetMyNURBSSmoothness"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("displaySmoothness -divisionsU 0 -divisionsV 0 -pointsWire 16 -pointsShaded 10;")
+	SetMyNURBSSmoothness;
+
+runTimeCommand
+	-annotation "ToggleIsolateSelect"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("source toggleIsolateViewSelection;\r\ntoggleIsolateViewSelection;\t")
+	ToggleIsolateSelect;
+
+runTimeCommand
+	-annotation "SelectFaceMaterial"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("source fix_findShader;\r\nfix_findShader;")
+	SelectFaceMaterial;
+
+runTimeCommand
+	-annotation "GOA_ToggleFullScreen"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("source GOAToggleFullScreen;\r\nGOAToggleFullScreen;")
+	GOA_ToggleFullScreen;
+
+runTimeCommand
+	-annotation "selects ring of edges"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("ringSelect;")
+	SelectRing;
+
+runTimeCommand
+	-annotation "SelectContiniousEdges_MJ"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("//performSelContiguousEdges 0;\r\nloopSelect;")
+	SelectContiniousEdges_MJ;
+
+runTimeCommand
+	-annotation "frame selected"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("source fix_fitPanel;\r\nfix_fitPanel -selected;")
+	fix_frameSelected;
+
+runTimeCommand
+	-annotation "SelectFacePlacement"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("source fix_findTexPlacement;\r\nfix_findTexPlacement;")
+	SelectFacePlacement;
+
+runTimeCommand
+	-annotation "Transfer Surface Information"
+	-category "Lights and Shading"
+	-commandLanguage "mel"
+	-command ("bakeSurfaceInfo 0")
+	TransferSurfaceInfo;
+
+runTimeCommand
+	-annotation "Transfer Surface Information Options"
+	-category "Lights and Shading"
+	-commandLanguage "mel"
+	-command ("bakeSurfaceInfo 1")
+	TransferSurfaceInfoOptions;
+
+runTimeCommand
+	-annotation "SelectContinuousEdgesWithOptions"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("polySelectConstraint -pp 4  -m2a 30 -m3a 90")
+	SelectContinuousEdgesWithOptions;
+
+runTimeCommand
+	-annotation "SelectThreeContinuousEdges"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("polySelectConstraint -pp 4  -m2a 30 -m3a 90 -ed 3")
+	SelectThreeContinuousEdges;
+
+runTimeCommand
+	-annotation "GrowPolygonSelection"
+	-category "User"
+	-commandLanguage "mel"
+	-command ("growSelection()")
+	GrowPolygonSelection;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("performActivePolySmooth 1")
+	ActiveSmoothPress;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("performActivePolySmooth 0")
+	ActiveSmoothRelease;
+
+runTimeCommand
+	-annotation "polygonOperation (Press)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }\npopupMenu -button 1 -ctl false -alt false -allowOptionBoxes true -parent viewPanes -mm 1 tempMM; \nsource \"menu_polygonOperation\";\n")
+	polygonOperation_Press;
+
+runTimeCommand
+	-annotation "polygonOperation (Release)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }")
+	polygonOperation_Release;
+
+runTimeCommand
+	-annotation ""
+	-category "User"
+	-commandLanguage "mel"
+	-command ("alignUV 1 1 0 0;\r\nalignUV 0 0 1 0;")
+	alignUV_up_left;
+
+runTimeCommand
+	-annotation "PolygonComponentConversion (Press)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }\npopupMenu -button 1 -ctl false -alt false -allowOptionBoxes true -parent viewPanes -mm 1 tempMM; \nsource \"menu_PolygonComponentConversion\";\n")
+	PolygonComponentConversion_Press;
+
+runTimeCommand
+	-annotation "PolygonComponentConversion (Release)"
+	-category "User Marking Menus"
+	-commandLanguage "mel"
+	-command ("if (`popupMenu -exists tempMM`) { deleteUI tempMM; }")
+	PolygonComponentConversion_Release;
+

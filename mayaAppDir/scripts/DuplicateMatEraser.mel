@@ -1,0 +1,147 @@
+
+global proc DuplicateMatEraser( )
+{
+
+
+
+
+/////////////////////  Erasing Duplicate Materials //////////////////
+
+	print ("\n\n\n\n--- Duplicates Erasing Started ---\n\n");
+
+
+	progressWindow
+	-title "Working"
+	-status "Erasing Unused Nodes"
+	-isInterruptable 0;
+
+	/////////////////////
+
+	MLdeleteUnused;
+	
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+// listing all color maps
+
+	int $Erased = size (`ls -typ lambert`);
+	string $colorMaps[];
+	string $tmpArr1[];
+	$fileTextures = `ls -typ file -l`;
+	
+	int $intTmp = 0;
+	for ($tmp in $fileTextures)
+		{
+		$tmpArr1 = `listConnections -p 0 -t lambert $tmp`;
+		if ( $tmpArr1[0] != "")
+			{
+			$colorMaps[$intTmp] = $tmp;
+			$intTmp ++;
+			}
+		}
+	
+
+///
+
+	float $amount = 0;
+	float $MaxAmount = size ($colorMaps);
+	progressWindow
+	-title "Working"
+	-status "Erasing Duplicates"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+	
+			
+	string $imageName;
+	string $SG[];
+	string $Mat[];
+	float $repeatU;
+	float $repeatV;
+	
+	string $imageNameCand;
+	string $SGCand[];
+	string $MatCand[];
+	string $objectsCand[];
+	float $repeatUCand;
+	float $repeatVCand;
+	
+	
+	for ($tex in $colorMaps)
+		{
+		
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+
+		$Mat = `listConnections -p 0 -t lambert $tex`;
+		$SG = `listConnections -p 0 -t shadingEngine $Mat`;
+		
+		
+		$imageName = eval("getAttr "+$tex+".ftn");
+		$repeatU = eval("getAttr "+$tex+".reu");
+		$repeatV = eval("getAttr "+$tex+".rev");
+
+	
+//		print ($tex + " -> ");
+//		print ("ftn="+$imageName + "; ");
+//		print ("reu="+$repeatU + "; ");
+//		print ("rev="+$repeatV + "\n");
+		
+		for ($candidate in $colorMaps)
+			{
+			if ($tex != $candidate)
+				{
+				$imageNameCand = eval("getAttr "+$candidate+".ftn");
+				$repeatUCand = eval("getAttr "+$candidate+".reu");
+				$repeatVCand = eval("getAttr "+$candidate+".rev");
+				if ( 	($imageName == $imageNameCand) && 
+					($repeatU == $repeatUCand) && 
+					($repeatV == $repeatVCand) )
+						{
+						$MatCand = `listConnections -p 0 -t lambert $candidate`;
+						$SGCand = `listConnections -p 0 -t shadingEngine $MatCand`;
+						$objectsCand = `sets -q $SGCand`;
+						if ($objectsCand[0] != "") sets -e -forceElement $SG $objectsCand; 
+						}
+				}
+			}
+		}
+	
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+
+/////////////////////////////////////////////////////////////////////	
+	
+
+	progressWindow
+	-title "Working"
+	-status "Reducing material list"
+	-isInterruptable 0;
+
+	/////////////////////
+
+	MLdeleteUnused;
+	
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+
+
+	$Erased = $Erased - size (`ls -typ lambert`);
+	string $Message = "Duplicates Erasing successfully finished.\n "+$Erased+" material(s) erased.";
+	confirmDialog -title "Information" -message $Message
+	-button "OK" -defaultButton "OK";
+
+
+	print ("\n\n--- Duplicates Erasing finished ---\n\n\n\n");
+}

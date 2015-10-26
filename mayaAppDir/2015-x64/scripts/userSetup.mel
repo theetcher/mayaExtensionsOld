@@ -1,0 +1,22 @@
+////////////////
+// misc tools //
+////////////////
+
+source watch;
+MJPolyTools;
+
+//////////////////////
+// lock ortho views //
+//////////////////////
+
+$cmd = "catch (`setAttr -lock true top.r`);";
+$cmd += "catch (`setAttr -lock true front.r`);";
+$cmd += "catch (`setAttr -lock true side.r`);";
+scriptJob -e "SceneOpened" $cmd;
+
+
+////////////////////
+// userSetupExtra //
+////////////////////
+catchQuiet(`userSetupExtra`);
+

@@ -1,0 +1,53 @@
+global proc fix_unitUVMove( string $dir )
+{
+
+	string $sel[];
+	string $objects[];
+	clear $objects;
+
+	PolySelectConvert 4;
+	
+	$sel = `ls -sl -l`;
+	$objects = `listRelatives -p`;
+	
+	if (size($objects) > 1){
+		for ($tmp in $sel)
+			switch ($dir){
+			case "up":
+				polyMoveUV -ch 0 -tu 0.0 -tv 1.0 $tmp;
+				break;
+			case "down": 
+				polyMoveUV -ch 0 -tu 0.0 -tv -1.0 $tmp;
+				break;
+			case "left": 
+				polyMoveUV -ch 0 -tu -1.0 -tv 0.0 $tmp;
+				break;
+			case "right":
+				polyMoveUV -ch 0 -tu 1.0 -tv 0.0 $tmp;
+				break;
+			}
+	} else {
+			switch ($dir){
+			case "up":
+				polyMoveUV -ch 0 -tu 0.0 -tv 1.0;
+				break;
+			case "down": 
+				polyMoveUV -ch 0 -tu 0.0 -tv -1.0;
+				break;
+			case "left": 
+				polyMoveUV -ch 0 -tu -1.0 -tv 0.0;
+				break;
+			case "right":
+				polyMoveUV -ch 0 -tu 1.0 -tv 0.0;
+				break;
+			}
+	}
+	
+	select $sel;
+
+
+}   
+
+
+
+

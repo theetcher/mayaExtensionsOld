@@ -1,0 +1,394 @@
+// Dice Mesh 0.2
+// fixed unterminated String in Maya 5.0 and above
+// added triangulate first for poly objects with holes
+// added delete construction history after
+//
+// Dice Mesh 0.1
+// initial release
+//
+// by Mike Thomson
+// Those of you who use(d) ElectricImage might
+// remember the Dicer plugin. Or even the 
+// Invigorator /mesh/ option. Well this kinda
+// does the same thing. I wrote it because we
+// build a lot of logos that have to be curved.
+//
+// Use this with Bevel Plus text created as
+// polys. Select a mesh and click on Dice Mesh...
+
+global proc mtDiceMesh() {
+
+	if (size(`ls -sl`) == 0) {
+		error ("Nothing selected");
+		}
+	else {
+		createDiceMeshWindow;
+		createGuideMesh;
+		}
+}
+
+global proc createDiceMeshWindow() {
+	if ( `window -exists diceMeshWindow` == true ) {
+		deleteUI diceMeshWindow;
+		}
+	window
+		-vis 1
+		-t "Dice Mesh" 
+		-mnb 1
+		-mxb 0
+		-w 267
+		-h 200
+		diceMeshWindow;
+
+formLayout mainForm;
+
+columnLayout
+	-w 267
+	masterWindowColumnLayout1;
+
+	frameLayout
+		-vis 0
+		-l "bounding box info"
+		-lv 1
+		-bv 1
+		-cll 1
+		-cl 1
+		-w 260
+		boundingBoxInfoFrameLayout;
+
+	columnLayout
+		boundingBoxInfColumnLayout;
+
+		textFieldGrp
+		-l "bounding box min x"
+		-tx ""
+		-cw2 120 80
+		-ed 0
+		boundingBoxXMinTxt;
+
+		textFieldGrp
+		-l "bounding box max x"
+		-tx ""
+		-cw2 120 80
+		-ed 0
+		boundingBoxXMaxTxt;
+
+		textFieldGrp
+		-l "bounding box min y"
+		-tx ""
+		-cw2 120 80
+		-ed 0		
+		boundingBoxYMinTxt;
+
+		textFieldGrp
+		-l "bounding box max y"
+		-tx ""
+		-cw2 120 80
+		-ed 0
+		boundingBoxYMaxTxt;
+
+		textFieldGrp
+		-l "bounding box min z"
+		-tx ""
+		-cw2 120 80
+		-ed 0		
+		boundingBoxZMinTxt;
+
+		textFieldGrp
+		-l "bounding box max z"
+		-tx ""
+		-cw2 120 80
+		-ed 0
+		boundingBoxZMaxTxt;
+
+	string $objToDice[] = `ls -sl`;
+		textFieldGrp
+		-l "Object to dice"
+		-tx $objToDice
+		-cw2 120 80
+		-ed 0
+		objToDiceTxt;
+		
+		setParent ..;
+	setParent ..;
+setParent masterWindowColumnLayout1;
+
+columnLayout
+	masterWindowColumnLayout2;
+	
+frameLayout
+	-l "Slice Options"
+	-lv 1
+	-bv 1
+	-mh 6
+	-w 260
+	sliceOptionsFrameLayout;
+
+	columnLayout
+		-cw 260
+		slicesRowColumnLayout;
+		
+		rowLayout
+			-nc 2
+			-cw2 210 50
+			sliceXrowLayout;
+	intSliderGrp
+		-l "slice X"
+		-v 3
+		-cw2 50 200
+		-min 1 -max 100
+		-dc "intFieldGrp -e -v1 (`intSliderGrp -q -v numberOfSlicesX`) numberOfSlicesXfield; editPlanes;"
+		numberOfSlicesX;
+
+	intFieldGrp
+		-w 40
+		-v1 `intSliderGrp -q -v numberOfSlicesX`
+		-cc "intSliderGrp -e -v (`intFieldGrp -q -v1 numberOfSlicesXfield`) numberOfSlicesX; editPlanes;"
+		numberOfSlicesXfield;
+
+	setParent ..;
+
+		rowLayout
+			-nc 2
+			-cw2 210 50
+			sliceYrowLayout;
+			
+	intSliderGrp
+		-l "slice Y"
+		-v 3
+		-cw2 50 450
+		-min 1 -max 100
+		-dc "intFieldGrp -e -v1 (`intSliderGrp -q -v numberOfSlicesY`) numberOfSlicesYfield; editPlanes;"
+		numberOfSlicesY;
+
+	intFieldGrp
+		-w 40
+		-v1 `intSliderGrp -q -v numberOfSlicesY`
+		-cc "intSliderGrp -e -v (`intFieldGrp -q -v1 numberOfSlicesYfield`) numberOfSlicesY; editPlanes;"
+		numberOfSlicesYfield;
+
+		setParent ..;
+
+		rowLayout
+			-nc 2
+			-cw2 210 50
+			sliceZrowLayout;
+
+	intSliderGrp
+		-l "slice Z"
+		-v 3
+		-cw2 50 450
+		-min 1 -max 100
+		-dc "intFieldGrp -e -v1 (`intSliderGrp -q -v numberOfSlicesZ`) numberOfSlicesZfield; editPlanes;"
+		numberOfSlicesZ;
+
+	intFieldGrp
+		-w 40
+		-v1 `intSliderGrp -q -v numberOfSlicesZ`
+		-cc "intSliderGrp -e -v	(`intFieldGrp -q -v1 numberOfSlicesZfield`) numberOfSlicesZ; editPlanes;"
+		numberOfSlicesZfield;
+
+		setParent ..;
+
+	checkBoxGrp
+		-l "triangulate first"
+		triangulateFirstBox;
+
+	checkBoxGrp
+		-l "delete history after"
+		deleteHistoryBox;
+
+setParent masterWindowColumnLayout1;
+
+columnLayout
+	masterWindowColumnLayout3;
+	button
+		-l "Dice it!"
+		-w 260
+		-c diceIt
+		sliceButton;
+	
+setParent masterWindowColumnLayout1;
+}
+
+global proc createGuideMesh() {
+	string $objToDice[] = `ls -sl`;
+	float $boundingBoxXMin =
+		`getAttr $objToDice.boundingBox.boundingBoxMin.boundingBoxMinX`;
+	float $boundingBoxXMax =
+		`getAttr $objToDice.boundingBox.boundingBoxMax.boundingBoxMaxX`;
+	float $boundingBoxYMin =
+		`getAttr $objToDice.boundingBox.boundingBoxMin.boundingBoxMinY`;
+	float $boundingBoxYMax =
+		`getAttr $objToDice.boundingBox.boundingBoxMax.boundingBoxMaxY`;
+	float $boundingBoxZMin =
+		`getAttr $objToDice.boundingBox.boundingBoxMin.boundingBoxMinZ`;
+	float $boundingBoxZMax =
+		`getAttr $objToDice.boundingBox.boundingBoxMax.boundingBoxMaxZ`;
+
+	int $numberOfSlicesX = `intSliderGrp -q -v numberOfSlicesX`;
+	int $numberOfSlicesY = `intSliderGrp -q -v numberOfSlicesY`;
+	int $numberOfSlicesZ = `intSliderGrp -q -v numberOfSlicesZ`;
+
+	float $objSizeX = $boundingBoxXMax - $boundingBoxXMin;
+	float $objSizeY = $boundingBoxYMax - $boundingBoxYMin;
+	float $objSizeZ = $boundingBoxZMax - $boundingBoxZMin;
+
+	float $objCentreX = ($boundingBoxXMax + $boundingBoxXMin) / 2;
+	float $objCentreY = ($boundingBoxYMax + $boundingBoxYMin) / 2;
+	float $objCentreZ = ($boundingBoxZMax + $boundingBoxZMin) / 2;
+
+// create xGuidePlane
+	polyPlane -ax 1 0 0
+		-w $objSizeZ -h $objSizeY
+		-sx $numberOfSlicesZ -sy $numberOfSlicesY
+		-tx 1 -ch 1
+		-n "xGuidePlane";
+	move ($boundingBoxXMax * 1.01) $objCentreY $objCentreZ;
+	setAttr "xGuidePlaneShape.overrideEnabled" 1;
+	setAttr "xGuidePlaneShape.overrideShading" 0;
+	setAttr "xGuidePlaneShape.overrideColor" 14;
+
+// create yGuidePlane
+	polyPlane -ax 0 1 0
+		-w $objSizeX -h $objSizeZ
+		-sx $numberOfSlicesX -sy $numberOfSlicesZ
+		-tx 1 -ch 1
+		-n "yGuidePlane";
+	move $objCentreX ($boundingBoxYMax * 1.01) $objCentreZ;
+	setAttr "yGuidePlaneShape.overrideEnabled" 1;
+	setAttr "yGuidePlaneShape.overrideShading" 0;
+	setAttr "yGuidePlaneShape.overrideColor" 14;
+
+// create zGuidePlane
+	polyPlane -ax 0 0 1
+		-w $objSizeX -h $objSizeY
+		-sx $numberOfSlicesX -sy $numberOfSlicesY
+		-tx 1 -ch 1
+		-n "zGuidePlane";
+	move $objCentreX $objCentreY ($boundingBoxZMax * 1.01);
+	setAttr "zGuidePlaneShape.overrideEnabled" 1;
+	setAttr "zGuidePlaneShape.overrideShading" 0;
+	setAttr "zGuidePlaneShape.overrideColor" 14;
+
+	$averageDimension = ($objSizeX +$objSizeY + $objSizeZ)/4;
+
+
+
+	select $objToDice;
+}	// end global proc createGuideMesh
+
+
+global proc editPlanes() {
+
+	int $numberOfSlicesX = `intSliderGrp -q -v numberOfSlicesX`;
+	int $numberOfSlicesY = `intSliderGrp -q -v numberOfSlicesY`;
+	int $numberOfSlicesZ = `intSliderGrp -q -v numberOfSlicesZ`;
+
+	$historyX = `listHistory -lv 1 xGuidePlaneShape`;
+		polyPlane -e -sx $numberOfSlicesZ -sy $numberOfSlicesY
+		$historyX;
+
+	$historyY = `listHistory -lv 1 yGuidePlaneShape`;
+		polyPlane -e -sx $numberOfSlicesX -sy $numberOfSlicesZ
+		$historyY;
+
+	$historyZ = `listHistory -lv 1 zGuidePlaneShape`;
+		polyPlane -e -sx $numberOfSlicesX -sy $numberOfSlicesY
+		$historyZ;
+
+	
+	
+}
+
+global proc diceIt() {
+	string $objToDice = `textFieldGrp -q -tx objToDiceTxt`;
+	select $objToDice;
+	float $boundingBoxXMin =
+		`getAttr $objToDice.boundingBox.boundingBoxMin.boundingBoxMinX`;
+	float $boundingBoxXMax =
+		`getAttr $objToDice.boundingBox.boundingBoxMax.boundingBoxMaxX`;
+	float $boundingBoxYMin =
+		`getAttr $objToDice.boundingBox.boundingBoxMin.boundingBoxMinY`;
+	float $boundingBoxYMax =
+		`getAttr $objToDice.boundingBox.boundingBoxMax.boundingBoxMaxY`;
+	float $boundingBoxZMin =
+		`getAttr $objToDice.boundingBox.boundingBoxMin.boundingBoxMinZ`;
+	float $boundingBoxZMax =
+		`getAttr $objToDice.boundingBox.boundingBoxMax.boundingBoxMaxZ`;
+
+	textFieldGrp -e -tx $boundingBoxXMin boundingBoxXMinTxt;
+	textFieldGrp -e -tx $boundingBoxXMax boundingBoxXMaxTxt;
+	textFieldGrp -e -tx $boundingBoxYMin boundingBoxYMinTxt;
+	textFieldGrp -e -tx $boundingBoxYMax boundingBoxYMaxTxt;
+	textFieldGrp -e -tx $boundingBoxZMin boundingBoxZMinTxt;
+	textFieldGrp -e -tx $boundingBoxZMax boundingBoxZMaxTxt;
+
+	float $objCentreX = ($boundingBoxXMax + $boundingBoxXMin) / 2;
+	float $objCentreY = ($boundingBoxYMax + $boundingBoxYMin) / 2;
+	float $objCentreZ = ($boundingBoxZMax + $boundingBoxZMin) / 2;
+
+	int $numberOfSlicesX = `intSliderGrp -q -v numberOfSlicesX`;
+	int $numberOfSlicesY = `intSliderGrp -q -v numberOfSlicesY`;
+	int $numberOfSlicesZ = `intSliderGrp -q -v numberOfSlicesZ`;
+
+	float $objSizeX = $boundingBoxXMax - $boundingBoxXMin;
+	float $objSizeY = $boundingBoxYMax - $boundingBoxYMin;
+	float $objSizeZ = $boundingBoxZMax - $boundingBoxZMin;
+
+	float $cutGapX = ($objSizeX / $numberOfSlicesX);
+	float $cutGapY = ($objSizeY / $numberOfSlicesY);
+	float $cutGapZ = ($objSizeZ / $numberOfSlicesZ);
+
+	float $firstPolyCutX = $boundingBoxXMin + $cutGapX;
+	float $firstPolyCutY = $boundingBoxYMin + $cutGapY;
+	float $firstPolyCutZ = $boundingBoxZMin + $cutGapZ;
+
+	$numberOfFaces = `polyEvaluate -f $objToDice`;
+
+	if(`checkBoxGrp -q -v1 triangulateFirstBox`){
+		print("triangulate!!!");
+		polyTriangulate -ch 1 $objToDice;
+		
+		} 
+
+for ( $cutNumberX = 1; $cutNumberX < $numberOfSlicesX; $cutNumberX ++ ) {
+		polyCut -ch 1 -pc $firstPolyCutX
+				$objCentreY
+				$objCentreZ
+			-ro 90 0 90
+			-ps 10 2
+			$objToDice.f[0:100000];
+ 		$firstPolyCutX = $firstPolyCutX + $cutGapX;
+		}
+	select $objToDice;
+	
+	for ( $cutNumberY = 1; $cutNumberY < $numberOfSlicesY; $cutNumberY ++ ) {
+		polyCut -ch 1 -pc $objCentreX $firstPolyCutY $objCentreZ
+			-ro 90 0 0 
+			-ps 10 2
+			$objToDice.f[0:100000];
+ 		$firstPolyCutY = $firstPolyCutY + $cutGapY;
+		}
+	select $objToDice;
+
+	for ( $cutNumberZ = 1; $cutNumberZ < $numberOfSlicesZ; $cutNumberZ ++ ) {
+		polyCut -ch 1 -pc $objCentreX $objCentreY $firstPolyCutZ
+			-ro 0 0 90
+			-ps 10 2
+			$objToDice.f[0:100000];
+ 		$firstPolyCutZ = $firstPolyCutZ + $cutGapZ;
+		}
+	select $objToDice;
+	
+	if(`checkBoxGrp -q -v1 deleteHistoryBox`){
+	delete -ch;
+	}
+
+
+	delete xGuidePlane;
+	delete yGuidePlane;
+	delete zGuidePlane;
+	deleteUI diceMeshWindow;
+
+}

@@ -1,0 +1,671 @@
+// mcPalette    v2005.09.13    © 2005 by Milo D. Cooper
+//
+// Adds support for customizable floating tool palettes.
+
+source "mcStringCleaning.mel";
+source "mcToInterCaps.mel";
+
+
+global proc mcPaletteBuildMenuList() {
+	string $saMenuItems[] = sort(`lsUI -menuItems`);
+	for ($sMenuItem in $saMenuItems)
+		if (`gmatch $sMenuItem "mcPalettePaletteList*"` || `gmatch $sMenuItem "mcPaletteSubMenu*"`)
+			deleteUI $sMenuItem;
+
+	string $saWindows[] = sort(`lsUI -windows`);
+	for ($sWindow in $saWindows) {
+		if (! `gmatch $sWindow "mcPalette*Window"`)
+			continue;
+		string
+			$sPalette = `window -query -title $sWindow`,
+			$sPaletteUI = `capitalizeString (mcStringCleaning(mcToInterCaps($sPalette), "an"))`
+		;
+		menuItem
+			-label $sPalette
+			-command ("showWindow " + $sWindow + ";")
+			-parent mcPaletteMainMenuItem
+		("mcPalettePaletteList" + $sPaletteUI + "MenuItem");
+	}
+
+	menuItem
+		-divider yes
+		-parent mcPaletteMainMenuItem
+	mcPaletteSubMenuDividerCreateMenuItem;
+	menuItem
+		-label "Create New Palette"
+		-command "mcPaletteNew;"
+		-parent mcPaletteMainMenuItem
+	mcPaletteSubMenuCreateNewPaletteMenuItem;
+	menuItem
+		-label "Magnetize Maya default shelves"
+		-command "mcPaletteDemagnetize;"
+		-parent mcPaletteMainMenuItem
+	mcPaletteSubMenuDemagnetizeAllPalettesMenuItem;
+	menuItem
+		-divider yes
+		-parent mcPaletteMainMenuItem
+	mcPaletteSubMenuDividerSaveMenuItem;
+	menuItem
+		-label "Save All Palettes"
+		-command "mcPaletteSave;"
+		-parent mcPaletteMainMenuItem
+	mcPaletteSubMenuSaveAllPalettesMenuItem;
+}
+
+
+global proc mcPaletteDemagnetize() {
+	global string
+		$gShelfTopLevel,
+		$sgMcPaletteShelfTopLevelOriginal
+	;
+
+	if ($sgMcPaletteShelfTopLevelOriginal != $gShelfTopLevel) {
+		string $saWindows[] = `lsUI -long -windows`;
+		for ($sPalette in $saWindows) {
+			if (`gmatch $sPalette "mcPalette*Window"`) {
+				string $sMenuItem = (`substitute "Window$" $sPalette ""` + "PaletteMagnetizeMenuItem");
+				menuItem -edit -checkBox off $sMenuItem;
+			}
+		}
+	}
+
+	$gShelfTopLevel = $sgMcPaletteShelfTopLevelOriginal;
+}
+
+
+global proc mcPaletteInitialize() {
+	global string
+		$gMainWindowMenu,
+		$gShelfTopLevel,
+		$sgMcPaletteShelfTopLevelOriginal
+	;
+
+	if ("" == $sgMcPaletteShelfTopLevelOriginal)
+		$sgMcPaletteShelfTopLevelOriginal = $gShelfTopLevel;
+	$gShelfTopLevel = $sgMcPaletteShelfTopLevelOriginal;
+
+	if (`menuItem -exists mcPaletteMainDividerMenuItem`)
+		deleteUI mcPaletteMainDividerMenuItem;
+	if (`menuItem -exists mcPaletteMainMenuItem`)
+		deleteUI mcPaletteMainMenuItem;
+
+	// Determine long name of main window menu.
+	string $sMainWindowmenu, $saMenus[] = `lsUI -long -menus`;
+	for ($sMenu in $saMenus) {
+		if (! `gmatch $sMenu ("*|" + $gMainWindowMenu)`)
+			continue;
+		$sMainWindowmenu = $sMenu;
+		break;
+	}
+
+	// Determine UV Texture Editor menu item.
+	string $sUVEditorMenuItem, $saItems[] = `menu -query -itemArray $sMainWindowmenu`;
+	for ($sItem in $saItems) {
+		string $sLong = ($sMainWindowmenu + "|" + $sItem);
+		if (`menuItem -query -divider $sLong` || `menuItem -query -isOptionBox $sLong` || `menuItem -query -subMenu $sLong`)
+			continue;
+		if ("TextureViewWindow" != `menuItem -query -command $sLong`)
+			continue;
+		$sUVEditorMenuItem = $sLong;
+		break;
+	}
+
+	// Add to "Window" menu.
+	menuItem
+		-divider yes
+		-insertAfter $sUVEditorMenuItem
+		-parent $sMainWindowmenu
+	mcPaletteMainDividerMenuItem;
+	menuItem
+		-label "Palettes"
+		-insertAfter mcPaletteMainDividerMenuItem
+		-subMenu yes -tearOff yes
+		-parent $sMainWindowmenu
+	mcPaletteMainMenuItem;
+
+	// Create saved palettes.
+	string $sPaletteDir = (`internalVar -userPrefDir` + "Mc/Palettes/");
+	string $saMELs[] = `getFileList -folder $sPaletteDir -filespec "*.mel"`;
+	for ($sMEL in $saMELs)
+		eval("source \"" + $sPaletteDir + $sMEL + "\"");
+
+	// Update palette list.
+	mcPaletteBuildMenuList();
+}
+
+
+global proc mcPaletteNew() {
+	string
+		$sPaletteName = "New Palette",
+		$sPaletteUI = `capitalizeString (mcStringCleaning(mcToInterCaps($sPaletteName), "an"))`,
+		$sPrefix = ("mcPalette" + $sPaletteUI),
+		$sWindow = ($sPrefix + "Window")
+	;
+
+	if (`window -exists $sWindow`)
+		deleteUI $sWindow;
+
+	string
+		$sShelfTabLayout = ($sPrefix + "ShelfTabLayout"),
+		$sTabLabel = "New Tab",
+		$sShelfLayout = ($sPrefix + `capitalizeString (mcStringCleaning(mcToInterCaps($sTabLabel), "an"))` + "ShelfLayout"),
+		$sPopUpMenu = ($sPrefix + "PopUp"),
+		$sMenuItemNewTab = ($sPrefix + "TabNewMenuItem"),
+		$sMenuItemLabelTab = ($sPrefix + "TabLabelMenuItem"),
+		$sMenuItemDeleteTab = ($sPrefix + "TabDeleteMenuItem"),
+		$sPaletteMoveDivider = ($sPrefix + "DividerMoveItem"),
+		$sMenuItemLeftTab = ($sPrefix + "TabMoveLeftMenuItem"),
+		$sMenuItemRightTab = ($sPrefix + "TabMoveRightMenuItem"),
+		$sPaletteRenameDivider = ($sPrefix + "DividerRenameItem"),
+		$sMenuItemLabelPalette = ($sPrefix + "PaletteLabelMenuItem"),
+		$sMenuItemMagnetizePalette = ($sPrefix + "PaletteMagnetizeMenuItem"),
+		$sPaletteRemoveDivider = ($sPrefix + "DividerRemoveItem"),
+		$sMenuItemDeletePalette = ($sPrefix + "PaletteDeleteMenuItem")
+	;
+
+	window
+		-title $sPaletteName
+		-widthHeight 106 124
+		-resizeToFitChildren no
+		-toolbox yes
+		-retain
+	$sWindow;
+
+	shelfTabLayout
+		-image "smallTrash.xpm"
+		-imageVisible yes
+		-parent $sWindow
+	$sShelfTabLayout;
+	
+	shelfLayout
+		-annotation $sTabLabel
+		-cellWidthHeight 34 34
+		-style "iconOnly"
+		-parent $sShelfTabLayout
+	$sShelfLayout;
+	shelfTabLayout -edit -tabLabel $sShelfLayout $sTabLabel $sShelfTabLayout;
+
+	popupMenu
+		-button 3
+		-parent $sShelfTabLayout
+	$sPopUpMenu;
+		menuItem
+			-label "New tab"
+			-command ("mcPaletteUpdate(\"TabNew\", \"" + $sPaletteName + "\")")
+			-parent $sPopUpMenu
+		$sMenuItemNewTab;
+		menuItem
+			-label "Rename current tab"
+			-command ("mcPaletteUpdate(\"TabLabel\", \"" + $sPaletteName + "\")")
+			-parent $sPopUpMenu
+		$sMenuItemLabelTab;
+		menuItem
+			-label "Delete current tab"
+			-command ("mcPaletteUpdate(\"TabDelete\", \"" + $sPaletteName + "\")")
+			-enable no
+			-parent $sPopUpMenu
+		$sMenuItemDeleteTab;
+		menuItem -divider yes -parent mcPaletteNewPalettePopUp $sPaletteMoveDivider;
+		menuItem
+			-label "Move current tab left"
+			-command ("mcPaletteUpdate(\"TabMoveLeft\", \"" + $sPaletteName + "\")")
+			-enable no
+			-parent $sPopUpMenu
+		$sMenuItemLeftTab;
+		menuItem
+			-label "Move current tab right"
+			-command ("mcPaletteUpdate(\"TabMoveRight\", \"" + $sPaletteName + "\")")
+			-enable no
+			-parent $sPopUpMenu
+		$sMenuItemRightTab;
+		menuItem -divider yes -parent mcPaletteNewPalettePopUp $sPaletteRenameDivider;
+		menuItem
+			-label "Rename palette"
+			-command ("mcPaletteUpdate(\"PaletteLabel\", \"" + $sPaletteName + "\")")
+			-parent $sPopUpMenu
+		$sMenuItemLabelPalette;
+		menuItem
+			-label "Magnetize palette"
+			-command ("mcPaletteUpdate(\"PaletteMagnetize\", \"" + $sPaletteName + "\")")
+			-checkBox off
+			-italicized yes
+			-enableCommandRepeat no
+			-parent $sPopUpMenu
+		$sMenuItemMagnetizePalette;
+		menuItem -divider yes -parent mcPaletteNewPalettePopUp $sPaletteRemoveDivider;
+		menuItem
+			-label "Delete palette"
+			-command ("mcPaletteUpdate(\"PaletteDelete\", \"" + $sPaletteName + "\")")
+			-parent $sPopUpMenu
+		$sMenuItemDeletePalette;
+
+	window -edit -widthHeight 106 124 $sWindow;
+	showWindow $sWindow;
+
+	mcPaletteBuildMenuList();
+}
+
+
+global proc string mcPaletteNoSpecialChars(string $sString) {
+	$sString = `substituteAllString $sString "\\" ""`;
+	$sString = `substituteAllString $sString "\"" ""`;
+	return $sString;
+}
+
+
+global proc mcPaletteSave() {
+	global string
+		$gShelfTopLevel,
+		$gMainProgressBar
+	;
+
+	// Delete all palette MELs.
+	string $sPaletteDir = (`internalVar -userPrefDir` + "Mc/Palettes/");
+	string $saMELs[] = `getFileList -folder $sPaletteDir -filespec "*.mel"`;
+	for ($sMEL in $saMELs)
+		sysFile -delete ($sPaletteDir + $sMEL);
+
+	string
+		$sPaletteDir = (`internalVar -userPrefDir` + "Mc/Palettes/"),
+		$sTempDir = `internalVar -userTmpDir`,
+		$saWindows[] = `lsUI -windows`,
+		$saPaletteWindows[]
+	;
+
+	for ($sWindow in $saWindows)
+		if (`gmatch $sWindow "mcPalette*Window"`)
+			$saPaletteWindows[size($saPaletteWindows)] = $sWindow;
+
+	if (! `filetest -d $sPaletteDir`)
+		sysFile -makeDir $sPaletteDir;
+
+	progressBar -edit -beginProgress -maxValue (size($saPaletteWindows)) -isInterruptable false $gMainProgressBar;
+
+	for ($sWindow in $saPaletteWindows) {
+		string
+			$sPalette = `window -query -title $sWindow`,
+			$sPaletteUI = `capitalizeString (mcStringCleaning(mcToInterCaps($sPalette), "an"))`,
+			$sPrefix = ("mcPalette" + $sPaletteUI),
+			$sShelfTabLayout = ($sPrefix + "ShelfTabLayout"),
+			$saShelfLayouts[] = `shelfTabLayout -query -childArray $sShelfTabLayout`,
+			$sPopUpMenu = ($sPrefix + "PopUp"),
+			$sMenuItemNewTab = ($sPrefix + "TabNewMenuItem"),
+			$sMenuItemLabelTab = ($sPrefix + "TabLabelMenuItem"),
+			$sMenuItemDeleteTab = ($sPrefix + "TabDeleteMenuItem"),
+			$sPaletteMoveDivider = ($sPrefix + "DividerMoveItem"),
+			$sMenuItemLeftTab = ($sPrefix + "TabMoveLeftMenuItem"),
+			$sMenuItemRightTab = ($sPrefix + "TabMoveRightMenuItem"),
+			$sPaletteRenameDivider = ($sPrefix + "DividerRenameItem"),
+			$sMenuItemLabelPalette = ($sPrefix + "PaletteLabelMenuItem"),
+			$sMenuItemMagnetizePalette = ($sPrefix + "PaletteMagnetizeMenuItem"),
+			$sPaletteRemoveDivider = ($sPrefix + "DividerRemoveItem"),
+			$sMenuItemDeletePalette = ($sPrefix + "PaletteDeleteMenuItem"),
+			$sFile = ($sPaletteDir + $sPaletteUI + ".mel")
+		;
+		progressBar -edit -status ("Saving palettes... " + $sPalette) $gMainProgressBar;
+
+		// Prepare palette MEL file for writing.
+		sysFile -delete $sFile;
+		int $iFileID = `fopen $sFile "w"`;
+
+		// Record contents of all tabs.
+		string $saTabUIs[] = `shelfTabLayout -query -childArray $sShelfTabLayout`;
+        for ($sTabUI in $saTabUIs) {
+			string
+				$sTab = `shelfLayout -query -annotation $sTabUI`,
+				$sTabIC = `capitalizeString (mcStringCleaning(mcToInterCaps($sTab), "an"))`,
+				$sTempFile = ($sTempDir + $sPrefix + $sTabIC + "Procedure")
+			;
+
+	        saveShelf $sTabUI $sTempFile;
+			$sTempFile += ".mel";
+			int $iTempFileID = `fopen $sTempFile "r"`;
+
+			while (! `feof $iTempFileID`) {
+				string $sLine = `fgetline $iTempFileID`;
+				fprint $iFileID $sLine;
+			}
+
+			fprint $iFileID "\n\n";
+			fclose $iTempFileID;
+			sysFile -delete $sTempFile;
+		}
+
+		// Record palette structure.
+		fprint $iFileID ("if (`window -exists " + $sWindow + "`) deleteUI " + $sWindow + ";\n");
+		fprint $iFileID (
+			"window -title \"" + $sPalette + "\""
+			+ "\n\t-resizeToFitChildren no -toolbox yes -retain"
+			+ "\n" + $sWindow + ";\n"
+
+		);
+		fprint $iFileID (
+			"\tshelfTabLayout"
+			+ "\n\t\t-image \"smallTrash.xpm\" -imageVisible yes"
+			+ "\n\t\t-parent " + $sWindow
+			+ "\n\t" + $sShelfTabLayout + ";\n"
+		);
+		for ($sShelfLayout in $saShelfLayouts) {
+			string $sLabel = `shelfLayout -query -annotation $sShelfLayout`;
+			fprint $iFileID (
+				"\t\tshelfLayout"
+				+ "\n\t\t\t-annotation \"" + $sLabel + "\""
+				+ "\n\t\t\t-cellWidthHeight 34 34 -style \"iconOnly\""
+				+ "\n\t\t\t-parent " + $sShelfTabLayout
+				+ "\n\t\t" + $sShelfLayout + ";\n"
+			);
+			fprint $iFileID (
+				"\tshelfTabLayout -edit"
+				+ "\n\t\t-tabLabel " + $sShelfLayout + " \"" + $sLabel + "\""
+				+ "\n\t" + $sShelfTabLayout + ";\n"
+			);
+		}
+		fprint $iFileID "\n";
+
+		// Record popupMenu.
+		fprint $iFileID (
+			"\tpopupMenu"
+			+ "\n\t\t-button 3"
+			+ "\n\t\t-parent " + $sShelfTabLayout
+			+ "\n\t" + $sPopUpMenu + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -label \"New tab\""
+			+ "\n\t\t\t-command (\"mcPaletteUpdate(\\\"TabNew\\\", \\\"" + $sPalette + "\\\")\")"
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sMenuItemNewTab + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -label \"Rename current tab\""
+			+ "\n\t\t\t-command (\"mcPaletteUpdate(\\\"TabLabel\\\", \\\"" + $sPalette + "\\\")\")"
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sMenuItemLabelTab + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -label \"Delete current tab\""
+			+ "\n\t\t\t-command (\"mcPaletteUpdate(\\\"TabDelete\\\", \\\"" + $sPalette + "\\\")\")"
+			+ "\n\t\t\t-enable " + `menuItem -query -enable $sMenuItemDeleteTab`
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sMenuItemDeleteTab + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -divider yes"
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sPaletteMoveDivider + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -label \"Move current tab left\""
+			+ "\n\t\t\t-command (\"mcPaletteUpdate(\\\"TabMoveLeft\\\", \\\"" + $sPalette + "\\\")\")"
+			+ "\n\t\t\t-enable " + (`shelfTabLayout -query -numberOfChildren $sShelfTabLayout` > 1)
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sMenuItemLeftTab + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -label \"Move current tab right\""
+			+ "\n\t\t\t-command (\"mcPaletteUpdate(\\\"TabMoveRight\\\", \\\"" + $sPalette + "\\\")\")"
+			+ "\n\t\t\t-enable " + (`shelfTabLayout -query -numberOfChildren $sShelfTabLayout` > 1)
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sMenuItemRightTab + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -divider yes"
+			+  "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sPaletteRenameDivider + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -label \"Rename palette\""
+			+ "\n\t\t\t-command (\"mcPaletteUpdate(\\\"PaletteLabel\\\", \\\"" + $sPalette + "\\\")\")"
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sMenuItemLabelPalette + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -label \"Magnetize palette\""
+			+ "\n\t\t\t-command (\"mcPaletteUpdate(\\\"PaletteMagnetize\\\", \\\"" + $sPalette + "\\\")\")"
+//			+ "\n\t\t\t-checkBox " + (($sWindow + "|" + $sShelfTabLayout) == $gShelfTopLevel)
+			+ "\n\t\t\t-checkBox off -italicized yes -enableCommandRepeat no"
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sMenuItemMagnetizePalette + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -divider yes"
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sPaletteRemoveDivider + ";\n"
+		);
+		fprint $iFileID (
+			"\t\tmenuItem -label \"Delete palette\""
+			+ "\n\t\t\t-command (\"mcPaletteUpdate(\\\"PaletteDelete\\\", \\\"" + $sPalette + "\\\")\")"
+			+ "\n\t\t\t-parent " + $sPopUpMenu
+			+ "\n\t\t" + $sMenuItemDeletePalette + ";\n"
+		);
+		fprint $iFileID "\n";
+
+		// Load tabs' contents.
+        for ($sTabUI in $saTabUIs) {
+			string
+				$sTab = `shelfLayout -query -annotation $sTabUI`,
+				$sTabIC = `capitalizeString (mcStringCleaning(mcToInterCaps($sTab), "an"))`,
+				$sProc = ($sPrefix + $sTabIC + "Procedure")
+			;
+			fprint $iFileID ("\tsetParent " + $sTabUI + ";\n");
+			fprint $iFileID ("\t" + $sProc + ";\n");
+		}
+		// Set current tab.
+		fprint $iFileID (
+			"\tshelfTabLayout -edit"
+			+ "\n\t\t-selectTab " + `shelfTabLayout -query -selectTab $sShelfTabLayout`
+			+ "\n\t" + $sShelfTabLayout + ";\n"
+		);
+		fprint $iFileID "\n";
+
+/*
+		// Magnetize palette.
+		fprint $iFileID (
+			"if (`menuItem -query -checkBox " + $sMenuItemMagnetizePalette + "`)\n"
+			+ "\t\t$gShelfTopLevel = \"" + $sWindow + "|" + $sShelfTabLayout + "\";\n"
+		);
+		fprint $iFileID "\n";
+*/
+
+		// Show palette.
+		// Set window size twice as work-around for poor button arrangement under Windows.
+		fprint $iFileID (
+			"window -edit"
+			+ "\n\t-widthHeight " + (`window -query -width $sWindow` * 2) + " " + (`window -query -height $sWindow` * 2)
+			+ "\n\t-topLeftCorner " + `window -query -topEdge $sWindow` + " " + `window -query -leftEdge $sWindow`
+			+ "\n" + $sWindow + ";\n"
+		);
+		fprint $iFileID (
+			"window -edit"
+			+ "\n\t-widthHeight " + `window -query -width $sWindow` + " " + `window -query -height $sWindow`
+			+ "\n" + $sWindow + ";\n"
+		);
+		if (`window -query -visible $sWindow`)
+			fprint $iFileID ("showWindow " + $sWindow + ";\n");
+		fprint $iFileID "\n";
+
+		fclose $iFileID;
+		progressBar -edit -step 1 $gMainProgressBar;
+	}
+
+	progressBar -edit -endProgress $gMainProgressBar;
+	print "\n";
+	print "Palettes saved.\n";
+}
+
+
+global proc mcPaletteUpdate(string $sAction, string $sOldPaletteName) {
+	global string
+		$gShelfTopLevel,
+		$sgMcPaletteShelfTopLevelOriginal
+	;
+
+	string
+		$sOldPaletteUI = `capitalizeString (mcStringCleaning(mcToInterCaps($sOldPaletteName), "an"))`,
+		$sOldPrefix = ("mcPalette" + $sOldPaletteUI),
+		$sOldWindow = ($sOldPrefix + "Window"),
+		$sShelfTabLayout = ($sOldPrefix + "ShelfTabLayout")
+	;
+	if (! `window -exists $sOldWindow`)
+		error ("Palette \"" + $sOldPaletteName + "\" does not exist.");
+	int
+		$iTab = `shelfTabLayout -query -selectTabIndex $sShelfTabLayout`,
+		$iNumTabs = `shelfTabLayout -query -numberOfChildren $sShelfTabLayout`;
+	;
+
+	switch ($sAction) {
+		case "TabNew":
+			string
+				$sTab,
+				$sShelfLayout
+			;
+			int $iI = 0;
+			while (true) {
+				$sTab = ("New Tab" + ($iI ? (" " + $iI) : ""));
+				$sShelfLayout = ($sOldPrefix + `capitalizeString (mcStringCleaning(mcToInterCaps($sTab), "an"))` + "ShelfLayout");
+				if (! `shelfLayout -exists $sShelfLayout`)
+					break;
+				$iI++;
+			}
+			shelfLayout
+				-annotation $sTab
+				-cellWidthHeight 34 34
+				-style "iconOnly"
+				-parent $sShelfTabLayout
+			$sShelfLayout;
+			shelfTabLayout -edit -tabLabel $sShelfLayout $sTab $sShelfTabLayout;
+			string
+				$sMenuItemDeleteTab = ($sOldPrefix + "TabDeleteMenuItem"),
+				$sMenuItemLeftTab = ($sOldPrefix + "TabMoveLeftMenuItem"),
+				$sMenuItemRightTab = ($sOldPrefix + "TabMoveRightMenuItem")
+			;
+			menuItem -edit -enable yes $sMenuItemDeleteTab;
+			menuItem -edit -enable yes $sMenuItemLeftTab;
+			menuItem -edit -enable yes $sMenuItemRightTab;
+			break;
+		case "TabLabel":
+			string $sOldShelfLayout = `shelfTabLayout -query -selectTab $sShelfTabLayout`;
+			string $saOldLabels[] = `shelfTabLayout -query -tabLabel $sShelfTabLayout`;
+			string $sButton =
+				`promptDialog
+					-title "Label tab"
+					-message ("New label for tab \"" + $saOldLabels[($iTab - 1)] + "\":")
+					-text $saOldLabels[($iTab - 1)]
+					-button "OK" -button "Cancel"
+					-defaultButton "OK" -cancelButton "Cancel"
+					-dismissString "Cancel"
+				`
+			;
+			if ("OK" == $sButton) {
+				string $sTab = mcPaletteNoSpecialChars(`promptDialog -query -text`);
+				if ("" == $sTab)
+					error "No label specified.";
+				string $sShelfLayout = ($sOldPrefix + `capitalizeString (mcStringCleaning(mcToInterCaps($sTab), "an"))` + "ShelfLayout");
+				if (`shelfLayout -exists $sShelfLayout`)
+					error ("Tab \"" + $sTab + "\" not sufficiently unique in palette \"" + $sOldPaletteName + ".\"");
+				shelfTabLayout -edit -tabLabelIndex $iTab $sTab $sShelfTabLayout;
+				shelfLayout -edit -annotation $sTab $sOldShelfLayout;
+				renameUI $sOldShelfLayout $sShelfLayout;
+			}
+			break;
+		case "TabDelete":
+			string
+				$sTab = `shelfTabLayout -query -selectTab $sShelfTabLayout`,
+				$sMenuItemDeleteTab = ($sOldPrefix + "TabDeleteMenuItem"),
+				$sMenuItemLeftTab = ($sOldPrefix + "TabMoveLeftMenuItem"),
+				$sMenuItemRightTab = ($sOldPrefix + "TabMoveRightMenuItem")
+			;
+			deleteUI $sTab;
+			menuItem -edit -enable ($iNumTabs > 2) $sMenuItemDeleteTab;
+			menuItem -edit -enable ($iNumTabs > 2) $sMenuItemLeftTab;
+			menuItem -edit -enable ($iNumTabs > 2) $sMenuItemRightTab;
+			break;
+		case "TabMoveLeft":
+			int $iDestIndex = (($iTab > 1) ? ($iTab - 1) : $iNumTabs);
+			shelfTabLayout -edit -moveTab $iTab $iDestIndex $sShelfTabLayout;
+			break;
+		case "TabMoveRight":
+			int $iDestIndex = (($iTab < $iNumTabs) ? ($iTab + 1) : 1);
+			shelfTabLayout -edit -moveTab $iTab $iDestIndex $sShelfTabLayout;
+			break;
+		case "PaletteLabel":
+			string $sButton =
+				`promptDialog
+					-title "Label palette"
+					-message ("New name for palette \"" + $sOldPaletteName + "\":")
+					-text $sOldPaletteName
+					-button "OK" -button "Cancel"
+					-defaultButton "OK" -cancelButton "Cancel"
+					-dismissString "Cancel"
+				`
+			;
+			if ("OK" == $sButton) {
+				string $sLabel = mcPaletteNoSpecialChars(`promptDialog -query -text`);
+				if ("" == $sLabel)
+					error "No label specified.";
+				string
+					$sNewPaletteUI = `capitalizeString (mcStringCleaning(mcToInterCaps($sLabel), "an"))`,
+					$sNewPrefix = ("mcPalette" + $sNewPaletteUI),
+					$sNewWindow = ($sNewPrefix + "Window")
+				;
+				if (`window -exists $sNewWindow`)
+					error ("Palette name \"" + $sLabel + "\" is insufficiently unique.");
+				if ("mcpalettecreatenewpalettewindow" == `tolower $sNewWindow`)
+					error ("Palette name \"" + $sLabel + "\" not allowed.");
+
+				string
+					$saControls[] = `lsUI -windows -controlLayouts -menus -menuItems`,
+					$sSearchString = ($sOldPrefix + "*")
+				;
+				for ($sControl in $saControls) {
+					if (! `gmatch $sControl $sSearchString`)
+						continue;
+					string $sRename = substitute($sOldPaletteUI, $sControl, $sNewPaletteUI);
+					renameUI $sControl $sRename;
+					if (
+						`menuItem -exists $sRename`
+						&& (! `menuItem -query -divider $sRename`)
+						&& (! `menuItem -query -isOptionBox $sRename`)
+						&& (! `menuItem -query -subMenu $sRename`)
+					) {
+						string $sCommand = `menuItem -query -command $sRename`;
+						$sCommand = `substitute (", \"" + $sOldPaletteName + "\"") $sCommand (", \"" + $sLabel + "\"")`;
+						menuItem -edit -command $sCommand $sRename;
+					}
+				}
+
+				window -edit -title $sLabel $sNewWindow;
+				mcPaletteBuildMenuList();
+			}
+			break;
+		case "PaletteMagnetize":
+			string $sMenuItem = ($sOldPrefix + "PaletteMagnetizeMenuItem");
+			int $bOn = `menuItem -query -checkBox $sMenuItem`;
+			mcPaletteDemagnetize();
+			menuItem -edit -checkBox $bOn $sMenuItem;
+			if ($bOn)
+				$gShelfTopLevel = ($sOldWindow + "|" + $sShelfTabLayout);
+			break;
+		case "PaletteDelete":
+			string $sMenuItem = ($sOldPrefix + "PaletteMagnetizeMenuItem");
+			if (`menuItem -query -checkBox $sMenuItem`)
+				$gShelfTopLevel = $sgMcPaletteShelfTopLevelOriginal;
+			if (`window -exists $sOldWindow`)
+				deleteUI $sOldWindow;
+			string $sFile = (`internalVar -userPrefDir` + "Mc/Palettes/" + $sOldPaletteUI + ".mel");
+			sysFile -delete $sFile;
+			mcPaletteBuildMenuList();
+			break;
+		default:
+			error("Invalid palette action \"" + $sAction + ".\"");
+	}
+
+	print "";
+}
+
+
+global proc mcPalette() {
+	evalDeferred ("mcPaletteInitialize()");
+}
+
+mcPalette();
+

@@ -1,0 +1,122 @@
+//------
+//crops a string array based on a given pair of indicies.
+//The indicies take the form: "start:end"
+
+//Neither numbers have to be specified, you can leave them blank instead.  Leaving them blank
+//causes the script to use defaults.  the start default is zero, and the end default is the final
+//index in the given array.  so zooIndexCrop_string { "a", "b", "c", "d" } "";  will return the
+//original array.
+//
+//You can also specify negative numbers for the end index.  Negative numbers specify the index
+//"backwards" from the final index.
+//example:
+//zooIndexCrop_string { "a", "b", "c", "d" } ":-2";
+//{ "a", "b" };
+//
+//zooIndexCrop_string { "a", "b", "c", "d" } "1:-1";
+//{ "b", "c" };
+//------
+global proc string[] zooIndexCrop_string( string $array[], string $startEndStr ) {
+	string $cropped[];
+	string $startStr = `match "^[^:]+" $startEndStr`;
+	string $endStr = `match "[^:]+$" $startEndStr`;
+	int $size = `size $array`;
+	int $start = 0;
+	int $end = $size;
+
+	$startStr = `match "[0-9]+" $startStr`;
+	$endStr = `match "[-0-9]+" $endStr`;
+	if( `size $startStr` ) $start = $startStr;
+	if( `size $endStr` ) $end = $endStr;
+	if( $start<0 ) return $array;
+	if( $end<0 ) $end = $size+$end;
+	for( $n=$start; $n<$end; $n++ ) $cropped[( `size $cropped` )] = $array[$n];
+
+	return $cropped;
+	}
+
+
+//------
+//orders the given string array based on an int array
+//example:
+//zooOrderArrayUsing { "a", "b", "c", "d" } { 3, 0, 1, 2 };
+//returns the result:
+// { "b", "c", "d", "a" };
+//------
+global proc string[] zooOrderArrayUsing( string $array[], int $orders[] ) {
+	if( `size $array` != `size $orders` ) warning "the given string array is a different size to the orders array - unwanted results may occur";
+	string $orderedStr[];
+	string $arrayM[] = $array;  //this is a copy of the given string array that will get modified - arrays are referenced so this is nessecary
+	int $ordersM[] = $orders;
+
+	while( `size $arrayM` && `size $ordersM` ) {
+		int $lowest = `zooGetLowestValueIndex $ordersM`;
+		$orderedStr[( `size $orderedStr` )] = $arrayM[$lowest];
+		$arrayM = `zooRemoveArrayIndex_string $arrayM $lowest`;
+		$ordersM = `zooRemoveArrayIndex_int $ordersM $lowest`;
+		}
+
+	return $orderedStr;
+	}
+
+
+//------
+//returns the index of the lowest value in an int array
+//------
+global proc int zooGetLowestValueIndex( int $array[] ) {
+	int $sorted[] = `sort $array`;
+	int $lowest = $sorted[0];
+	for( $n=0; $n<`size $array`; $n++ ) if( $array[$n] == $lowest ) return $n;
+	}
+
+
+//------
+//removes the array element at the given index - returns the resulting array
+//------
+global proc int[] zooRemoveArrayIndex_int( int $array[], int $index ) {
+	int $removed[];
+	for( $n=0; $n<`size $array`; $n++ ) {
+		if( $n == $index ) continue;
+		$removed[( `size $removed` )] = $array[$n];
+		}
+
+	return $removed;
+	}
+
+
+//------
+//same as zooRemoveArrayIndex_int but for a string array
+//------
+global proc string[] zooRemoveArrayIndex_string( string $array[], int $index ) {
+	string $removed[];
+	for( $n=0; $n<`size $array`; $n++ ) {
+		if( $n == $index ) continue;
+		$removed[( `size $removed` )] = $array[$n];
+		}
+
+	return $removed;
+	}
+
+
+//------
+//given an array of floats, this proc will return an array normalised to a given number
+//example:
+//zooNormaliseArray { 1, 2, 3 } 1;
+//returns { 0.166667 0.333333 0.5 }
+//------
+global proc float[] zooNormaliseArray( float $array[], float $normaliseTo ) {
+	float $total = 0;
+	float $normFactor = 0;
+	float $normArray[] = $array;
+	int $num = `size $array`;
+
+	if( !$num ) return $array;
+	for( $n=0; $n<$num; $n++ ) $total += $array[$n];
+	if( $total == $normaliseTo ) return $array;
+	$normFactor = $normaliseTo/$total;
+	for( $n=0; $n<$num; $n++ ) $normArray[$n] *= $normFactor;
+	return $normArray;
+	}
+
+
+//zoo.end

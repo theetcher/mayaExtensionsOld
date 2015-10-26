@@ -1,0 +1,39 @@
+/* XPM */
+static char *copyUV[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #040204",
+". c #848684",
+"# c #c8c7c8",
+"a c #f9faf9",
+"b c #504e50",
+"c c #9bb2ad",
+"d c #646664",
+"e c #343234",
+/* pixels */
+"########################",
+"#c##c##c#####c##c##c##c#",
+"#c..........c###########",
+"#c.aaaaaaaa.b#c#c#c#c#c#",
+"#c.aaaaaaaa.#b##########",
+"#c.aaaaaaaa.a#bcccc####c",
+"#c.aaeee..........cc####",
+"#c.aaaaa.aaaaaaaa.`##c##",
+"#c.aaeee.aaaaaaa#.#`c##c",
+"#c.aaaaa.aaaaaa#a.a#e###",
+"#c.aaeee.aa....a#```eb##",
+"#c.aaaaa.aaa#a##a#a##dc#",
+"#c.aaeee.aa........a#b##",
+"#c.aaaaa.aa#aaaaa##a#b##",
+"#c.aaeee.aa........##b##",
+"#c.aaaaa.aaaaa#a#a#a#b##",
+"#c.#####.aadddddddd##d#c",
+"#cebbd...aaa##a##a#a#b##",
+"#######c.a#dddddddd##b##",
+"#c##c#cc.#a#a#a#a#a##d##",
+"#######c.############b##",
+"##c#c##ceedbdbdbbdbdbd#c",
+"######c###############c#",
+"#c##c#####c##c##c##c####"
+};

@@ -1,0 +1,71 @@
+global proc fix_delCompTool_start()
+{
+//	watchStr("StartTool","executed");
+	changeSelectMode -component;
+	selectType
+//		-polymeshVertex 1
+		-polymeshEdge 1
+//		-polymeshFace 1
+		;
+}
+
+global proc fix_delCompTool_finish()
+{
+	watchStr("FinishTool","executed");
+}
+
+global proc fix_delCompTool_final()
+{
+//	watchStr("FinalTool","executed");
+
+	$compToDelete = `filterExpand -ex 1 -fp 1 -sm 32`; // 32 - polygon edge
+	if (size($compToDelete)>0) DeleteEdge;
+		else delete;
+}
+
+
+////////// main procedure //////////
+
+global proc fix_delCompTool()
+
+{
+string $delCompToolCtx = "fix_delCompToolCtx";
+
+	if (0 == `contextInfo -ex "fix_delCompToolCtx"`) {
+		$delCompToolCtx = `scriptCtx
+			-toolStart "fix_delCompTool_start"
+			-toolFinish "fix_delCompTool_finish"
+			-finalCommandScript "fix_delCompTool_final" 
+			-title "Delete Components"
+			-image1 "killScene.bmp"
+			-toolCursorType "edit"
+			-exitUponCompletion 0
+//			-expandSelectionList 1
+			-showManipulators 0
+			-baseClassName "fix_delCompTool"
+			-setNoSelectionPrompt "select component to delete"
+			-setSelectionPrompt "select component to delete"
+			
+			-totalSelectionSets 1
+
+         -setAutoToggleSelection 0
+ 			-setSelectionCount 1
+ 			-setAutoComplete 1
+//				-polymesh 1
+//				-polymeshFace 0
+				-polymeshEdge 1
+//				-polymeshFreeEdge 1
+//				-facet 0
+				-edge 1
+				-vertex 1
+			fix_delCompToolCtx`;
+		print ("tool context successfully created.\n");
+	}
+
+setToolTo $delCompToolCtx;
+
+
+}
+
+
+

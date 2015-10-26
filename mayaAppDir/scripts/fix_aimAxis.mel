@@ -1,0 +1,48 @@
+// nada sdelat' tak chtoby aimConstraint uchityval UPvector object. up vector object dolzhen lezhat' na y osi objecta
+// OKOLO pivota a ne v nachale ego koordinat
+
+global proc fix_aimAxis ()
+{
+	source watch;
+	
+	string $objComp[] = `ls -sl -l`;
+	string $shape[] = `listRelatives -f -parent $objComp[0]`; 
+	if ("mesh" != `objectType $shape[0]`) error ("Works only with polygon vertices selected.");
+	string $obj[] = `listRelatives -f -parent $shape[0]`;
+	float $targetPoint[] = `polyEvaluate -bc`;
+	string $mainLoc[] = `spaceLocator`;
+	string $targetLoc[] = `spaceLocator`;
+	string $YLocInit[] = `spaceLocator`;
+
+
+	pointConstraint -offset 0 0 0 -weight 1 $obj $mainLoc[0]; // positioning main locator
+
+	move -ws (($targetPoint[0]+$targetPoint[1])/2) // positioning target locator
+		(($targetPoint[2]+$targetPoint[3])/2)
+		(($targetPoint[4]+$targetPoint[5])/2) 
+		$targetLoc[0];
+
+//	string $YLoc[] = `parent $YLocInit[0] $obj[0]`; // positioning y-axis locator
+//	move -ls -a 0 0 0 $YLoc[0];
+//	move -ls -r 0 1 0 $YLoc[0];
+	
+	aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "scene" $targetLoc[0] $mainLoc[0];
+//	aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "object" -worldUpObject $YLoc[0] $targetLoc[0] $mainLoc[0];
+//	error;
+	
+	delete -constraints $targetLoc[0] $mainLoc[0];
+// freeze section //
+
+	select $obj[0];
+	string $parentObj[] = `listRelatives -p -pa $obj[0]`;
+	parent $obj[0] $mainLoc[0];
+	string $objNewPosition[] = `ls -sl -l`;
+	makeIdentity -apply true -t 0 -r 1 -s 0 $objNewPosition[0];
+	if ($parentObj[0] != "") parent $objNewPosition[0] $parentObj[0];
+		else parent -w $objNewPosition[0];
+	
+	delete $targetLoc[0] $mainLoc[0];
+//	delete $targetLoc[0] $mainLoc[0] $YLoc[0];
+
+
+}

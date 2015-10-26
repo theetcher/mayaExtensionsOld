@@ -1,0 +1,219 @@
+// matchVertNormal ----------------------------------------------- //
+//                                                                 //
+// Script Name:   matchVertNormal.mel                              //
+//                                                                 //
+// Creation Date: 11/05/02                                         //
+//                                                                 //
+// Last Updated:  04/18/03                                         //
+//                                                                 //
+// Author:        Morris Olmsted                                   //
+//                                                                 //
+// Description:   This is a simple script that I wrote to address  //
+//                lighting of vert normals of polygons for games.  //
+//                                                                 //
+// --------------------------------------------------------------- //
+global string $MVNWindow = "matchNormalWindow";    // define a variable to hold the name of the window object //
+global string $startPntsArray[0];    // var array to hold the names of the points that the user wants points changed on //
+global string $targetPntsArray[0];    // var array to hold the names of the points that the user wants points changed to //
+global int $useDistField;    // var to hold whether or not to use the max distance of points considered snapped together //
+global int $SetVertColor;    // define a var to hold the state of whether or not the user wants to use the vert color too //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply calls the procedure to set up the gui if  //
+// it didn't already exist.                                        //
+// --------------------------------------------------------------- //
+global proc matchVertNormal()
+{
+    global string $MVNWindow;    // define a variable to hold the name of the window object //
+
+    waitCursor -st 1;
+
+    if (!`window -ex $MVNWindow`)
+        matchVertNormalsGUI();
+
+    showWindow $MVNWindow;    // call to display the window //
+    waitCursor -st 0;
+
+}    // end of procedure  //
+
+
+// --------------------------------------------------------------- //
+// --------------------------------------------------------------- //
+global proc int comparePtsDist(string $startPntName, string $targetPntName)
+{
+    global int $useDistField;    // var to hold whether or not to use the max distance of points considered snapped together //
+
+    float $distStartPnt[0] = `pointPosition $startPntName`;
+    float $targStartPnt[0] = `pointPosition $targetPntName`;
+
+    int $matchFnd = false;
+    float $dist = 0.05;
+
+    if ($useDistField)
+        $dist = `floatFieldGrp -q -v1 distField`;
+
+    float $vectDist = sqrt((($distStartPnt[0]-$targStartPnt[0]) * ($distStartPnt[0]-$targStartPnt[0])) +
+                          (($distStartPnt[1]-$targStartPnt[1]) * ($distStartPnt[1]-$targStartPnt[1])) +
+                          (($distStartPnt[2]-$targStartPnt[2]) * ($distStartPnt[2]-$targStartPnt[2])));
+
+    if (($vectDist <= $dist) && ($vectDist >= ($dist*-1)))
+         $matchFnd = true;
+
+    return $matchFnd;
+
+}    // end of procedure  //
+
+
+// --------------------------------------------------------------- //
+// --------------------------------------------------------------- //
+global proc float[] captureNormalArray(string $pntName)
+{
+    float $colorArray[0] = `polyNormalPerVertex -q -xyz $pntName`;
+    float $returnVals[3] = {$colorArray[0], $colorArray[1], $colorArray[2]};
+
+    return $returnVals;
+
+}    // end of procedure  //
+
+
+// --------------------------------------------------------------- //
+// --------------------------------------------------------------- //
+global proc getStartVertNames()
+{
+    global string $startPntsArray[0];
+
+    $startPntsArray = `ls -sl -fl`;
+    $startPntsArray = `filterExpand -ex 1 -sm 31 $startPntsArray`;
+
+    if (`size $startPntsArray` > 0)
+    {
+        print ("\nCaptured " + `size $startPntsArray` + " points as the starting vert normals\n");
+        disable -v 0 goTargetVertSetButton;
+
+    }    // end of if loop //
+
+    else
+        warning ("Nothing Selected!  Switch into component mode and select VERICIES!");
+
+}    // end of procedure  //
+
+
+// --------------------------------------------------------------- //
+// --------------------------------------------------------------- //
+global proc setVertNormals()
+{
+    global string $startPntsArray[0];
+    global string $targetPntsArray[0];
+    global int $SetVertColor;    // define a var to hold the state of whether or not the user wants to use the vert color too //
+
+    $targetPntsArray = `ls -sl -fl`;
+    $targetPntsArray = `filterExpand -ex 1 -sm 31 $targetPntsArray`;
+
+    if (`size $targetPntsArray` > 0)
+    {
+        // check to see if two points match before evaluating and setting them //
+        for ($startPnt in $startPntsArray)
+        {
+            for ($targetPnt in $targetPntsArray)
+            {
+                if (`comparePtsDist $startPnt $targetPnt`)
+                {
+                    float $startPntNormArray[0] = `captureNormalArray $startPnt`;
+
+                    select -r $targetPnt;
+                    polyNormalPerVertex -xyz $startPntNormArray[0] $startPntNormArray[1] $startPntNormArray[2];
+
+                    if ($SetVertColor)
+                    {
+                        float $startClrArray[0] = `polyColorPerVertex -q -rgb $targetPnt`;    // get the vals for the first comparing vart //
+                        polyColorPerVertex -rgb $startClrArray[0] $startClrArray[1] $startClrArray[2] $startPnt;
+
+                    }    // end of if loop //
+
+                }    // end of if loop //
+
+            }    // end of for loop //
+
+        }    // end of for loop //
+
+    }    // end of if loop //
+
+}    // end of procedure  //
+
+
+// --------------------------------------------------------------- //
+// The main GUI for this script.                                   //
+// --------------------------------------------------------------- //
+global proc matchVertNormalsGUI()
+{
+    global string $MVNWindow;    // define a variable to hold the name of the window object //
+    global int $SetVertColor;    // define a var to hold the state of whether or not the user wants to use the vert color too //
+    global int $useDistField;    // var to hold whether or not to use the max distance of points considered snapped together //
+
+    $SetVertColor = false;
+
+    window    // call to create a GUI window //
+        -w 200
+        -h 100
+        -t "Match Normal Win"
+        -in "MNW"
+        -mb 1
+        -tb 1
+        -mnb 1
+        -mxb 0
+        -rtf 1
+        -s 1
+      $MVNWindow;
+
+    setParent $MVNWindow;
+
+        rowColumnLayout -nc 1 -cw 1 200 ZXC1;
+            columnLayout ZXC2;
+                text " ";
+
+                checkBox
+                    -l " Also Match Vert RGB Vals "
+                    -al "left"
+                    -v 0
+                    -onc "$SetVertColor = 1;"
+                    -ofc "$SetVertColor = 0;";
+
+                rowColumnLayout -nc 2 -cw 1 170 -cw 2 130;
+                    checkBox
+                        -l "Set Distance to campare points"
+                        -al "left"
+                        -v 0
+                        -onc "$useDistField = 1; disable -v 0 distField;"
+                        -ofc "$useDistField = 0; disable -v 1 distField;";
+
+                    floatFieldGrp -nf 1 -pre 2 -v1 0.50 -en 0 distField;
+
+                setParent ZXC2;
+
+                separator -w 1 -height 5 -style "in";
+
+                button
+                    -w 200
+                    -l " Copy Vert Normals From "
+                    -c "getStartVertNames";
+
+                button
+                    -w 200
+                    -l " Paste Vert Normals To "
+                    -en 0
+                    -c "setVertNormals; deleteUI $MVNWindow; windowPref -r $MVNWindow; source matchVertnormal; matchVertNormal;"
+                  goTargetVertSetButton;
+
+                separator -w 1 -height 10 -style "in";
+
+                button
+                    -l " Close "
+                    -w 150
+                    -c "deleteUI $MVNWindow; windowPref -r $MVNWindow; source matchVertnormal;";
+
+            setParent ZXC1;
+
+        setParent ..;
+
+}    // end of procedure  //

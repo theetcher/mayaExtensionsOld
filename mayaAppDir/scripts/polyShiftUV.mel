@@ -1,0 +1,178 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: polyShiftUV v1.0
+''    Author: Eli Enigenburg
+''    Last Updated: June 13, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=polygon#1783
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+
+
+
+
+			for ($tmpUnsortedUV in $faceUVsUnsorted)
+				{
+				int $found = 0;
+				for ($tmpCandidateUV in $CandidateUVs)
+					{
+					if ($tmpUnsortedUV == $tmpCandidateUV)
+						{
+						if (-1 != sFindItem($faceUVs,$tmpUnsortedUV) )
+							{
+							$found = 1;
+							break;
+							}
+						}
+					}
+				if ($found == 1)
+					{
+					$faceUVs[$Counter] = $tmpUnsortedUV;
+					break;
+					}
+
+				}
+
+
+
+
+
+
+
+
+
+*/
+
+////////////////////////////////////////////////////////////////
+//
+//  polyShiftUV.mel v1.0
+//  6/7/2002
+//  By Eli Enigenburg (eli@hierographics.com)
+//  www.hierographics.com
+//
+//  Description:
+//    This script will shift UVs along a face's edge. Unlike
+//    rotating or flipping, the UVs will remain in the same
+//    configuration, effectively turning your mapping in local
+//    UV space. Select a single mapped face and try it*. You may
+//    need to cut the edges first to get the desired effect.
+//    * NOTE: You must have the array tools. You can find them
+//    at my web site.
+//
+//  Usage:
+//    polyShiftUV
+//
+//  Returns:
+//    [nothing]
+//
+//  Example:
+//    select -r polyObject1.f[764];
+//    polyShiftUV;
+//
+////////////////////////////////////////////////////////////////
+
+
+
+
+proc int sFindItem (string $array[], string $value)
+{
+	int $i;
+	if (`size($array)` > 0) {
+		for ($i = 0; $i <= `size($array)`; $i++)
+		{
+			if ($array[$i] == $value) {
+				return $i;
+			}
+		}
+	}
+	return -1;
+}
+
+
+global proc polyShiftUV() {
+	
+	PolySelectConvert 1;
+	$allFaces = `ls -sl -fl`;
+	$allFacesSize = `size $allFaces`;
+	$edgesToCut = `polyListComponentConversion -te $allFaces`;
+	
+	for ($stringCnt in $edgesToCut) polyMapCut -ch 0 $stringCnt;
+	
+	select $allFaces;
+	string $sel;
+
+	for ($cnt=0;$cnt<$allFacesSize;$cnt++) 
+		{
+//		$sel = $allFaces[$cnt]; 				
+		$conv = `polyListComponentConversion -tuv $allFaces[$cnt]`; 	
+		$faceUVsUnsorted = `ls -fl $conv`; 				
+		int $numUVs = `size $faceUVsUnsorted`;
+
+	
+	
+/////////////////// Sorting UVs //////////////////////////////		
+		
+		string $faceUVs[];
+		$faceUVs[0] = $faceUVsUnsorted[0];
+		
+
+
+		for ($Counter = 1; $Counter < $numUVs; $Counter ++)	
+			{
+			string $CrntUV = $faceUVs[$Counter - 1];
+			string $ConnectedEdges[] = `polyListComponentConversion -te $CrntUV`;
+			string $CandidateUVsNotFlattened[] = `polyListComponentConversion -tuv $ConnectedEdges`;
+			string $CandidateUVs[] = `ls -fl $CandidateUVsNotFlattened`;
+//			print $CrntUV;
+
+
+			for ($tmpUnsortedUV in $faceUVsUnsorted)
+				{
+				int $found = 0;
+				if ( (-1 == sFindItem($faceUVs,$tmpUnsortedUV)) && (-1 != sFindItem($CandidateUVs,$tmpUnsortedUV)) )
+					{
+					$faceUVs[$Counter] = $tmpUnsortedUV;
+					break;
+					}
+				}
+
+			}
+			
+		print ("Unsorted\n");
+		print $faceUVsUnsorted;
+		print ("Sorted\n");
+		print $faceUVs;
+		
+		
+////////////////////////////////////////////////////////////////
+	
+	
+	
+	
+		if ($numUVs > 0) 
+			{
+			float $currUVs[] = {};
+			float $homeUVs[] = `polyEditUV -q $faceUVs[0]`; // координаты любой увихи (это теперь будет первая)
+			float $currUs[] = {};
+			float $currVs[] = {};
+			for ($uv in $faceUVs) 				// заполняем массивы $currUs и $currVs 
+				{
+				$currUVs = `polyEditUV -q $uv`;
+				$currUs[`size $currUs`] = $currUVs[0];
+				$currVs[`size $currVs`] = $currUVs[1];
+				}
+			for ($uv in $faceUVs) 
+				{
+				int $index = (`sFindItem $faceUVs $uv` + 1);
+				if ($index < `size $faceUVs`) 
+					polyEditUV -relative false -u $currUs[$index] -v $currVs[$index] $uv;
+						else polyEditUV -relative false -u $homeUVs[0] -v $homeUVs[1] $uv;
+				}
+			}
+		}
+
+}

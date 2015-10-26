@@ -1,0 +1,94 @@
+// Copyright (C) 1997-2002 Alias|Wavefront,
+// a division of Silicon Graphics Limited.
+//
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias|Wavefront.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias|Wavefront license agreement, without fee.
+//
+// ALIAS|WAVEFRONT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS|WAVEFRONT BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+//
+// Alias|Wavefront Script File
+// MODIFY THIS AT YOUR OWN RISK
+//
+// extrudeVertexWin.mel
+// cpam nov 2001
+//
+// last updated: mar 2002
+//				 added offset UI
+//
+// creates UI for vertexMod.mel command in extrudeVertex mode
+
+global proc extrudeVertexWin(){
+
+	string $extrudeVertexWin = "extrudeVertexWin";
+	if (`window -exists $extrudeVertexWin`)
+		{deleteUI -wnd $extrudeVertexWin;}
+	
+	if (!`optionVar -exists "extrudeVertexMode"`)
+	{
+		optionVar -iv "extrudeVertexMode" 1;
+		optionVar -fv "extrudeVertexOffset" 0.3;
+		optionVar -iv "extrudeVertexExpression" 0;
+		optionVar -iv "extrudeVertexEquilateral" 0;
+	}
+	int $mode = `optionVar -q "extrudeVertexMode"`;
+
+	window -width 400
+		-h 140
+		-title "Extrude Vertex Window"
+		$extrudeVertexWin;
+	
+		columnLayout -adjustableColumn true;
+
+		radioButtonGrp -numberOfRadioButtons 2
+			-label "Move Mode" -labelArray2 "Component" "Normal"
+			-sl $mode
+			-onCommand1 "optionVar -iv \"extrudeVertexMode\" 1"
+			-onCommand2 "optionVar -iv \"extrudeVertexMode\" 2"
+			extrudeVertexModeGrp;
+
+		checkBoxGrp
+			-numberOfCheckBoxes 1
+			-label "Create Expression"
+			-label1 "Yes"
+			-onCommand1 "optionVar -iv \"extrudeVertexExpression\" 1"
+			-offCommand1 "optionVar -iv \"extrudeVertexExpression\" 0"
+			extrudeVertexExpressionGrp;
+
+		radioButtonGrp -numberOfRadioButtons 2
+			-label "Edge Length" -labelArray2 "Proportional" "World Units"
+			-sl (`optionVar -q extrudeVertexEquilateral` + 1)
+			-onCommand1 "optionVar -iv \"extrudeVertexEquilateral\" 0"
+			-onCommand2 "optionVar -iv \"extrudeVertexEquilateral\" 1"
+			edgeLengthModeGrp;
+
+		floatSliderGrp -label "Edge Offset"
+			-minValue 0.01
+			-maxValue 0.99
+			-field true
+			-fieldMinValue 0.01
+			-fieldMaxValue 10
+			-value `optionVar -q "extrudeVertexOffset"`
+			extrudeVertexOffset;
+
+		floatSliderGrp -edit
+			-changeCommand "optionVar -fv extrudeVertexOffset
+				`floatSliderGrp -q -v extrudeVertexOffset`"
+			extrudeVertexOffset;
+
+		button -label "Extrude Vertex"
+			-c ("vertexMod `optionVar -q extrudeVertexMode` " +
+				"`optionVar -q extrudeVertexEquilateral` " +
+				"`optionVar -q extrudeVertexExpression` " +
+				"`optionVar -q extrudeVertexOffset`");
+
+	showWindow $extrudeVertexWin;
+	 
+}

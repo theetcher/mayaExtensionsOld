@@ -1,0 +1,12 @@
+
+// Modifications in Maya 4 (after saving in export scene) for future conversion into Softimage //
+
+global proc fixxxerRender( )
+{
+for ($i=0;$i<=60;$i++)
+	{
+	playButtonStepForward;
+	redoPreviousRender render;
+	}
+print ("Render Complete");
+}

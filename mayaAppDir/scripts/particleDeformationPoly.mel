@@ -1,0 +1,99 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: particleDeformationPoly v1.0
+''    Author: alex bigott
+''    Last Updated: March 9, 2001
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=dynamics#908
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//	particleDeformation Poly V1.0
+//
+//	author:		alex bigott (alex.bigott@h5b5.de    bigott@gmx.de)
+//	last change:	12.12.2000
+//
+//	description:
+//		creates a poly object that can act as a goal for the particles
+//		the poly object can be deformed with any deformation tools 
+//
+//	usage:
+//		select the particle object you want the object to be created for
+//		and run the script
+//
+//	limitations:
+//		the script may fail if you emit a lot of particles in very short time.
+//		that is a maya bug which means the particles have no successive numbering 
+//		or even float numbering.
+//
+//	use at own risk. :)
+//	never mind about the strange creation of the poly object. that is the fastest way...
+//
+
+
+
+string $part;
+string $sel[];
+int $selSize;
+
+$sel = `ls -sl -sn -o`;
+
+if (size($sel) != 1)
+{
+	error("\n// Select ONE particle system");
+}
+
+$part = $sel[0];
+
+int $count = `getAttr ($part+".count")`;
+int $i = 0;
+
+float $pos1[];
+float $pos2[];
+float $pos3[];
+
+
+print ("\n// Object gets created. May take some time... \n");
+
+while ($i < $count)
+{
+
+	if (($count - $i) >= 3)
+	{
+		$pos1 = `particle -at position -id ($i++) -q $part`;
+		$pos2 = `particle -at position -id ($i++) -q $part`;
+		$pos3 = `particle -at position -id ($i++) -q $part`;
+	}
+	else
+	{
+		$pos1 = `particle -at position -id ($i) -q $part`;
+		$pos2 = `particle -at position -id ($i) -q $part`;
+		$pos3 = `particle -at position -id ($i) -q $part`;
+		$i = $count;
+	}
+
+	polyCreateFacet -ch 0 -p ($pos1[0]) ($pos1[1]) ($pos1[2]) -p ($pos2[0]) ($pos2[1]) ($pos2[2]) -p ($pos3[0]) ($pos3[1]) ($pos3[2]) -name "ParticleDeformFacet";
+
+	if (($i % 100) < 3)
+	{
+		print("\n"+$i);
+	}
+	if (($i % 1000) < 3)
+	{
+		select "ParticleDeformFacet*";
+		polyUnite -ch 0 -o 1 -name "ParticleDeformIntermediateObject";
+		flushUndo;
+	}
+}
+
+
+select "ParticleDeform*";
+polyUnite -ch 0 -o 1 -name "ParticleDeformObject";
+	
+
+print ("\n// Poly Object Created ");

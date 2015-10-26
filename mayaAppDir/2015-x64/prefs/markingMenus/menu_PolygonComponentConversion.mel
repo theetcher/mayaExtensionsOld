@@ -1,0 +1,231 @@
+
+    menuItem
+        -label "To Edges" 
+        -divider 0
+        -subMenu 0
+        -command "/*\r\n// convert to Edges\r\nPolySelectConvert 2;\r\nchangeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Line\" true;\r\n*/\r\nConvertSelectionToEdges" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "N" 
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem1;
+
+    menuItem
+        -label "Select Edge Ring Tool" 
+        -divider 0
+        -subMenu 0
+        -command "SelectEdgeRingTool" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "NE" 
+        -enableCommandRepeat 1
+        -image "polySelectEdgeRing.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem10;
+
+    menuItem
+        -label "To UVs" 
+        -divider 0
+        -subMenu 0
+        -command "/*\r\n// convert to UVs\r\nPolySelectConvert 4;\r\nchangeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"ParmPoint\" true;\r\n*/\r\nConvertSelectionToUVs" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "E" 
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem4;
+
+    menuItem
+        -label "Select Shortest Edge Path Tool" 
+        -divider 0
+        -subMenu 0
+        -command "setToolTo polyShortestEdgePathContext" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "SE" 
+        -enableCommandRepeat 1
+        -image "selectEdgePath.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem12;
+
+    menuItem
+        -label "To Faces" 
+        -divider 0
+        -subMenu 0
+        -command "/*\r\n// convert to Faces\r\nPolySelectConvert 1;\r\nchangeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Facet\" true;\r\n*/\r\nConvertSelectionToFaces" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "S" 
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem2;
+
+    menuItem
+        -label "Select Border Edge Tool" 
+        -divider 0
+        -subMenu 0
+        -command "SelectBorderEdgeTool" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "SW" 
+        -enableCommandRepeat 1
+        -image "polySelectEdgeBorder.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem11;
+
+    menuItem
+        -label "To Vertices" 
+        -divider 0
+        -subMenu 0
+        -command "/*\r\n// convert to Vertices\r\nPolySelectConvert 3;\r\nchangeSelectMode -component;\r\nsetComponentPickMask \"All\" 0;\r\nsetComponentPickMask \"Point\" true;\r\n*/\r\nConvertSelectionToVertices" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "W" 
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem3;
+
+    menuItem
+        -label "Select Edge Loop Tool" 
+        -divider 0
+        -subMenu 0
+        -command "SelectEdgeLoopTool" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "NW" 
+        -enableCommandRepeat 1
+        -image "polySelectEdgeLoop.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem9;
+
+    menuItem
+        -label "Convert To Shell" 
+        -divider 0
+        -subMenu 0
+        -command "polyConvertToShell;// standrard way\r\nfix_selectPolyShell;" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem13;
+
+    menuItem
+        -label "Selection Boundary" 
+        -divider 0
+        -subMenu 0
+        -command "SelectPolygonSelectionBoundary" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem7;
+
+    menuItem
+        -label "Selection Constraints..." 
+        -divider 0
+        -subMenu 0
+        -command "PolygonSelectionConstraints" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem8;
+
+setParent -m ..;
+

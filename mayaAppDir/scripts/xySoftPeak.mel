@@ -1,0 +1,183 @@
+//
+// xySoftPeak.mel -- by Imre Tuske
+// (2003-jan-5)
+//
+// requires xySoftPeak.mll
+//
+// Tool set for implementing 'proportional' modeling workflow. Alpha version ;)
+//
+// If you want to see a newer version, you _must_ send me a mail. I won't upgrade
+// it until I got at least 10000 mails! ;)
+//
+//
+//
+// Usage:
+//
+// To begin a new proportional tweak, select some polygonal vertices, then type
+//
+//	xySoftPeak;			// it's a good idea to put it on a shelf
+//
+// then move the appearing locator around. Once you finished the current
+// tweak, simply delete the locator.
+//
+//
+//
+// Limitations:
+//
+// - works only on polygons for now, one object at a time;
+// - only '3d radial' falloff mode is implemented;
+//
+//
+// Todo:
+//
+// - clean the script up to be more 'robust' (checkings, etc.);
+// - move the weight re-calculation event to API code (now it's a scriptJob);
+// - a small UI (window) for 'proportional modeling';
+//
+//
+
+
+proc float[] calc_center( string $cs[] )
+{
+	float	$p[], $r[]={0,0,0}, $c=0;
+	int	$i, $m;
+
+	if (size(`ls $cs`))
+	{
+		$m=size($cs);
+
+		for($i=0; $i<$m; $i++)
+		{
+			if (gmatch($cs[$i],"*.*"))
+			{
+				$p=`pointPosition -w $cs[$i]`;
+				$r[0]+=$p[0]; $r[1]+=$p[1]; $r[2]+=$p[2];
+				$c++;
+			}
+		}
+
+		//$m=size($p=`xform -q -ws -t $cs`);
+		//for($i=0; $i<$m; $i+=3) { $r[0]+=$p[$i]; $r[1]+=$p[$i+1]; $r[2]+=$p[$i+2]; }
+
+		if ($c>0.0) { $r[0]/=(float)$c; $r[1]/=(float)$c; $r[2]/=(float)$c; }
+	}
+
+	return($r);
+}
+
+proc int[] cverts_indices( string $cs[] )
+{
+	int	$r[], $c=0;
+	string	$n, $s;
+
+	for($n in $cs)
+	{
+		if ( ($s=match("[0-9]+[]]$",$n))!="" )
+		$r[$c++]=(int)$s;
+	}
+
+	return($r);
+}
+
+proc string cverts_string( string $cs[] )
+{
+	string	$r="", $n, $s;
+
+	for($n in $cs)
+	{
+		if ( ($s=match("[0-9]+[]]$",$n))!="" )
+		$r+=(" "+match("^[0-9]*",$s));
+	}
+
+	return($r);
+}
+
+
+proc string add_deformer( string $sh )
+{
+	string	$r[]=`deformer -type xySoftPeak $sh`;
+	return($r[0]);
+}
+
+
+proc string[] create_icon( float $p[], string $ci )
+{
+	string	$t, $s;
+	$t=`group -em -w -n softPeakIcon1`;
+	$s=`createNode xySoftPeakIcon -p $t`;
+	if (size($p)==3) xform -ws -t $p[0] $p[1] $p[2] $t;
+
+	setAttr -type "string" ($s+".center_verts") $ci;
+
+	return( {$t, $s} );
+}
+
+
+proc connect_icon( string $is[], string $d, string $sh ) // icon shape, deformer node, geom shape
+{
+	if (size(`ls $is $d`))
+	{
+		catch(`connectAttr -f ($sh+".msg") ($is[1]+".geo")`);
+		catch(`connectAttr -f ($d+".msg") ($is[1]+".def")`);
+
+		catch(`connectAttr -f ($is[1]+".radius") ($d+".radius")`);
+		catch(`connectAttr -f ($is[1]+".bias") ($d+".bias")`);
+		catch(`connectAttr -f ($is[1]+".gain") ($d+".gain")`);
+		catch(`connectAttr -f ($is[0]+".wm") ($d+".transform")`);
+
+		catch(`connectAttr -f ($is[0]+".wm") ($d+".origTransform")`);
+		dgeval($d+".outputGeometry");
+		catch(`disconnectAttr ($is[0]+".wm") ($d+".origTransform")`);
+
+		scriptJob -ac ($is[1]+".falloffMode") ("xyspRecalcWeights(\""+$is[1]+"\",\""+$d+"\",\""+$sh+"\")");
+	}
+}
+
+global proc xyspRecalcWeights( string $is, string $de, string $sh ) // icon shape, deformer, geom shape
+{
+	if (size(`ls $is $de $sh`)==3)
+	{
+		evalDeferred("setAttr \""+$de+".nodeState\" 0");
+		setAttr ($de+".nodeState") 1;
+		eval("xyspCalcWeights \""+$de+"\" \""+$sh+"\" "+getAttr($is+".falloffMode")+" "+getAttr($is+".center_verts"));
+	}
+	else warning("cannot recalculate vertex distances");
+}
+
+
+global proc xySoftPeak()
+{
+	string	$cs[]=`ls -sl -fl`, $o[]=`ls -sl -ni -o`;
+	string	$i[], $d, $ci;
+	float	$c[];
+
+	if (size(`ls -sl -dag -lf -ni -type xySoftPeakIcon`))
+	{
+		// save pivot for existing soft peak
+
+		if (size($cs=`listConnections -s 0 -d 1 -type xySoftPeak ($o[0]+".wm")`))
+		{
+			catch(`connectAttr -f ($o[0]+".wm") ($cs[0]+".origTransform")`);
+			dgeval($cs[0]+".outputGeometry");
+			catch(`disconnectAttr ($o[0]+".wm") ($cs[0]+".origTransform")`);
+		}
+	}
+	else
+	if (size($cs)&&size($o))
+	{
+		// create new soft peak
+
+		$ci=cverts_string($cs);
+		$d=add_deformer($o[0]);
+		$c=calc_center({$cs[0]});
+		$i=create_icon($c, $ci);
+		connect_icon($i, $d, $o[0]);
+
+		xyspRecalcWeights($i[1],$d,$o[0]);
+
+		select -r -ne $i[0];
+	}
+}
+
+
+

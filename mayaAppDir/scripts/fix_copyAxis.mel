@@ -1,0 +1,18 @@
+// 1. Select source object
+// 2. Select object with LocalRotationAxises to change.
+// 3. Execute script
+
+global proc fix_copyAxis ()
+{
+
+	string $obj[]=`ls -l -sl`;
+	string $target = $obj[0];
+	string $pivotObject = $obj[1];
+	string $parent[] = `listRelatives -p -pa $pivotObject`;
+	parent $pivotObject $target;
+	string $pivotObjectNewPosition[] = `ls -sl -l`;
+	makeIdentity -apply true -t 0 -r 1 -s 0 $pivotObjectNewPosition[0];
+	if ($parent[0] != "") parent $pivotObjectNewPosition[0] $parent[0];
+		else parent -w $pivotObjectNewPosition[0];
+
+}

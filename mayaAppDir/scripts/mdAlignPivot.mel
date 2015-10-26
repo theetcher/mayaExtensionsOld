@@ -1,0 +1,118 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: mdAlignPivot v1.0
+''    Author: Mark Doberenz
+''    Last Updated: May 9, 2004
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=modeling#2916
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//***************************************************
+// Script created by Mark Doberenz
+//***************************************************
+// USE:
+// Select three points in order where the points are:
+// 1) Pivot location
+// 2) X axis direction
+// 3) Y axis direction
+//***************************************************
+// Use at your own discretion!
+//***************************************************
+
+// A SHORTER VERSION OF THE POINTPOSITION FUNCTION
+global proc float[] mdPP(string $pnt)
+{
+  print ("mdPP : " + $pnt + "\n");
+  return(`pointPosition -w $pnt`);
+}  
+
+// GETS THE SELECTION ORDER OF A SET OF POINTS
+global proc string[] selectOrder()
+{
+// VARIABLE SETUP
+  string $allSel[] = `ls -sl -fl`; 
+  string $tempSel[],$newSel[]; 
+  string $info,$undoSt,$newList[];
+// LOOPS THROUGH SELECTED OBJECTS
+  for ($v = 0;$v <`size ($allSel)`;$v++)
+  { 
+    $info = `undoInfo -q -undoName`; 
+    $undoSt = `undo`; 
+// SEPERATES $INFO BY SPACES
+    $numTokens = `tokenize ($info) $newList`;
+// TAKES THE THIRD ENTITY OF THE TOKENIZED ARRAY
+    $tempSel[$v] = $newList[2]; 
+  }
+  return $tempSel;
+}
+
+global proc mdAlignPivot(int $movePivot)
+{
+// VARIABLE SETUP
+  string $selObj[],$buffer[],$objName,$grpName,$tmp,$objParent[];
+  int $numTokens;
+  vector $toZ,$toX;
+  float $pivPNT[],$zPNT[],$xPNT[],$rotVal[],$tmpFlt,$grpTrans[],$grpRot[];
+// GET THE NAME OF THE PARENT OBJECT
+  $selObj = `selectOrder`;
+  $numTokens = `tokenize $selObj[0] "/." $buffer`;
+  $objName = $buffer[0];
+// GET WORKSPACE POINTS FOR THE THREE POINTS SELECTED
+  $pivPNT = mdPP($selObj[2]);
+  $zPNT = mdPP($selObj[1]);
+  $xPNT = mdPP($selObj[0]);
+// Position objects origin at pivPNT
+  if($movePivot == 1)
+    eval("move " + $pivPNT[0] + " " + $pivPNT[1] + " " + $pivPNT[2] + " " + $objName + ".scalePivot " +$objName + ".rotatePivot");
+// CALCULATE VECTORS AND ANGLE FROM PIVOT POINT
+  $toZ = << $zPNT[0]-$pivPNT[0],$zPNT[1]-$pivPNT[1],$zPNT[2]-$pivPNT[2] >>;
+  $toX = << $xPNT[0]-$pivPNT[0],$xPNT[1]-$pivPNT[1],$xPNT[2]-$pivPNT[2] >>;
+  $tmpFlt = `angle $toZ $toX`;
+  print("Angle between vectors: " + `rad_to_deg $tmpFlt`);
+// CREATE JOINTS AT THE 3 POINTS
+  $tmp = `joint -p $xPNT[0] $xPNT[1] $xPNT[2] -n tmpJNT_1`;
+  joint -p $pivPNT[0] $pivPNT[1] $pivPNT[2] -n tmpJNT_2;
+  joint -e -zso -oj xyz tmpJNT_1;
+  joint -p $zPNT[0] $zPNT[1] $zPNT[2] -n tmpJNT_3;
+  joint -e -zso -oj xyz tmpJNT_2;
+// GET WORLD ROTATION VALUES OF JOINT 2
+  $rotVal = `xform -q -ws -ro tmpJNT_2`;
+// CREATE GROUP AND MOVE AND ROTATE TO LOCATION AND ORIENTATION
+  $grpName = `group -w -em -n orientGroup_1`;
+  move -a $pivPNT[0] $pivPNT[1] $pivPNT[2] $grpName;
+  rotate -a $rotVal[0] $rotVal[1] $rotVal[2] $grpName;
+// DELETE THE TEMP JOINTS
+  delete $tmp;
+// SELECTS THE OBJECT AND FINDS IT'S PARENT
+  select $objName;
+  $objParent = `pickWalk -d up`;
+// MAKES THE OBJECT A CHILD OF THE ORIENT GROUP
+  parent $objName $grpName;
+// GETS THE TRANSLATE AND ROTATE VALUES FOR THE GROUP
+  $grpTrans = eval("getAttr " + $grpName + ".translate");
+  $grpRot = eval("getAttr " + $grpName + ".rotate");
+// RESETS THE TRANSFORM AND ROTATE OF THE GROUP
+  eval("setAttr " + $grpName + ".translate -type double3 0 0 0");
+  eval("setAttr " + $grpName + ".rotate -type double3 0 0 0");
+// FREEZE THE TRANSFORM OF THE OBJECT
+  select $objName;
+  makeIdentity -apply true -t 1 -r 1 -s 1;
+// MOVE THE GROUP BACK WHERE IT WAS
+  eval("setAttr " + $grpName + ".translate -type double3 " + $grpTrans[0] + " " + $grpTrans[1] + " " + $grpTrans[2]);
+  eval("setAttr " + $grpName + ".rotate -type double3 " + $grpRot[0] + " " + $grpRot[1] + "  " +$grpRot[2]);
+// IF THE OBJECT WAS A CHILD TO AN OBJECT, PUT IT BACK WHERE IT WAS
+  if($objParent[0] != $objName){
+    parent $objName $objParent[0];
+  }else{
+    parent -w;
+  }
+  delete $grpName;
+  toggleSelMode;
+}
+

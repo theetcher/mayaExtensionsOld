@@ -1,0 +1,274 @@
+// Voronoi Shatter
+// select first particles, and then geometry. launch script.
+
+  // Creates the cut block
+proc string voronoiParticlesToLocators(string $pName)
+  {
+      // Create group to hold locators
+      string $pGRP = `group -empty -n "particleLocatorGrp"`;
+  
+      // Get particle count
+      int $pCount = `getAttr ($pName + ".count")`;
+  
+      // Go thru each particle
+      for($p=0;$p<$pCount;$p++)
+      {
+          // Store worldspace translate of each particle
+          float $pPos[] = `getParticleAttr -at worldPosition ($pName + ".pt[" + $p + "]")`;
+  
+          // Create locator
+          string $pLoc[] = `spaceLocator -n "voronoiPoint_#"`;
+  
+          // Set attributes
+          setAttr ($pLoc[0] + ".translateX") $pPos[0];
+          setAttr ($pLoc[0] + ".translateY") $pPos[1];
+          setAttr ($pLoc[0] + ".translateZ") $pPos[2];
+          setAttr ($pLoc[0] + ".scaleX") 0.1;
+          setAttr ($pLoc[0] + ".scaleY") 0.1;
+          setAttr ($pLoc[0] + ".scaleZ") 0.1;
+  
+          // Parent locator
+          parent $pLoc[0] $pGRP;
+      }
+  
+      // Return the locator group name
+      return $pGRP;
+  }
+
+proc string voronoiCreateCutBlock(string $objName)
+  {
+      // Find the bounding box of obj
+      float $bbox[] = `exactWorldBoundingBox $objName`; 
+      float $biggestDimension = abs($bbox[3]-$bbox[0]); 
+      if (abs($bbox[4]-$bbox[1]) > $biggestDimension)
+      { 
+          $biggestDimension = abs($bbox[4]-$bbox[1]); 
+      } 
+  
+      if (abs($bbox[5]-$bbox[2]) > $biggestDimension)
+      { 
+          $biggestDimension = abs($bbox[5]-$bbox[2]); 
+      }
+      
+      // Now that we have the biggest dimension, lets increase it a bit
+      $biggestDimension = $biggestDimension * 4;
+  
+      // Create the cut block geometry and store its name
+      string $cutBlockCreate[] = `polyPlane -w 1 -h 1 -sx 1 -sy 1 -ax 0 1 0 -cuv 2 -ch 0 -n "cutBlock"`;
+      string $cutBlockName = $cutBlockCreate[0];
+  
+      // Set the scale of the plane
+      setAttr ($cutBlockName + ".scaleX") $biggestDimension;
+      setAttr ($cutBlockName + ".scaleZ") $biggestDimension;
+  
+      // Extrude the plane into a block
+      polyExtrudeFacet -ch 0 -ltz ($biggestDimension * 2) -smoothingAngle 0 ($cutBlockName+".f[0]");
+  
+      // Freeze transforms
+      makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 $cutBlockName;
+  
+      // Hide the cut block
+      setAttr ($cutBlockName + ".visibility") 0;
+  
+      select -cl;
+  
+      return $cutBlockName;
+  }
+
+proc voronoiShatter(string $pTName, string $pSName, int $pCount, string $objName, float $crackOffset)
+  {
+      int $amount = 0;
+       progressWindow
+         -title "Voronoi Shatter"
+         -progress 0
+         -status "Initializing . . ."
+         -isInterruptable true
+      -maxValue $pCount;
+  
+      // Disable the undo que
+      undoInfo -state off;
+  
+      // Create shard material if it doesn't exist
+      int $shardMatExists = `objExists voronoiShardMaterial`;
+      if($shardMatExists == 0)
+      {
+          string $mat = `shadingNode -asShader lambert -name voronoiShardMaterial`;
+          sets -renderable true -noSurfaceShader true -empty -name ($mat + "SG");
+          connectAttr -f ($mat + ".outColor") ($mat + "SG.surfaceShader");
+          setAttr ($mat + ".color") -type double3 1 1 0 ;
+      }
+  
+      // Create an empty group node to store shards
+      string $shardsGRP = `group -empty -n "shardsGRP"`;
+  
+      // Hide particles
+      setAttr ($pTName + ".visibility") 0;
+  
+      // Create cut block
+      string $cutBlock = voronoiCreateCutBlock($objName);
+  
+      // Convert all the particles to locators
+      string $locGRP = voronoiParticlesToLocators($pSName);
+      setAttr ($locGRP + ".visibility") 0;
+      
+      // Get list of all locators under locator group
+      string $locators[] = `listRelatives -c -type transform $locGRP`;
+  
+      // Go thru every locator and compare it to every other locator
+      // Find the midpoint, create shatter cube, and shatter
+      for($a=0;$a<size($locators);$a++)
+      {
+             // Check if the dialog has been cancelled
+             if ( `progressWindow -query -isCancelled` ) break;
+  
+             // Check if end condition has been reached
+             if ( `progressWindow -query -progress` >= $pCount ) break;
+  
+             $amount += 1;
+  
+          // Store worldspace translate of a
+          float $aPos[] = `xform -q -ws -t $locators[$a]`;
+      
+          // Variable to store active shard mesh name
+          string $activeShard = "";
+      
+          // Duplicate mesh to shatter
+          string $dupMesh[] = `duplicate -rr $objName`;
+          setAttr ($objName + ".visibility") 0;
+          $activeShard = $dupMesh[0];
+          setAttr ($activeShard + ".visibility") 1;
+      
+          // Go thru each locator
+          for($b=0;$b<size($locators);$b++)
+          {
+              // Check that its not going to itself
+              if($a != $b)
+              {
+                  // Store worldspace translate of b
+                  float $bPos[] = `xform -q -ws -t $locators[$b]`;
+                  
+                  // Find the midpoint between locator A and locator B
+                  vector $midPoint = <<(($aPos[0] + $bPos[0])/2), (($aPos[1] + $bPos[1])/2), (($aPos[2] + $bPos[2])/2)>>;
+      
+                  // Convert to vectors
+                  vector $aPosVector = {$aPos[0],$aPos[1],$aPos[2]};
+                  vector $bPosVector = {$bPos[0],$bPos[1],$bPos[2]};
+      
+                  // Calculate direction vector
+                  vector $dir = $aPosVector - $midPoint;
+      
+                  // Normalize
+                  $dir = $dir / mag($dir);
+      
+                  // Calculate new offset midpoint
+                  vector $offMidPoint = $midPoint + ($crackOffset * $dir);
+      
+                  // Create aim locator
+                  string $aimLoc[] = `spaceLocator -p $bPos[0] $bPos[1] $bPos[2]`;
+                  xform -cp $aimLoc[0];
+      
+                  // Position cut block
+                  string $cutCube[] = `duplicate -rr $cutBlock`;
+                  setAttr ($cutCube[0] + ".visibility") 1;
+                  setAttr ($cutCube[0] + ".translateX") ($offMidPoint.x);
+                  setAttr ($cutCube[0] + ".translateY") ($offMidPoint.y);
+                  setAttr ($cutCube[0] + ".translateZ") ($offMidPoint.z);
+      
+                  // Aim cut cube
+                  string $aimConstraint[] = `aimConstraint -offset 0 0 0 -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 $aimLoc[0] $cutCube[0]`;
+                  for($ac=0;$ac<size($aimConstraint);$ac++)
+                  {
+                      if(`objExists $aimConstraint[$ac]`)
+                      {
+                          delete $aimConstraint[$ac];
+                      }
+                  }
+      
+                  // Cleanup
+                  for($al=0;$al<size($aimLoc);$al++)
+                  {
+                      if(`objExists $aimLoc[$al]`)
+                      {
+                          delete $aimLoc[$al];
+                      }
+                  }
+                  
+                  // Do Cut procedure
+                  vector $cutBlockRot = `xform -q -ws -rotation $cutCube[0]`;
+                  int $numFace[] = `polyEvaluate -f $activeShard`;
+//						error("break");
+                  polyCut -ch off -df 1 -pc ($offMidPoint.x) ($offMidPoint.y) ($offMidPoint.z) -ro ($cutBlockRot.x + 90) ($cutBlockRot.y) ($cutBlockRot.z) ($activeShard + ".f[0:" + $numFace[0] + "]");
+  
+                  // Evaluate the new cut faces        
+                  int $numCutFace[] = `polyEvaluate -f $activeShard`;
+  
+                  polyCloseBorder -ch 0 $activeShard;
+  
+                  // Evaluate the new cut and filled faces
+                  int $numNewFace[] = `polyEvaluate -f $activeShard`;
+  
+                  // Go through all the new faces and assign new shader
+                  for($f=($numCutFace[0]);$f<($numNewFace[0]);$f++)
+                  {
+                      // Assign the shard material to the new face    
+                      sets -e -forceElement voronoiShardMaterialSG ($activeShard + ".f[" + $f + "]");
+                  }
+                  select -cl;
+  
+                  // Cleanup
+                  if(`objExists $cutCube[0]`)
+                  {
+                      delete $cutCube[0];
+                  }
+              }
+              else
+              {
+                  //delete $dupMesh[0];
+              }
+          }
+  
+          // Parent shard under group node
+          parent $activeShard $shardsGRP;
+      
+          // Refresh the viewport
+          //select -cl;
+          refresh();
+  
+               progressWindow -edit
+                   -progress $amount
+                   -status ("Voronoi Shatter step " + $amount + " of " + $pCount + " completed . . .");
+  
+      }
+  
+      progressWindow -endProgress;
+  
+      // Delete the cut block
+      delete $cutBlock;
+  
+  undoInfo -state on;
+  }
+  
+  // Converts particles to locators
+  
+global proc voronoi_shatter()
+  {
+      // Variables
+      float $crackOffset = 0.002;
+  
+      // Gather selected items
+      string $s[] = `ls -sl -fl`;
+  
+      // Store particle name and object name
+      $pTName = $s[0];
+      string $objName = $s[1];
+  
+      // Store particle shape name and particle count
+      string $pRelatives[] = `listRelatives -s $s[0]`;
+      $pSName = $pRelatives[0];
+      int $pCount = `getAttr ($pSName+".count")`;
+  
+      // Pass selection to the voronoi shatter procedure
+      voronoiShatter($pTName, $pSName, $pCount, $objName, $crackOffset);
+  }
+  
+  // The main voronoi shatter procedure

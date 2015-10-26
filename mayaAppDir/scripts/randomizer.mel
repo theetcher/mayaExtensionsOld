@@ -1,0 +1,158 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: randomizer.mel v1.0
+''    Author: Sean Fennell
+''    Last Updated: August 20, 2001
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=modeling#1219
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+/* This scripts use is to randomize pre-created objects' placement based on their
+	previous translate, rotate or scale values.  The "Random" value is the 
+	range that the objects' transformation can shift.  There are buttons in the UI
+	for translate x y z, rotate x y z, and scale x y z.
+	
+	Usage: type randomizer in the script editor or create a shelf with the randomizer
+	command.
+*/
+
+global proc randomizer()
+{
+	randomUI;
+}
+
+// do the randomization.  Case is passed to the movement procedure to do the work.
+global proc doRandom(string $input)
+{
+	switch($input){
+		case "tx":
+			trans x;
+			break;
+		case "ty":
+			trans y;
+			break;
+		case "tz":
+			trans z;
+			break;
+		case "rx":
+			rot rx;
+			break;
+		case "ry":
+			rot ry;
+			break;
+		case "rz":
+			rot rz;
+			break;
+		case "sx":
+			sca sx;
+			break;
+		case "sy":
+			sca sy;
+			break;
+		case "sz":
+			sca sz;
+			break;
+		case "uniScale":
+			uniSca;
+			break;
+	}
+		
+}
+
+// build the gui.
+global proc randomUI()
+{
+	if(`window -exists randomizerWin` != 0)
+		deleteUI -window randomizerWin;
+	window -w 300 -h 200 -t "Transformation Randomizer Window" randomizerWin;
+	gridLayout -numberOfRowsColumns 3 4 -cellWidthHeight 75 25;
+		button -label "translate X" -command "doRandom tx";
+		button -label "translate Y" -command "doRandom ty";
+		button -label "translate Z" -command "doRandom tz";
+		floatField -value 0.1 transRand;
+		button -label "rotate X" -command "doRandom rx";
+		button -label "rotate Y" -command "doRandom ry";
+		button -label "rotate Z" -command "doRandom rz";
+		floatField -value 5.0 rotRand;
+		button -label "scale X" -command "doRandom sx";
+		button -label "scale Y" -command "doRandom sy";
+		button -label "scale Z" -command "doRandom sz";
+		floatField -value 0.1 scaleRand;
+		button -label "uniform scale" -command "doRandom uniScale";
+    showWindow randomizerWin;
+}
+
+// this procedure actually does the movement on the attribute invoked in the input.
+global proc trans(string $input)
+{
+	$selArray = `ls -sl -l`;
+	float $amount = `floatField -query -value transRand`;  // get rand amount from window.
+	
+	for($element in $selArray) {
+		$rnd = rand (-$amount, $amount);
+		eval("move -relative -" + $input + " " + $rnd + " " + $rnd + " " + $rnd + " " + $element);
+	}
+	select $selArray;
+}
+
+global proc rot(string $input)
+{
+	$selArray = `ls -sl -l`;
+	float $amount = `floatField -query -value rotRand`;  // get rand amount from window.
+	
+	for($element in $selArray)
+	{
+		$rnd = rand (-$amount, $amount);
+		switch ($input) {
+			case "rx": eval("rotate -relative " + $rnd + " 0 0 " + $element);
+				break;
+			case "ry": eval("rotate -relative 0 " + $rnd + " 0 " + $element);
+				break;
+			case "rz": eval("rotate -relative 0 0 " + $rnd + " " + $element);
+				break;
+		}
+	}
+	select $selArray;
+}
+
+global proc sca(string $input)
+{
+	$selArray = `ls -sl -l`;
+	float $amount = `floatField -query -value scaleRand`;  // get rand amount from window.
+	
+	for($element in $selArray)
+	{
+		$rnd = rand (-$amount, $amount);
+		$scaleAttr = eval("getAttr " + $element + ".scale"); 
+		
+		switch ($input) {
+			case "sx": $scaleAttr[0] = $scaleAttr[0] + $rnd;
+				break;
+			case "sy": $scaleAttr[1] = $scaleAttr[1] + $rnd;
+				break;
+			case "sz": $scaleAttr[2] = $scaleAttr[2] + $rnd;
+				break;
+		}
+		scale("-a",$scaleAttr[0],$scaleAttr[1],$scaleAttr[2],$element);
+	}
+	select $selArray;
+}
+
+global proc uniSca()
+{
+	$selArray = `ls -sl -l`;
+	float $amount = `floatField -query -value scaleRand`;  // get rand amount from window.
+	
+	for($element in $selArray)
+	{
+		$rnd = rand ( (1-$amount), (1+$amount) );
+		scale("-r",$rnd,$rnd,$rnd,$element);
+	}
+	select $selArray;
+}

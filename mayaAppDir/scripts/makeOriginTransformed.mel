@@ -1,0 +1,80 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: makeOriginTransformed v1.0
+''    Author: Morris Olmsted
+''    Last Updated: March 15, 2001
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=polygon#925
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+// makeOriginTransformed ----------------------------------------- //
+//                                                                 //
+// Script Name:   makeOriginTransformed                            //
+//                                                                 //
+// Creation Date: 02/08/01                                         //
+//                                                                 //
+// Last Updated:  02/08/01                                         //
+//                                                                 //
+// Author:        Morris Olmsted                                   //
+//                                                                 //
+// Description:   This script was developed to take an object from //
+//                anywhere in the scene and make it's translates   //
+//                relative to the origin only.  This is paticulary //
+//                useful for things that were made away form the   //
+//                origin but need values relative to the origin.   //
+//                                                                 //
+//                                                                 //
+// --------------------------------------------------------------- //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply takes a selection of any objct given and  //
+// runs a number of steps to make the translates of the object     //
+// relative to the origin.  This makes the translate values for the//
+// object relative to the origin.                                  //
+// There are six basic steps that this procedure takes to          //
+// accomplish this task: 1) capture names of the objects, 2) freeze//
+// only the translate transforms on the object, 3) move the object //
+// to the origin, 4) capture the translate values from the object, //
+// 5) again freeze only the translate transforms of the object, and//
+// 6) move the object back to where I found it with the new        //
+// origin based translates.                                        //
+// --------------------------------------------------------------- //
+global proc makeOriginTransformed()
+{
+    // capture object //
+    string $tempObjectName[0] = `ls -sl -l -tr`;
+    print ("\n");
+
+    for ($M=0; $M<`size $tempObjectName`; $M++)
+    {
+        //freeze only the translate transforms //
+        makeIdentity -apply 1 -t 1 -r 0 -s 0 $tempObjectName[$M];
+
+        //move object to true orgin //
+        move -rpr 0 0 0 $tempObjectName[$M];
+
+        // capture the new translates and reverse the values to make sure I get back to where I was instead of double transforming //
+        float $TransX = (`getAttr ($tempObjectName[$M] + ".tx")` * -1);
+        float $TransY = (`getAttr ($tempObjectName[$M] + ".ty")` * -1);
+        float $TransZ = (`getAttr ($tempObjectName[$M] + ".tz")` * -1);
+
+        // again freeze only the translate transforms //
+        makeIdentity -apply 1 -t 1 -r 0 -s 0 $tempObjectName[$M];
+
+        // move the object to the new recorded transforms //
+        setAttr ($tempObjectName[$M] + ".tx") $TransX;
+        setAttr ($tempObjectName[$M] + ".ty") $TransY;
+        setAttr ($tempObjectName[$M] + ".tz") $TransZ;
+
+        print ("Made " + $tempObjectName[$M] + "'s translation transformes relative to the origin.\n");
+
+    }    // end of for loop //
+
+}    // end of `command` //

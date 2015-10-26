@@ -1,0 +1,1 @@
+global proc contiguousEdgesFlow(float $maxAngle){$sizeWas = size (`ls -sl -fl`);for (;;)	{	contignuousEdges($maxAngle);	$sizeNow = size (`ls -sl -fl`);	if ($sizeNow == $sizeWas)		break;	$sizeWas = $sizeNow;	}}

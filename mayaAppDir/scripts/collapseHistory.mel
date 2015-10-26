@@ -1,0 +1,96 @@
+// Copyright (C) 1999 Alias|Wavefront,
+// a division of Silicon Graphics Limited.
+//
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias|Wavefront.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias|Wavefront license agreement, without fee.
+//
+// ALIAS|WAVEFRONT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS|WAVEFRONT BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+//
+//
+//
+// To run: Select a dependency node with a single output that produces
+// a polygon shape.  Run the script.  All of the nodes preceeding the
+// active one in the "stack of operations" for the polygon shape,
+// including the node itself will be deleted and their operations
+// "collapsed".  The nodes following the selected one are not affected.
+//
+
+global proc collapseHistory()
+{
+	string $fromNode[] = `ls -sl`;
+	if( size($fromNode) < 1 ) {
+		error( "Select a node whose history (including the node itself) " +
+			   "you want collapsed.");
+		return;
+	}
+
+	string $toPlug[] = `listConnections -p on -d on -s off $fromNode[0]`;
+	if( size($toPlug) < 1 ) {
+		error( "The node must be connected to another one" );
+		return;
+	}
+
+	string $fromPlug[] = `listConnections -p on -d off -s on $toPlug[0]`;
+	if( size($fromPlug) < 1 ) {
+		error( "Impossible: there is a previous node." );
+		return;
+	}
+
+	// So, we have to break a connection from fromPlug to toPlug.
+	// First, make a shape, and put it under the transform.
+
+	string $inTheFuture[] = `listHistory -f on $fromNode[0]`;
+	if( size($fromPlug) < 1 ) {
+		error( "Impossible: there is future." );
+		return;
+	}
+
+	string $shape;
+	int $foundIt = false;
+	for ($shape in $inTheFuture) {
+		if( "mesh" == `nodeType $shape` ) {
+			$foundIt = true;
+			break;
+		}
+	}
+
+	if( !$foundIt ) {
+		error( "Cannot find the polygon shape in the future of this node.");
+		return;
+	}
+
+	string $trans[0] = `listRelatives -p $shape`;
+	if( size($trans) < 1 ) {
+		error( "Impossible: there must be a parent transform" );
+		return;
+	}
+
+	string $newShapeName = $shape + "Collapse#";
+	string $newShape = `createNode mesh -n $newShapeName -p $trans[0]`;
+
+	disconnectAttr $fromPlug[0] $toPlug[0];
+	connectAttr $fromPlug[0] ($newShape + ".i");
+	connectAttr ($newShape + ".o") $toPlug[0];
+
+	// Kick the evaluate, just in case:
+	getAttr ($shape + ".boundingBoxMinZ");
+	delete -ch $newShape;
+
+	// Kick the evaluate again:
+	getAttr ($shape + ".boundingBoxMinZ");
+
+	// Make the shape intermediate, and select the transform.
+	setAttr ($newShape + ".io") yes;
+	select -r $trans[0];
+
+	print "History collapsed\n";
+}
+

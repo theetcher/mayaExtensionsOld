@@ -1,0 +1,169 @@
+// TODO : sdelat' tak chtoby rabotalo na selectione sostoyashem iz neskol'kih objectov.
+//	  dlya etogo mozhno sobirat massive iz polygonov nad kotorymi budet vypolnyatsya polycut
+//	  proveryaya chto oni prenadlezhat ODNOMU objectu pri pomoshi "listRelatives -p".
+//	  i tak perebrat' vse objecty
+
+proc initOptionVars ()
+{
+	if (!`optionVar -exists "fix_axisSubdivideSplits"`)
+		optionVar -intValue "fix_axisSubdivideSplits" 2;
+
+	if (!`optionVar -exists "fix_axisSubdivideAxis"`)
+		optionVar -intValue "fix_axisSubdivideAxis" 1;
+}
+
+proc setOptionVars ()
+{
+	optionVar -intValue "fix_axisSubdivideSplits" `intSliderGrp -q -v AS_Splits`;
+	optionVar -intValue "fix_axisSubdivideAxis" `radioButtonGrp -q -select AS_Axis`;
+}
+
+
+global proc fix_axisSubdivide()
+
+{
+
+	initOptionVars ();
+	
+	if (`window -exists axisSubdivideWindow` == 1)
+			deleteUI axisSubdivideWindow;
+
+	int $winWidth = 420;
+	int $separatorWidth = $winWidth - 7;
+	
+	
+	string $axisSubdivideWin = `window 
+				-t "Axis Subdivide"
+				-in "Axis Subdivide"
+				-s 0
+				-mnb 1
+				-mxb 0
+				axisSubdivideWindow`;
+	
+	columnLayout -co both -200;
+	
+		separator -style "none" -height 5;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 5;
+
+		intSliderGrp
+			-field on
+			-label "Splits"
+			-minValue 2
+			-maxValue 50
+			-fieldMinValue 2
+			-fieldMaxValue 1000
+			-step 1
+			-value `optionVar -q "fix_axisSubdivideSplits"`
+			AS_Splits;
+
+	
+		separator -style "in" -width $separatorWidth;
+		separator -style "none" -height 5;
+
+		radioButtonGrp
+			-numberOfRadioButtons 3
+			-label "Axis"
+			-labelArray3 "X" "Y" "Z"
+			-select `optionVar -q "fix_axisSubdivideAxis"`
+			AS_Axis;
+
+		separator -style "none" -height 5;
+		separator -style "double" -width $separatorWidth;
+		separator -style "none" -height 5;
+
+		rowColumnLayout  -numberOfColumns 3 
+			-columnWidth 1 137 
+			-columnWidth 2 137 
+			-columnWidth 3 137;
+
+			button -label "Axis Subdivide" 
+				-ann "peform Axis Subdivide on selected objects/polygons" 
+				-command "do_axisSubdivide;deleteUI axisSubdivideWindow;";
+
+			button -label "Apply" 
+				-ann "peform Axis Subdivide on selected objects/polygons and leave this window opened" 
+				-command "do_axisSubdivide;";
+
+			button -label "Cancel" 
+				-ann "cancel this operation" 
+				-command "deleteUI axisSubdivideWindow;";
+		
+		setParent ..;
+		
+		// diming control on ER_extraSegmentLength
+
+	
+
+	showWindow $axisSubdivideWin;
+
+	window -e -w $winWidth -h 121 $axisSubdivideWin; // width and height works only after window has been shown
+
+
+
+}
+
+global proc do_axisSubdivide ()
+{
+	
+	setOptionVars();
+
+	float $splits = `optionVar -q "fix_axisSubdivideSplits"`;
+	float $axis = `optionVar -q "fix_axisSubdivideAxis"`;
+
+	performAxisSubdivide ($splits, $axis);
+
+}
+
+
+global proc performAxisSubdivide( int $subdNum, int $axis )
+
+{
+
+	int $objSelected;
+	string $selection[] = `ls -sl -fl -l`;
+	PolySelectConvert 1;
+	string $selConv[] = `ls -sl -fl -l`;
+	
+	if ( "transform" == `objectType $selection[0]`) $objSelected = 1;
+		else $objSelected = 0;
+		
+	float $BBox[] = `polyEvaluate -bc $selConv`;
+	float $increment;
+	int $i = 1;
+	float $cutPlane = 0;
+	
+	switch ($axis) {
+		case 1:
+			$increment = ($BBox[1] - $BBox[0])/$subdNum;
+			$cutPlane = $BBox[0];
+			for ($i;$i < $subdNum; $i++){
+				$cutPlane = $cutPlane + $increment;
+				polyPerformAction ("polyCut -pc "+$cutPlane+" 0 0 -ro -180 -90 0") -e 0;
+				if ($objSelected) select -r $selection;
+			}
+			break;
+		case 2:
+			$increment = ($BBox[3] - $BBox[2])/$subdNum;
+			$cutPlane = $BBox[2];
+			for ($i;$i < $subdNum; $i++){
+				$cutPlane = $cutPlane + $increment;
+				polyPerformAction ("polyCut -pc 0 "+$cutPlane+" 0 -ro -90 0 0") -e 0;
+				if ($objSelected) select -r $selection;
+			}
+			break;
+		case 3:
+			$increment = ($BBox[5] - $BBox[4])/$subdNum;
+			$cutPlane = $BBox[4];
+			for ($i;$i < $subdNum; $i++){
+				$cutPlane = $cutPlane + $increment;
+				polyPerformAction ("polyCut -pc 0 0 "+$cutPlane+" -ro -180 0 0") -e 0;
+				if ($objSelected) select -r $selection;
+			}
+			break;
+	
+	}
+
+	if ($objSelected) select -r $selection;
+
+}

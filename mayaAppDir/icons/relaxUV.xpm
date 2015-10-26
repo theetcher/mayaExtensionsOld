@@ -1,0 +1,39 @@
+/* XPM */
+static char *relaxUV[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #17077d",
+". c #a9a5b5",
+"# c #f10d0e",
+"a c #6f677d",
+"b c #fcd204",
+"c c #e94344",
+"d c #c4c2c3",
+"e c #34307e",
+/* pixels */
+"dddddddddddddddddddddddd",
+"ddddd.dddddddddddddddddd",
+"dddeaaeaeaaaaea.dddddddd",
+"dd.addadddaddda.dddddddd",
+"dd.ad..dd.addda.dddddddd",
+"dd.aaeeada.ddda.dddddddd",
+"dd.aadddaaa.a.a.dddddddd",
+"dd.aaddda..ddda.dddddddd",
+"dd.aeaddaddddda.dddddddd",
+"dd.ea.a.dda.a.e..a..a.dd",
+"dd.aa..aee`e`e````e```dd",
+"dd.c.addaa`dde`ddeddd`dd",
+"dd###ddd.e`daaadaaadd`dd",
+"dd.###d.cae`abb`abb``edd",
+"dd.`##c##.`dabadabadd`dd",
+"ddd.a####c`dd`edd`ddd`dd",
+"ddddd#####ddaaadaaaddedd",
+"dddd.e#####`abb`abb```dd",
+"ddddd`e####dabadabadd`dd",
+"ddddddae###ddadddadddedd",
+"ddddddddda`dd`dddeddd`dd",
+"ddddddddd.```e```ee```dd",
+"dddddddddddddddddddddddd",
+"ddddd.dddddddddddddddddd"
+};

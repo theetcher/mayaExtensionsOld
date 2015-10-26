@@ -1,0 +1,39 @@
+/* XPM */
+static char *filteredMode[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #080708",
+". c #8a898a",
+"# c #c4c3c4",
+"a c #444544",
+"b c #a9a9a9",
+"c c #706f70",
+"d c #e7e9e7",
+"e c #525352",
+/* pixels */
+"##b#bb##################",
+"#b....bb#d##############",
+"bbcaaacbdddd########b.##",
+"b.a```eb#ddd#######b.b##",
+"b.a```ebdddd######b.b###",
+"#.a``aeb#dd######b.b####",
+"bbcceec..bbb####b.b##b##",
+"#bbbb..ceaecbb#b.b#b####",
+"##d#d#ba``aa.bb.b#######",
+"##ddddbe```a.b.b########",
+"##ddddbe```ac.b#########",
+"##ddd#bceeeecbb###b##b##",
+"#######b..cc`````ddddd##",
+"#######bbb.b`````ddddd##",
+"########b.bb`````ddddd##",
+"#######b.b##`````ddddd##",
+"######b.b###`````ddddd##",
+"#####b.b####ddddd`````##",
+"####b.b###b#ddddd`````##",
+"###b.b######ddddd`````##",
+"##b.b#b#####ddddd`````##",
+"##.bb#######ddddd`````##",
+"##########b#############",
+"#####################b##"
+};

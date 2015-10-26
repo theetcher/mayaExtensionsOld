@@ -1,0 +1,955 @@
+// XFormUV ------------------------------------------------------- //
+//                                                                 //
+// Script Name:   XFormUV.mel                                      //
+//                                                                 //
+// Creation Date: 10/26/99                                         //
+//                                                                 //
+// Last Updated:  04/22/03                                         //
+//                                                                 //
+// Author:        Morris Olmsted                                   //
+//                                                                 //
+// Description:   This Window was created to give quicker access to//
+//                various modeling/texturing procedures for use in //
+//                game developement.                               //
+//                                                                 //
+// Requirements:  There are some required files to make this script//
+//                work properly.                                   //
+//                -rgbVertexChooser.mel by Morris Olmsted          //
+//                -matchVertNormal.mel by Morris Olmsted           //
+//                -polyAverageVertexRGB.mel by Morris Olmsted      //
+//                -invertSel.mel by Morris Olmsted                 //
+//                -addPreSuf.mel by Morris Olmsted                 //
+//                -crvOnPoly.mel by Steven T. L. Roselle           //
+//                -safeSeperate.mel by Bryan Ewert                 //
+//                -polySeparateByShadingGroup.mel by Bryan Ewert   //
+//                                                                 //
+// --------------------------------------------------------------- //
+global string $UVWindow;    // create variable name for the GUI window //
+global int $smoothEdges;    // global integer variable to hold the state of the smoothEdges checkbox //
+global int $protectAlpha;    // global integer variable to hold the state of the protect alpha checkbox //
+global float $distance;
+global int $UVRot;
+global string $panelFocus;
+
+
+// --------------------------------------------------------------- //
+// This procedure simply opens a window to house the XFormUV       //
+// program.                                                        //
+// --------------------------------------------------------------- //
+global proc XFormUV()
+{
+    global string $UVWindow = "XformUV";    // redifine global variable to be used in scripts //
+    waitCursor -st 1;    // turn the wait curser on //
+
+    if (!`window -ex $UVWindow`)    // check to see if this window already exsists //
+        Control();    // if window doesn't exsists, create it and go to main procedure to create GUI //
+
+    showWindow $UVWindow;    // call to Maya to make GUI visable //
+    waitCursor -st 0;    //  turn the wait curser off //
+
+}     // end of XFormUV //
+
+
+// Beginning of Poly Modeling ------------------------------------ //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply creates a message window with one button  //
+// called Confirm.  It only displays a message to the user than    //
+// closes itself.                                                  //
+// --------------------------------------------------------------- //
+global proc messageWin(string $phrase)
+{
+    confirmDialog
+        -t "Confirm"
+        -m $phrase
+        -b "Confirm"
+        -db "Confirm";
+
+}    // end of procedure messageWin //
+
+
+// --------------------------------------------------------------- //
+// Turbine Single Sided Poly Script                                //
+// By:Chris Clay                                                   //
+// Date:May 15th, 2000                                             //
+// Last Updated:May 15th, 2000                                     //
+//                                                                 //
+// Description: The Following Script turns all Poly Objects in the //
+// Scene into Single Sided poly objects.                           //
+//                                                                 //
+// --------------------------------------------------------------- //
+global proc turbineSSPolys()
+{
+    string $ccSSPoly[];
+    $ccSSPoly = `ls -g`;
+
+    string $temp;
+    for ($temp in $ccSSPoly)
+    {
+        print $temp;
+
+        if (`objectType -i mesh $temp` == 1)
+        {
+            string $ccPPattr = $temp + ".doubleSided";
+            setAttr $ccPPattr 0;
+
+        }    // end of if loop //
+
+    }    // end of for loop //
+
+}    // end of procedure turbineSSPolys //
+
+
+/* copy.mel V1.1 - Maya2.0
+This script may be freely distributed. Modify at your own risk.
+Author: Dirk Bialluch (DirkBi@Software2000.de)
+Creation date:  29.03.2000
+Last update:    05.07.2000
+Description
+    Copy (export) selection to a file
+Required MEL scripts
+    paste.mel
+History
+    V1.1    -use user temp folder to avoid conflicts,
+         if several users work on the same project
+        -use "copy" prefix for clashing nodes
+*/
+global proc copy ()
+{
+    if ( !size( `ls -sl` ) )
+        print "Nothing selected";
+    else
+    {
+        // get old scene filename
+        string $oldFilename = `file -q -sceneName`;
+
+        // get user temp folder
+        string $tmpDir = `internalVar -utd`;
+
+        file -rename ( $tmpDir + "_copyBuffer_" );
+        file -es -type mayaBinary -ch 1 -chn 1 -exp 1 -con 1 -sh 1;
+        file -rename $oldFilename;
+    }
+}
+
+
+/* paste.mel V1.1 - Maya2.0
+This script may be freely distributed. Modify at your own risk.
+Author: Dirk Bialluch (DirkBi@Software2000.de)
+Creation date:  29.03.2000
+Last update:    05.07.2000
+Description
+    Paste (import) data into the scene
+Required MEL scripts
+    copy.mel
+History
+    V1.1    -use user temp folder to avoid conflicts,
+         if several users work on the same project
+        -use "copy" prefix for clashing nodes
+*/
+global proc paste ()
+{
+    // get old scene filename
+    string $oldFilename = `file -q -sceneName`;
+
+    // get user temp folder
+    string $tmpDir = `internalVar -utd`;
+
+    file -rename ( $tmpDir + "_copyBuffer_" );
+    print $tmpDir;
+
+    if ( !`file -q -exists` )
+        print "Copy buffer empty\n";
+    else
+        file -i -rpr "copy" ( $tmpDir + "_copyBuffer_.mb" );
+
+    file -rename $oldFilename;
+}
+
+
+
+// --------------------------------------------------------------- //
+// This procedure simply is the guts of the polyCurveEdit program. //
+// By using the Edge Path Selection Tool or by defining the edges  //
+// by yourself you can have a degree 1 curve created from your     //
+// poly mesh surface.  It is best to use an untriangulated mesh.   //
+// --------------------------------------------------------------- //
+global proc polyCurveEdit()
+{
+    string $selectedEdges[0] = `ls -sl`;    // capture all of rhe currently selected edges //
+    $selectedEdges = `filterExpand -ex 1 -sm 32 $selectedEdges`;    // expand all selected faces into the array selectedFaces //
+
+    FitBSpline;    // call to run the fitBspline script //
+    string $bSplines[0] = `ls -sl "fitBsplineCurve*"`;    // select all of the created fitBSpline curves into the array bSplines //
+
+    delete -ch $bSplines;    // delete all of the construction history accumulated until now on the bSplines in the array bSplines //
+    string $curveArray[0] = `filterExpand -ex 1 -sm 9 $bSplines`;    // expand all selected curves into the array bSplines //
+
+    for ($x=1; $x<`size $curveArray`; $x++)
+        attachCurve -ch 0 -rpo 1 -kmk 1 -m 0 -bb 0.5 -bki 0 -p 0.1 $curveArray[0] $curveArray[$x];    // call to attach the curves to create a new curve //
+
+    select -r $curveArray[0];    // select by replace all of the curves in the array curveArray //
+    rebuildCurve -ch 0 -rpo 1 -rt 0 -end 1 -kr 2 -kcp 0 -kep 1 -kt 0 -s 0 -d 1 -tol 0.01 $curveArray[0];    // rebuild the curve to degree 1 //
+
+    xform -cp $curveArray[0];    // force to center pivot //
+    delete -ch $curveArray[0];    // delete construction history //
+
+    string $curveName = "myNewCurve";    // string variable to hold the name of the curve after all editing is accomplished //
+    rename $curveArray[0] $curveName;    // rename the curve to the above variable "myNewCurve" //
+
+    delete "fitBsplineCurve*";    // delete all of the created bSplines that are no longer needed //
+
+    global string $gSelect;
+    setToolTo $gSelect;
+
+}    // end of procedure polyCurveEdit //
+
+
+
+
+// --------------------------------------------------------------- //
+// This procedure simply converts a selected Nurbs surface to a    //
+// polygon mesh based on the options last set for the nurbsToPolys //
+// option box.                                                     //
+// --------------------------------------------------------------- //
+global proc convert2Polys()
+{
+    performnurbsToPoly 0;    // call to create a poly surface from the selected Nurbs surface //
+
+}    //  end of procedure convert2Polys //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply starts the append polygon call in Maya.   //
+// --------------------------------------------------------------- //
+global proc appendPolys()
+{
+     setToolTo polyAppendFacetContext;    // call to setup and create the split polygon tool //
+     polyAppendFacetCtx -e -pc `optionVar -q polyKeepFacetsPlanar` polyAppendFacetContext;    // call to reference split polygon tool options //
+
+}    // end of procedure appendPolys //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply determines which option was called,       //
+// open the option box or just run the subdivide poly based on the //
+// current options.                                                //
+// --------------------------------------------------------------- //
+global proc goPolySubdivide(int $val)
+{
+     if ($val == 0)
+        performPolySubdivide "" 0;    // call to perform the poly subdivision procedure //
+
+     else
+        performPolySubdivide "" 1;    // call to the poly subdivision option box //
+
+}    // end of procedure goPolySubdivide //
+
+// --------------------------------------------------------------- //
+// This procedure cleanly combines pieces of polygonal geometry    //
+// and deletes the empty nodes.  It was written in 1999 by David   //
+// Stripinis of Factor 5, LLC from www.highend3d.com.  Originally  //
+// called "cleanPolyCombine.mel".                                  //
+// --------------------------------------------------------------- //
+global proc combinePolys()
+{
+    string $cleanPolyCombineSelection[0] = `ls -sl`;    // get the names of the currently selected poly surfaces //
+    polyUnite -ch 0 $cleanPolyCombineSelection;    // combine the selected poly surfaces into one poly surface //
+
+}    // end of procedure combinePolys //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply merges vertexes after a poly combine has  //
+// been performed.  NOTE: when using only select the vertexs to be //
+// combined, not the entre group of edges in scene.                //
+// --------------------------------------------------------------- //
+global proc mergeEdgeVerts()
+{
+     global int $smoothEdges;
+     global float $distance;
+
+     string $edgeList[];
+     string $verts[];
+
+     $verts = `ls -sl`;    // capture all currently selected verticies //
+     changeMergeDistance;
+
+     polyMergeVertex -ch 0 -tx 0 -d $distance $verts;    // merge the selected verts into a single verts //
+     $verts = `ls -sl`;
+
+     if ($smoothEdges == 1)
+     {
+        $edgeList = `polyListComponentConversion -fv -te $verts`;    // convert the list to corresponding edges //
+        select -r $edgeList;
+
+        PolygonSoftenHarden;    // run the command performPolySoftEdge //
+
+     }    // end of if loop //
+
+     setComponentPickMask "Point" 1;    // set the pick mask back to point //
+     select -r $verts;    // select merged verticies //
+
+     refresh;    // simply a call to refresh the screen //
+
+     clear $verts;
+     clear $edgeList;
+
+}    // end of procedure mergeVerts //
+
+
+
+// --------------------------------------------------------------- //
+// This procedure simply changes the global variable if the        //
+// distance field is changed.                                      //
+// --------------------------------------------------------------- //
+global proc changeMergeDistance()
+{
+    global float $distance;
+    $distance = `floatField -q -v setDistanceField`;
+
+}    // end of procedure changeMergeDistance //
+
+
+
+// --------------------------------------------------------------- //
+// This procedure simply calls a script called edgePath, which is  //
+// used to select all edges along a path.  It was downloaded from  //
+// Highend3D.com and was written by Quang Tran.                    //
+// --------------------------------------------------------------- //
+global proc selectEdgePath()
+{
+     if (`currentCtx` != "QT_edgePathCtx")
+         edgePath;
+
+}    // end of procedure selectEdgePath //
+
+
+
+// --------------------------------------------------------------- //
+// This procedure simply triangulates the selected poly faces.     //
+// --------------------------------------------------------------- //
+global proc goPolyTriangulate()
+{
+    Triangulate;
+    changeSelectMode -object;
+    deletePolyHistory();
+
+}    // end of procedure goPolyTriangulate //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply cleanup the selected poly mesh.           //
+// --------------------------------------------------------------- //
+global proc goPolyCleanup()
+{
+    polyCleanupArgList 3 { "0","1","1","1","1","0","0","0","1","1e-005","1","1e-005","0","1e-005","0","1","0" };
+    changeSelectMode -object;
+
+    polyCleanupArgList 3 { "0","1","1","1","1","0","0","0","1","1e-005","1","1e-005","0","1e-005","0","-1","1" };
+    changeSelectMode -object;
+
+    deletePolyHistory();
+
+}    // end of procedure goPolyCleanup //
+
+
+
+// --------------------------------------------------------------- //
+// Renames all meshes found in scene.                              //
+// --------------------------------------------------------------- //
+global proc renameAllMeshes()
+{
+    promptDialog -m "Type a Unique Name" -ma "center" -b "OK" -db "OK" -t "Rename Window";
+    string $renameName = `promptDialog -q -t "Rename Window"`;    // find out what the user typed and search for it //
+
+    string $allMesheShapes[0] = `ls -type "mesh"`;
+    string $allMeshes[0] = `pickWalk -d up $allMesheShapes`;
+
+    for ($K=0; $K<`size $allMeshes`; $K++)
+    {
+        int $mF = 0;    // integer variable to hold an integer value for a string //
+        string $mName = ($renameName + $K);
+
+        while (`objExists $mName`)    // perform until this name is unique //
+        {
+            $mName = ($renameName + $mF);    // if this name already exsists then increment f and append to name //
+            $mF++;
+
+        }    // end of while loop //
+
+        rename $allMeshes[$K] $mName;
+        print ("\nRenamed " + $allMeshes[$K] + " to " + $mName + "\n");
+        $allMeshes[$K] = $mName;
+
+    }    // end of for loop //
+
+}    // end of procedure renameAllMeshes //
+
+
+// --------------------------------------------------------------- //
+// Renames selected meshes found in scene.                         //
+// --------------------------------------------------------------- //
+global proc renameSelectedMeshes()
+{
+    promptDialog -m "Type a Unique Name" -ma "center" -b "OK" -db "OK" -t "renameWindow";
+    string $RenameName = `promptDialog -q -t "renameWindow"`;
+
+    string $selectedMeshes[0] = `ls -sl`;
+
+    for ($d=0; $d<`size $selectedMeshes`; $d++)
+    {
+        string $mName = ($RenameName + $d);
+        rename $selectedMeshes[$d] $mName;
+
+        print ("\nRenamed " + $selectedMeshes[$d] + " to " + $mName + "\n");
+        $selectedMeshes[$d] = $mName;
+
+    }    // end of for loop //
+
+    select -r $selectedMeshes;
+
+}    // end of procedure renameSelectedMeshes //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply takes an edge and converts it to its      //
+// equivilant verticies.  It was taken from Bryan Ewert's Mel How  //
+// To website, which can be found at www.ewertb.com/maya/mel.      //
+// --------------------------------------------------------------- //
+global proc int[] edgeVertices(string $edge)
+{
+    int $vertices[2];
+    string $vlist[] = `listAttr $edge`;
+
+    $vertices[0] = match("[0-9]+", $vlist[0]);
+    $vertices[1] = match("[0-9]+", $vlist[4]);
+
+    return $vertices;
+
+}    // end of procedure edgeVerticies //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply takes any selected vertexes and sets their//
+// alpha channel to a given value based on a value from the UI.    //
+// --------------------------------------------------------------- //
+global proc setSelectedAlphas()
+{
+    string $selectedAlphas[0] = `ls -sl`;
+
+    string $selectedAlphaVTXs[0] = `filterExpand -ex 1 -sm 31 $selectedAlphas`;
+    string $selectedAlphaEdges[0] = `filterExpand -ex 1 -sm 32 $selectedAlphas`;
+
+    if (`size $selectedAlphaEdges` > 0)
+    {
+        select -cl;
+
+        for ($x=0; $x<`size $selectedAlphaEdges`; $x++)
+        {
+            int $temp[0] = `edgeVertices $selectedAlphaEdges[$x]`;
+
+            string $vertName[];
+            int $tempNum = `tokenize $selectedAlphaEdges[$x] "." $vertName`;
+
+            for ($z=0; $z<$tempNum; $z++)
+                select -add ($vertName[0] + ".vtx[" + $temp[$z] + "]");
+
+        }    // end of for loop //
+
+        $selectedAlphaVTXs = `ls -sl`;
+        $selectedAlphaVTXs = `filterExpand -ex 1 -sm 31 $selectedAlphaVTXs`;
+
+    }    // end of if loop //
+
+    float $alphaValToSet = `floatField -q -v setAlphaField`;
+
+    for ($z=0; $z<`size $selectedAlphaVTXs`; $z++)
+    {
+        float $RGBVals[0] = `polyColorPerVertex -q -rgb $selectedAlphaVTXs[$z]`;
+        polyColorPerVertex -rgb $RGBVals[0] $RGBVals[1] $RGBVals[2] -a $alphaValToSet $selectedAlphaVTXs[$z];
+
+    }    // end of for loop //
+
+    DisplayShadedAndTextured;    // call to redisplay the original display mode //
+
+}    // end of procedure setSelectedAlphas //
+
+
+// --------------------------------------------------------------- //
+// This procedure actually burns the scene lights into the selected//
+// poly meshes.  It is called by the procedure burnPolyLights.     //
+// --------------------------------------------------------------- //
+global proc goLightBurn(string $myLights[], string $selectedPolyMeshes[])
+{
+    select -r $selectedPolyMeshes;    // add the poly meshes to the selection //
+    select -add $myLights;    // add these names to the selection //
+
+    toggleMaterialMapping(0);
+    polyGeoSampler -sf 1 -su -colorBlend "overwrite" -alphaBlend "overwrite";
+    toggleMaterialMapping(1);
+
+    select -cl;    // select nothing and deselect everything //
+
+}    // end of procedure goLightBurn //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply selects all of the objects in the scene   //
+// and burns any available light information int the poly meshes.  //
+// --------------------------------------------------------------- //
+global proc burnPolyLights()
+{
+    global int $protectAlpha;    // global integer variable to hold the state of the protect alpha checkbox //
+    string $selectedPolyMeshes[0] = `ls -sl`;
+
+    string $myLights[0] = `ls -type "light"`;    // add these names to the selection //
+    $myLights = `pickWalk -d up $myLights`;    // get the real names of the lights //
+
+    if (`size $myLights` == 0)
+        messageWin("Your lights are hidden or broken!\n        Bailing without pre-lighting.");
+
+    else
+    {
+        select -r $myLights;    // add these names to the selection //
+        select -add $selectedPolyMeshes;    // add the poly meshes to the selection //
+
+        toggleMaterialMapping(0);
+
+        if ($protectAlpha == 1)
+            polyGeoSampler -bf -sf 1 -su -colorBlend "overwrite" -alphaBlend "none";
+
+        else
+            polyGeoSampler -bf -sf 1 -su -colorBlend "overwrite" -alphaBlend "overwrite";
+
+        toggleMaterialMapping(1);
+
+        DisplayShadedAndTextured;    // call to redisplay the original display mode //
+        polyOptions -cm ambientDiffuse -cs 1 -ao $selectedPolyMeshes;
+
+        refresh;
+        select -cl;    // select nothing and deselect everything //
+
+    }    // end of else loop //
+
+}    // end of procedure burnPolyLights //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply fixes some of the UV problems associated  //
+// with texturing and UV changes over a period of time.            //
+// --------------------------------------------------------------- //
+global proc fixBuggyUVS()
+{
+    string $selection[0] = `ls -sl`;
+
+    for ($object in $selection)
+    {
+        string $shapes[0] = `listRelatives -shapes $object`;
+        string $meshes[0] = `ls -type "mesh" $shapes[0]`;
+        string $uplicate[];
+
+        for ($mesh in $meshes)
+        {
+            $uplicate = `duplicate $mesh`;
+            polyTransfer -uv 1 -ch 0 -ao $mesh $uplicate[0];
+
+        }    // end of for loop //
+
+        delete $object;
+        rename $uplicate[0] $object;
+
+        }    // end of for loop //
+
+}    // end of procedure fixBuggyUVS //
+
+
+
+// --------------------------------------------------------------- //
+// This procedure simply rotates in 90 degree steps the UV         //
+// paramiterization on all selected poly faces.                    //
+// --------------------------------------------------------------- //
+global proc rotateUV()
+{
+    global int $UVRot;
+    polyEditUV -pu 0.5 -pv 0.5 -a $UVRot;    // call to rotate clockwise 90 or 180 degrees per call //
+
+}    // end of rotateUV //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply toggles on/off the doublesided attribute  //
+// on all selected poly faces.                                     //
+// --------------------------------------------------------------- //
+global proc tglDblSided()
+{
+    string $obj[] = `selectedNodes`;
+    string $nObj = ($obj[0] + ".doubleSided");
+    int $num = `getAttr $nObj`;
+
+    if ($num == 1)
+        setAttr $nObj 0;
+    else
+        setAttr $nObj 1;
+
+}    // end of tglDblSided //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply deletes an objects construction history.  //
+// --------------------------------------------------------------- //
+global proc deletePolyHistory()
+{
+    MovePolygonComponent;    // turn on the move poly component tool to add a layer of non-UV history //
+    changeSelectMode -object;
+    delete -ch;    // deletes the construction history of the selected objects //
+
+}    // end of procedure deleteConstructionHistory //
+
+// --------------------------------------------------------------- //
+// `description`                                                   //
+// --------------------------------------------------------------- //
+global proc setPanelFocus()
+{
+    global string $panelFocus;
+    setFocus $panelFocus;
+
+}    // end of procedure setPanelFocus //
+
+
+// --------------------------------------------------------------- //
+// `description`                                                   //
+// --------------------------------------------------------------- //
+global proc getPanelFocus()
+{
+    global string $panelFocus;
+    string $modelingPanels[4] = {"modelPanel1", "modelPanel2", "modelPanel3", "modelPanel4"};
+
+    for ($panel in $modelingPanels)
+    {
+        if (`modelEditor -q -av $panel`)
+            $panelFocus = $panel;
+
+    }    // end of for loop //
+
+}    // end of procedure getPanelFocus //
+
+
+// --------------------------------------------------------------- //
+// The purpose of this script is to take a selection of edges and  //
+// seperate a poly mesh in half based on the two sides that the    //
+// selected edges create.  The basic rule for this to happen is    //
+// that just like a nurbs trim tool, your edge selection must      //
+// define two full zones in order to slice the poly mesh.          //
+// --------------------------------------------------------------- //
+global proc seperateByEdges()
+{
+    string $myEdgeSelection[0] = `ls -sl -fl`;    // capture the names of the edges for the seperate //
+    $myEdgeSelection = `filterExpand -ex 1 -sm 32 $myEdgeSelection`;    // filter out anything but faces //
+
+    string $edges2Verts[0] = `polyListComponentConversion -fe -tv $myEdgeSelection`;    // capture the names of the associated verticies //
+    string $splitVerts[0] = `polySplitVertex -ch 0 $edges2Verts`;    // now split the selected verts //
+
+    string $origName[];    // variable to hold the name of the original object //
+    tokenize $myEdgeSelection[1] "." $origName;    // capture the actual full name of the poly object //
+
+    changeSelectMode -object;    // change to object mode //
+    select -cl;    // select nothing //
+
+    string $newObjNames[0] = `polySeparate -ch 0 $origName[0]`;    // seperate any selected surface that meets the criteria of seperation //
+    print ("\n"); print $newObjNames; print ("\n");
+
+    for ($Name in $newObjNames)
+    {
+        string $Verts[0] = `ls ($Name + ".vtx[*]")`;    // get the names of all of the meshes verts //
+        polyMergeVertex -ch 0 -tx 0 -d 0.01 $Verts;    // merge the selected verts into a single verts //
+        parent -w $Name;    // ungroup the new mesh from the old mesh node //
+
+    }     // end of for loop //
+
+    changeSelectMode -object;    // change to object mode //
+    select -r $newObjNames[0];    // just select one of the new meshes //
+    delete $origName[0];    // delete the created empty original shape node //
+
+}    // end of procedure seperateByEdges //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply runs the options for the dupPolys proc.   //
+// --------------------------------------------------------------- //
+global proc dupPolys()
+{
+    string $tempObjs[0] = `ls -sl`;    // capture the name of the selected curves //
+    string $selectedFaces[0] = `filterExpand -ex 1 -sm 34 $tempObjs`;    // filter out everything not a face //
+
+    int $numFaces = `size $selectedFaces`;    // capture the number of selected curves //
+    int $currentCount = 1;    // integer variable to hold count for namming purposes //
+
+    if ($numFaces == 0)    // if nothing was picked //
+        messageWin("Nothing Picked!!!\n\nPick a set of Polygon Faces and try again!\n");
+
+    else
+    {
+        flushUndo;    // this causes maya to forget all undos - this is not undoable //
+
+        string $tokenName[];
+        tokenize $selectedFaces[0] "." $tokenName;
+
+        string $tmpParentName[0] = $tokenName;  // get the name of the selected faces' parent //
+        string $objectsParent = $tmpParentName[0];    // get the name of the parent into the string variable objectsParent //
+
+        string $newPolyName = ($objectsParent + "Copy");    // create a new name for the new poly object to be created //
+
+        while (`objExists $newPolyName`)    // perform until this name is unique //
+        {
+            $newPolyName = ($objectsParent + "Copy" + $currentCount);    // if this name already exsists then count up and reassign name //
+            $currentCount++;    // increment value in this variable //
+
+        }    // end of while loop //
+
+        duplicate -n $newPolyName $objectsParent;    // duplicate $objectsParent and name it $newPolyName //
+        polyTransfer -uv 1 -vc 1 -ch 0 -ao $objectsParent $newPolyName;
+
+        select -cl;    // select nothing //
+
+        for ($faceName in $selectedFaces)
+        {
+            string $Tokens[];
+            tokenize $faceName "." $Tokens;
+
+            string $FaceName = ($newPolyName + "." + $Tokens[1]);
+            select -add $FaceName;
+
+        }    // end of for loop //
+
+        source invertSel; invertSel;
+        delete;
+
+        select -r $newPolyName;
+
+    }    // end of for loop //
+
+    clear $tempObjs;
+    clear $selectedFaces;
+
+}    // end of procedure dupPolys //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply takes a selection of any objct given and  //
+// runs a number of steps to make the translates of the object     //
+// relative to the origin.  This makes the translate values for the//
+// object relative to the origin.                                  //
+// There are six basic steps that this procedure takes to          //
+// accomplish this task: 1) capture names of the objects, 2) freeze//
+// only the translate transforms on the object, 3) move the object //
+// to the origin, 4) capture the translate values from the object, //
+// 5) again freeze only the translate transforms of the object, and//
+// 6) move the object back to where I found it with the new        //
+// origin based translates.                                        //
+// --------------------------------------------------------------- //
+global proc makeOriginTransformed()
+{
+    // capture object //
+    string $tempObjectName[0] = `ls -sl`;
+
+    for ($M=0; $M<`size $tempObjectName`; $M++)
+    {
+        //freeze only the translate transforms //
+        makeIdentity -apply 1 -t 1 -r 0 -s 0 $tempObjectName[$M];
+
+        //move object to true orgin //
+        move -rpr 0 0 0 $tempObjectName[$M];
+
+        // capture the new translates and reverse the values to make sure I get back to where I was instead of double transforming //
+        float $TransX = (`getAttr ($tempObjectName[$M] + ".tx")` * -1);
+        float $TransY = (`getAttr ($tempObjectName[$M] + ".ty")` * -1);
+        float $TransZ = (`getAttr ($tempObjectName[$M] + ".tz")` * -1);
+
+        // again freeze only the translate transforms //
+        makeIdentity -apply 1 -t 1 -r 0 -s 0 $tempObjectName[$M];
+
+        // move the object to the new recorded transforms //
+        setAttr ($tempObjectName[$M] + ".tx") $TransX;
+        setAttr ($tempObjectName[$M] + ".ty") $TransY;
+        setAttr ($tempObjectName[$M] + ".tz") $TransZ;
+
+    }    // end of for loop //
+
+}    // end of procedure makeOriginTransformed //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply closes the XFormUV program.               //
+// --------------------------------------------------------------- //
+global proc closeXFormUV()
+{
+     global string $UVWindow;    // redifine global variable to be used in scripts //
+
+     deleteUI $UVWindow;    // delete the User Interface window called XFormUV //
+     windowPref -r $UVWindow;
+
+}    // end of closeXFormUV //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply creates a window and buttons that when    //
+// clicked, call the aforementioned procedures.                    //
+// --------------------------------------------------------------- //
+global proc Control()
+{
+    global string $UVWindow;    // redifine global variable to be used in scripts //
+    global int $smoothEdges = 0;    // global intiger to hold state of to smooth smooth edges while merging edge verts //
+    global int $protectAlpha = 0;    // global integer variable to hold the state of the protect alpha checkbox //
+    global float $distance = 0.01;
+    global int $UVRot = 90;
+    global string $panelFocus;
+
+    window    // call to create a GUI window //
+        -w 220
+        -h 550
+        -t "MO-Tools"
+        -in "MO-Tools"
+        -mb 1
+        -tb 1
+        -mnb 1
+        -mxb 0
+        -rtf 1
+        -s 1
+      $UVWindow;
+
+    menu
+        -l "Help";
+
+        menuItem
+            -l "Rename All Poly Meshes"
+            -c "getPanelFocus; renameAllMeshes; setPanelFocus;";
+
+        menuItem
+            -l "Rename Selected Meshes"
+            -c "getPanelFocus; renameSelectedMeshes; setPanelFocus;";
+
+        menuItem
+            -l "Add prefix or Suffex to names"
+            -c "source addPreSuf; addPreSuf;";
+
+    string $form = `formLayout`;    // string variable to create the call for formLayout //
+    string $tabs = `tabLayout -imw 5 -imh 5`;    // string variable to hold the call and values for tabLayout //
+
+    formLayout    // call to formLayout to set up the GUI for tabs //
+        -e
+        -af $tabs "top"    0
+        -af $tabs "left"   0
+        -af $tabs "bottom" 0
+        -af $tabs "right"  0
+      $form;
+
+    string $tab1 = `rowColumnLayout -nc 1 -cw 1 200 RCL1`;    // sets up buttons for Polygon UV/Texturing tools in first tab //
+
+            rowColumnLayout -nc 1 -cw 1 150 ;    // inner layout to keep buttons formatted to 150 wide //
+                button -h 1;    // add an empty button to keep from running when space bar selected //
+                button -al "center" -l "Force UV by Camera" -c "getPanelFocus; polyForceUV -cp; setPanelFocus;";
+                button -al "center" -l "Force UV Collective" -c "getPanelFocus; polyNormalizeUV -normalizeType 1 -preserveAspectRatio 0 -ch 0 `ls -sl -fl`; setPanelFocus;";
+                button -al "center" -l "Force UV Separate" -c "getPanelFocus; polyNormalizeUV -normalizeType 0 -preserveAspectRatio 0 -ch 0 `ls -sl -fl`; setPanelFocus;";
+                button -al "center" -l "Flip UV Horizontal" -c "getPanelFocus; polyFlipUV -ft 0 -local 1; setPanelFocus;";
+                button -al "center" -l "Flip UV Vertical" -c "getPanelFocus; polyFlipUV -ft 1 -local 1; setPanelFocus;";
+
+            setParent RCL1;    // call to reset parent back to former rowColumnLayout //
+
+            rowColumnLayout -nc 2 -cw 1 90 -cw 2 110;    // inner layout to keep buttons formatted to 150 wide //
+                button -al "center" -l "Rotate UV" -c "getPanelFocus; rotateUV; setPanelFocus;";
+                radioButtonGrp
+                    -l " "
+                    -nrb 2
+                    -sl 1
+                    -cw3 10 50 50
+                    -la2 "90" "180"
+                    -on1 "$UVRot = 90;"
+                    -of1 "$UVRot = 180;"
+                    -on2 "$UVRot = 180;"
+                    -of2 "$UVRot = 90;";
+
+            setParent RCL1;    // call to reset parent back to former rowColumnLayout //
+
+            rowColumnLayout -nc 1 -cw 1 150 ;    // inner layout to keep buttons formatted to 150 wide //
+
+                button -al "center" -l "Toggle DoubleSided" -c "getPanelFocus; tglDblSided; setPanelFocus;";
+                button -al "center" -l "Display Poly Normals" -c "getPanelFocus; polyOptions -r -dn 1 -facet; setPanelFocus;";
+                button -al "center" -l "Reverse Poly Normal" -c "getPanelFocus; ReversePolygonNormals; setPanelFocus;";
+                button -al "center" -l "Conform Poly Normals" -c "getPanelFocus; performPolyNormal 0 2 0; setPanelFocus;";
+                button -al "center" -l "Copy Poly UV" -c "getPanelFocus; polyClipboard -uv -sh -clr -cp; setPanelFocus;";
+                button -al "center" -l "Paste Poly UV" -c "getPanelFocus; polyClipboard -uv -sh -clr -ps; setPanelFocus;";
+                button -al "center" -l "Delete Constr-Hist" -c "getPanelFocus; deletePolyHistory; setPanelFocus;";
+                button -al "center" -l "Freeze Transforms" -c "getPanelFocus; makeIdentity -a 1; setPanelFocus;";
+                button -al "center" -l "Force All Single Sided" -c "getPanelFocus; turbineSSPolys; setPanelFocus;";
+                button -al "center" -l "Fix Buggy UVs" -c "getPanelFocus; fixBuggyUVS; setPanelFocus;";
+                button -al "center" -l "Make Origin Transformed" -c "getPanelFocus; makeOriginTransformed; setPanelFocus;";
+
+                separator -w 150 -h 5 -style "in";
+
+                button -al "center" -l "Copy Selected Objects" -c "getPanelFocus; copy; setPanelFocus;";
+                button -al "center" -l "Paste Selected Objects" -c "getPanelFocus; paste; setPanelFocus;";
+
+                separator -w 150 -h 10 -style "in";    // simple seperator for formattinf //
+                button -w 150 -al "center" -l "Close" -c "getPanelFocus; setPanelFocus; closeXFormUV;";
+
+            setParent RCL1;    // call to reset parent back to former rowColumnLayout //
+
+            setParent ..;    // call to reset parent back to (not sure) formLayout1 //
+
+    string $tab2 = `rowColumnLayout -nc 1 -cw 1 200 RCL2`;    // sets up buttons for Polygon Modeling tools in second tab //
+
+            button -h 1;    // add an empty button to keep from running when space bar selected //
+
+            setParent RCL2;    // call to reset parent back to former rowColumnLayout //
+
+            rowColumnLayout -nc 2 -cw 1 150 -cw 2 50;    // inner layout to add images to the side of the buttons //
+                button -al "center" -l "Soften Edge Normals" -c "getPanelFocus; performPolySoftEdge 0;";
+                iconTextButton -w 10 -h 10 -i1 "polySoftEdge.xpm" -st "iconOnly" -c "PolygonSoftenHardenOptions";
+
+                button -al "center" -l "Set Alphas" -c "getPanelFocus; setSelectedAlphas;";
+                floatField -w 40 -min 0 -max 1 -pre 1 -v 1 setAlphaField;
+
+                button -al "center" -l "Burn Lights" -c "getPanelFocus; burnPolyLights;";
+                checkBox -l "keep" -ofc "$protectAlpha = 0;" -onc "$protectAlpha = 1;";
+
+            setParent RCL2;    // call to reset parent back to former rowColumnLayout //
+
+            rowColumnLayout -nc 3 -cw 1 90 -cw 2 60 -cw 3 50;    // inner layout to add images to the side of the buttons //
+                button -al "center" -l "Merge Verts" -c "getPanelFocus; mergeEdgeVerts; setPanelFocus;";
+                checkBox -l "Smooth" -v 0 -onc "$smoothEdges = 1" -ofc "$smoothEdges = 0";
+                floatField -pre 2 -v $distance setDistanceField;
+
+            setParent RCL2;    // call to reset parent back to former rowColumnLayout //
+
+            rowColumnLayout -nc 1 -cw 1 150;    // inner layout to keep buttons formatted to 150 wide //
+                button -al "center" -l "Edit Vertex RGBA" -c "getPanelFocus; source rgbVertexChooser; polyVertRGBGUI; setPanelFocus;";
+                button -al "center" -l "Match Vertex Normals" -c "getPanelFocus; source matchVertNormal; matchVertNormal; setPanelFocus;";
+                button -al "center" -l "Average Vert Normals" -c "getPanelFocus; source polyAverageVertexRGB; polyAverageVertexRGB; setPanelFocus;";
+                button -al "center" -l "Seperate Polys" -c "getPanelFocus; source safeSeparate; safeSeparate; setPanelFocus;";
+                button -al "center" -l "Seperate by Edges" -c "getPanelFocus; seperateByEdges; setPanelFocus;";
+                button -al "center" -l "Seperate Polys By Shader" -c "getPanelFocus; source polySeparateByShadingGroup; polySeparateByShadingGroup; setPanelFocus;";
+                button -al "center" -l "Duplicate Poly Faces" -c "getPanelFocus; dupPolys; setPanelFocus;";
+                button -al "center" -l "Make Edge Curve" -c "getPanelFocus; source crvOnPoly; crvOnPoly; setPanelFocus;";
+                button -al "center" -l "Combine Polys" -c "getPanelFocus; combinePolys; setPanelFocus;";
+                button -al "center" -l "Triangulate Polys" -c "getPanelFocus; goPolyTriangulate; setPanelFocus;";
+                button -al "center" -l "Clean Polys" -c "getPanelFocus; goPolyCleanup; setPanelFocus;";
+
+                separator -w 150 -h 10 -style "in";
+                button -al "center" -l "Close" -c "getPanelFocus; setPanelFocus; closeXFormUV;";
+
+            setParent RCL2;    // call to reset parent back to former rowColumnLayout //
+
+            setParent ..;    // call to reset parent back to (not sure) formLayout1 //
+
+    tabLayout    // call to tabLayout to create the above tab and buttons for the GUI //
+        -edit
+        -w 160
+        -h 25
+        -tabLabel $tab1 "Poly UVs"
+        -tabLabel $tab2 "Poly Model"
+        -cc "source XFormUV;"
+      $tabs;
+
+}    // end of procedure Control //

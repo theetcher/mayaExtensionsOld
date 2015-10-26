@@ -1,0 +1,284 @@
+
+// Modifications in Maya 4 (after saving in export scene) for future conversion into Softimage //
+
+global proc ExportMod_NoRotFreeze( )
+{
+
+	string $decision = confirmDialog ("-title","Confirmation",
+			"-message","This will start ExportMod",
+			"-button","OK",
+			"-button","Cancel");
+			
+	if ($decision == "dismiss" || $decision == "Cancel") error "Operation was cancelled";
+
+	string $meshList[];
+	$meshList = `ls -l -type mesh`;
+	
+	if ($meshList[0] == "")
+		{
+		confirmDialog ("-title","Error !!!",
+					"-message","No polygon objects in scene.",
+					"-button","OK");
+		error "No polygon objects in Scene.";
+		}
+
+	print ("\n\n\n\n--- Export Modifications Started ---\n\n");
+
+	string $tmpArr[];
+	string $tmp;
+	
+// Reseting Transformations
+
+//catch(`rotate -a 0 0 0 Scene`);
+//move -a 0 0 0 Scene;
+
+/*// UnFreezing Transforms (this may help to save pivots. must be studied later)
+	
+	string $tempObjectName[];
+//	$tempObjectName = `listTransforms -g`;
+	$tempObjectName = `ls -tr -dag Scene`;
+
+	float $amount = 0;
+	float $MaxAmount = size ($tempObjectName);
+	progressWindow
+	-title "Working"
+	-status "UnFreezing Transforms"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+	for ($M=0; $M<`size $tempObjectName`; $M++)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		
+		//freeze only the translate transforms //
+		makeIdentity -apply 1 -t 1 -r 0 -s 0 $tempObjectName[$M];
+
+		//move object to true orgin //
+		move -rpr 0 0 0 $tempObjectName[$M];
+
+		// capture the new translates and reverse the values to make sure I get back to where I was instead of double transforming //
+		float $TransX = (`getAttr ($tempObjectName[$M] + ".tx")` * -1);
+		float $TransY = (`getAttr ($tempObjectName[$M] + ".ty")` * -1);
+		float $TransZ = (`getAttr ($tempObjectName[$M] + ".tz")` * -1);
+
+		// again freeze only the translate transforms //
+		makeIdentity -apply 1 -t 1 -r 0 -s 0 $tempObjectName[$M];
+
+		// move the object to the new recorded transforms //
+		setAttr ($tempObjectName[$M] + ".tx") $TransX;
+		setAttr ($tempObjectName[$M] + ".ty") $TransY;
+		setAttr ($tempObjectName[$M] + ".tz") $TransZ;
+
+//		print ("Made " + $tempObjectName[$M] + "'s translation transformes relative to the origin.\n");
+
+		}    // end of for loop //
+
+			
+	/////////////////////
+
+	progressWindow -endProgress;*/
+
+// Freezing Transforms 
+	
+	progressWindow
+	-title "Working"
+	-status "Freezing All Transformations"
+	-progress 0
+	-isInterruptable 0;
+
+	/////////////////////
+
+	$tmpArr = `ls -tr Scene`;
+	if ($tmpArr[0] == "")
+		confirmDialog -title "Warning !!!" -message "You do not have a \"Scene\" transform. Transformations will be freezed only on this node."
+		-button "OK" -defaultButton "OK";
+		else
+		{
+		confirmDialog -title "Warning !!!" -message "Transformations will be freezed only on Scene node."
+		-button "OK" -defaultButton "OK";
+		if ( catch(`makeIdentity -a 1 -t 1 -r 0 -s 1 Scene`) ) 
+			{
+			confirmDialog -title "Error !!!" -message "Can't Freeze Transformations."
+			-button "OK" -defaultButton "OK";
+			progressWindow -endProgress;
+			error "Can't Freeze Transformations.";
+			};
+		};
+
+//	catch(`makeIdentity -a 1 Scene`);
+			
+	/////////////////////
+
+	progressWindow -endProgress;
+	
+//	source fix_oppositeEraser;
+//	fix_oppositeEraser;
+	
+/*
+// Merging points with same coordinates
+	
+	float $amount = 0;
+	float $MaxAmount = size ($meshList);
+	progressWindow
+	-title "Working"
+	-status "Merging points with same coordinates"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+	for ($tmp in $meshList)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		polyMergeVertex -d 0.001 -tx 0 -ch 0 $tmp;
+		}
+
+	/////////////////////
+
+	progressWindow -endProgress;
+	
+*/	
+// Detecting faces with holes 
+
+	
+	progressWindow
+	-title "Working"
+	-status "Detecting faces with holes"
+	-isInterruptable 0
+	-progress 100;
+
+	/////////////////////
+
+	select -cl;
+	polyCleanup 1 0 0  0 0 0 1 0  0 0  0 0  0 0;
+	$tmpArr = `ls -sl`;
+	if ($tmpArr[0] != "")
+		{
+		confirmDialog -title "Error !!!" -message "Faces with holes detected."
+		-button "OK" -defaultButton "OK";
+		progressWindow -endProgress;
+//		waitCursor -state off;
+		error "Faces with holes detected";
+		}
+		else print ("Faces with holes not found\n");
+		
+	/////////////////////
+
+	progressWindow -endProgress;
+
+/*
+// Triangulating faces with sides > 4
+
+	progressWindow
+	-title "Working"
+	-status "Triangulating faces with sides > 4"
+	-isInterruptable 0
+	-progress 100;
+
+	/////////////////////
+
+	select -cl;
+	polyCleanup 1 0 0  0 1 0 0 0  0 0  0 0  0 0;
+	$tmpArr = `ls -sl`;
+	if ($tmpArr[0] != "")
+		{
+//		polyTriangulate -ch 0 $tmpArr;
+		crsTriangulate;
+		print ("Faces with sides > 4 triangulated\n");
+		}
+		else print ("Faces with sides > 4 not found\n");
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+	
+// Triangulating concave faces
+
+	progressWindow
+	-title "Working"
+	-status "Triangulating concave faces"
+	-isInterruptable 0
+	-progress 100;
+
+	/////////////////////
+
+	select -cl;
+	polyCleanup 1 0 0  0 0 1 0 0  0 0  0 0  0 0;
+	$tmpArr = `ls -sl`;
+	if ($tmpArr[0] != "")
+		{
+//		polyTriangulate -ch 0 $tmpArr;
+		crsTriangulate;
+		print ("Concave faces triangulated\n");
+		}
+		else print ("Concave faces not found\n");
+		
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+// Triangulating non-planar faces
+
+	progressWindow
+	-title "Working"
+	-status "Triangulating non-planar faces"
+	-isInterruptable 0
+	-progress 100;
+
+	/////////////////////
+
+	select -cl;
+	polyCleanup 1 0 0  0 0 0 0 1  0 0  0 0  0 0;
+	$tmpArr = `ls -sl`;
+	if ($tmpArr[0] != "")
+		{
+//		polyTriangulate -ch 0 $tmpArr;
+		crsTriangulate;
+		print ("Non-planar faces triangulated\n");
+		}
+		else print ("Non-planar faces not found\n");
+		
+	/////////////////////
+
+	progressWindow -endProgress;
+
+*/
+// Deleting construction history
+
+	progressWindow
+	-title "Working"
+	-status "Deleting construction history"
+	-isInterruptable 100;
+
+	/////////////////////
+
+	delete -all -constructionHistory;
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+/////////////////////////////
+
+	cleanUpScene 1;
+	
+	source deleteEmptyShapes; // one useful script
+	deleteEmptyShapes;
+
+//	waitCursor -state off;
+	
+	confirmDialog -title "Information" -message "Export Modifications successfully finished"
+	-button "OK" -defaultButton "OK";
+	maya523pt;
+
+	print ("\n\n--- Export Modifications Finished ---\n\n\n\n");
+}

@@ -1,0 +1,547 @@
+// DISCLAIMER:  USE THIS SCRIPT AT YOUR OWN RISK.  I DO NOT GUARANTEE IT, 
+// NOR WILL I SUPPORT IT, AND I DON'T WANT TO BE HOUNDED BY QUESTIONS
+// REGARDING WHY IT MAY NOT WORK FOR YOU, ON YOUR PLATFORM, IN YOUR CUBICLE
+// OR WHEREVER YOU MAY BE.  I AM NOT RESPONSIBLE FOR YOUR USE OF IT IN
+// ANY WAY, SHAPE, OR FORM.  THIS SCRIPT IS "AS-IS" AND MAY BE 
+// FREELY DISTRIBUTED TO ANYONE.
+//
+// AUTHOR:           Keith Klohn
+//
+// LOCATION:         Visualization Sciences Program, Texas A&M University
+//
+// CREATION DATE:    04 November 1998
+//
+// PROCEDURE NAME:   followcurve.mel
+//
+// DESCRIPTION:      
+// This script is a smaller version of the PA plug-in pptFollowCurve written by
+// Ka-Ping Yee.  It takes an arbitraray curve and maps geometry to that curve
+// according to the user-specified parameters in the window UI.  The attaching
+// of the geometry is based on Joshua Reiss's "Tentacle Node Script" found in 
+// Issue No.5 of the A|W Assistant (pg.35).  Basically I expanded Reiss's 
+// concept to include the option of using multiple objects instead of just
+// a single node.  Additionally, parameters are changed in the window UI 
+// rather than the command line.
+// 
+// INPUT PARAMETERS:
+//       1. Select geometry first
+//       2. Evoke the script and follow directions in the status line
+//
+// RETURN VALUE:    None
+//
+
+global proc showStatus (string $selected)			{textField -edit -text $selected StatusLine;}
+global proc int getBankStatus ()					{return `checkBox -query -value bankBox`;}
+global proc string[] getObjects()					{return `ls -objectsOnly -sl`;}
+global proc int numberOfObjects(string $objects[])	{return (`size $objects`);}
+global proc cancelWindow ()						{deleteUI FollowCurveWindow;}
+global proc int getCurveCVs() {return `intSliderGrp -query -value curveCVSlider`;}
+global proc int getCurveDegree() {return `intSliderGrp -query -value curveDegreeSlider`;}
+
+global proc string getAxisSelected()
+{
+	string $axisName = `radioCollection -query -select AxisButtons`;
+	string $SelectedAxis;
+	
+	if ( strcmp("axisButton1", $axisName) == 0) 
+		$SelectedAxis = "x";
+	else
+	if ( strcmp("axisButton2", $axisName) == 0)
+		$SelectedAxis = "y";
+	else
+		$SelectedAxis = "z";
+		
+	return $SelectedAxis;
+}
+
+global proc showCurveOptionsOn()
+{
+	showStatus("Keep Curve CV's: ON");
+	text -edit -enable 0 userCurveParamText;
+	intSliderGrp -edit -enable 0 curveCVSlider;
+	intSliderGrp -edit -enable 0 curveDegreeSlider;
+}
+
+global proc showCurveOptionsOff()
+{
+	showStatus("Keep Curve CV's: OFF");
+	text -edit -enable 1 userCurveParamText;
+	intSliderGrp -edit -enable 1 curveCVSlider;
+	intSliderGrp -edit -enable 1 curveDegreeSlider;
+}
+
+global proc string getUpAxisSelected()
+{
+	string $axisName = `radioCollection -query -select upAxisButtons`;
+	string $SelectedAxis;
+	
+	if ( strcmp("upaxisButton1", $axisName) == 0) 
+		$SelectedAxis = "x";
+	else
+	if ( strcmp("upaxisButton2", $axisName) == 0)
+		$SelectedAxis = "y";
+	else
+		$SelectedAxis = "z";
+		
+	return $SelectedAxis;
+}
+
+global proc int getObjectState (string $objects[])
+{
+    int $nObj = numberOfObjects ($objects);
+    
+    if ($nObj <= 1) 
+    	return 1;			// Return One for Single Object
+    else 
+    	return 0;			// Return Zero for Multiple Objects
+}
+
+global proc showNewName()
+{
+	string $newName = `textFieldGrp -query -text ObjectNameText`;
+	showStatus ("New Name for Objects: " + $newName);
+}
+
+global proc showProfileSliderValue()
+{
+	string $value = `intSliderGrp -query -value ProfileNumberSlider`;
+	showStatus ("Repeat Number Set To: " + $value);
+}
+
+global proc showCVSliderValue()
+{
+	string $value = `intSliderGrp -query -value curveCVSlider`;
+	showStatus ("Number of Curve CV's Set To: " + $value);
+}
+
+global proc showDegreeSliderValue()
+{	
+	int $sliderValue = `intSliderGrp -query -value curveDegreeSlider`;
+	$sliderValue = (fmod($sliderValue,2) == 0) ? $sliderValue - 1 : $sliderValue;
+	intSliderGrp -edit -value $sliderValue curveDegreeSlider;
+	
+	string $value = `intSliderGrp -query -value curveDegreeSlider`;
+	showStatus ("Curve Degree Set To: " + $value);
+}
+
+global proc string getInitStatusString(int $nObj)
+{
+	string $returnString;
+	
+	if ($nObj == 0) $returnString = "No Objects Have Been Selected";
+	
+	else 
+	if ($nObj == 1) $returnString = "Single Node Object Has Been Selected";
+	
+	else $returnString = "Multiple Objects Have Been Selected";
+	
+	return $returnString;
+}
+
+global proc string getObjectName()
+{	
+	string $name = "";
+	textFieldGrp -edit -editable 0 ObjectNameText;
+	return $name = `textFieldGrp -query -text ObjectNameText`;
+}
+
+global proc disableWindow()
+{
+	radioButton 	-edit -enable 0 axisButton1;
+	radioButton 	-edit -enable 0 axisButton2;
+	radioButton 	-edit -enable 0 axisButton3;
+	radioButton 	-edit -enable 0 upaxisButton1;
+	radioButton 	-edit -enable 0 upaxisButton2;
+	radioButton 	-edit -enable 0 upaxisButton3;
+	intSliderGrp    -edit -enable 0	ProfileNumberSlider;
+	intSliderGrp    -edit -enable 0	curveCVSlider;
+	intSliderGrp    -edit -enable 0	curveDegreeSlider;
+	textFieldGrp	-edit -enable 0 ObjectNameText;
+	text			-edit -enable 0 AxisText;
+	text			-edit -enable 0 upAxisText;
+	text 		    -edit -enable 0 SingleNodeText;
+	text			-edit -enable 0 checkBoxLabel;
+	text			-edit -enable 0 userCurveParamText;
+	button			-edit -enable 0 applyButton;
+	button			-edit -enable 0 resetButton;
+	checkBox		-edit -enable 0 bankBox;
+	checkBox		-edit -enable 0 curveBox;
+}
+
+global proc performSingleNodeOperation(string $objects[], string $curve[])
+{
+	int $i, $spans, $bankStatus, $curveDegree, $nCVs, $keepCVs;
+	string $FollowAxis, $UpAxis, $pathCurve, $NodeBase, $Node, $motionPath, $motionPathAttr;
+	float  $ProfileNumber;
+	
+	$objectName = getObjectName();
+	$FollowAxis = getAxisSelected();
+	$UpAxis = getUpAxisSelected();
+	$ProfileNumber = `intSliderGrp -query -value ProfileNumberSlider`;
+	$pathCurve = $curve[0];
+	$NodeBase = $objects[0];
+	$bankStatus = getBankStatus();
+	
+	if (`checkBox -query -value curveBox` == 1)
+		{
+		$spans = getAttr ($pathCurve + ".spans");
+		$curveDegree = getAttr ($pathCurve + ".degree");
+		$keepCVs = true;
+		}
+	else
+		{
+		$nCVs = getCurveCVs();
+		$curveDegree = getCurveDegree();
+		$spans = $nCVs + $curveDegree - 2;
+		$keepCVs = false;
+		}
+	
+	rebuildCurve
+		-constructionHistory 0
+		-replaceOriginal 1 
+		-rebuildType 0 
+		-keepRange 0 
+		-keepControlPoints $keepCVs 
+		-keepEndPoints 1 
+		-keepTangents 0 
+		-spans $spans
+		-degree $curveDegree
+		-tolerance 0.05000000000 
+	 	$pathCurve;
+	
+	for ($i=0; $i <= $ProfileNumber; $i++)
+		{
+		$Node = $objectName + $i;
+		$motionPath = "tnMotionPath" + $i;
+		$motionPathAttr = $motionPath + ".u";
+	
+		select -r $NodeBase;
+		duplicate -n $Node;
+		
+		select -r $Node $pathCurve;
+		pathAnimation
+			-n $motionPath
+			-fractionMode false
+			-follow true
+			-followAxis $FollowAxis
+			-upAxis $UpAxis
+			-useNormal false
+			-inverseUp false
+			-bank $bankStatus
+			-startTimeU 1
+			-endTimeU 90;
+	
+		cutKey -t ":" -f ":" -at "u" $motionPath;
+		setAttr $motionPathAttr ($i / $ProfileNumber);
+		}
+	
+	print("\n// Follow curve command successful. // \n");
+	cancelWindow();
+}
+
+global proc performMultipleNodeOperation(string $objects[], string $curve[])
+{
+	int $i, $spans, $nObj, $bankStatus, $curveDegree, $nCVs, $keepCVs;
+	string $FollowAxis, $UpAxis, $pathCurve, $NodeBase, $Node, $motionPath, $motionPathAttr;
+	float  $ProfileNumber;
+	
+	$objectName = getObjectName();
+	$FollowAxis = getAxisSelected();
+	$UpAxis = getUpAxisSelected();
+	$pathCurve = $curve[0];
+	$NodeBase = $objects[0];
+	$spans = getAttr ($pathCurve + ".spans");
+	$nObj = numberOfObjects($objects);
+	$ProfileNumber = $nObj - 1;
+	$bankStatus = getBankStatus();
+	
+	if (`checkBox -query -value curveBox` == 1)
+		{
+		$spans = getAttr ($pathCurve + ".spans");
+		$curveDegree = getAttr ($pathCurve + ".degree");
+		$keepCVs = true;
+		}
+	else
+		{
+		$nCVs = getCurveCVs();
+		$curveDegree = getCurveDegree();
+		$spans = $nCVs + $curveDegree - 2;
+		$keepCVs = false;
+		}
+	
+	rebuildCurve
+		-constructionHistory 0
+		-replaceOriginal 1 
+		-rebuildType 0 
+		-keepRange 0 
+		-keepControlPoints $keepCVs 
+		-keepEndPoints 1 
+		-keepTangents 0 
+		-spans $spans
+		-degree $curveDegree
+		-tolerance 0.05000000000 
+	 	$pathCurve;
+	
+	// Put a copy of the elements along the curve
+	// Using the motion curves as a guide
+	for ($i=0; $i <= ($nObj - 1); $i++)
+		{
+		$NodeBase = $objects[$i];
+		$Node = $objectName + $i;
+		$motionPath = "tnMotionPath" + $i;
+		$motionPathAttr = $motionPath + ".u";
+		
+		select -r $NodeBase;
+		duplicate -n $Node;
+		
+		select -r $Node $pathCurve;
+		pathAnimation
+			-n $motionPath
+			-fractionMode false
+			-follow true
+			-followAxis $FollowAxis
+			-upAxis $UpAxis
+			-useNormal false
+			-inverseUp false
+			-bank $bankStatus
+			-startTimeU 1
+			-endTimeU 90;
+	
+		cutKey -t ":" -f ":" -at "u" $motionPath;
+		setAttr $motionPathAttr ($i / $ProfileNumber);
+		}
+	print("\n// Follow curve command successful. // \n");
+	cancelWindow();
+}	
+	
+global proc putGeometryOnCurve (string $objects[])
+{
+	
+	string $curve[] = getObjects();
+	string $name = $curve[0];
+	int    $nObj       = numberOfObjects($objects);
+	
+	if (`size $curve`> 0)
+		{
+		showStatus("Executing...Objects[" + numberOfObjects($objects) + "] Curve Path[" + $name + "]");
+	
+		if ($nObj > 1)
+			performMultipleNodeOperation($objects, $curve);
+		else
+			performSingleNodeOperation($objects, $curve);
+		}
+	else
+		showStatus ("Select a Curve for the Geometry Before Executing");
+		
+}
+
+global proc changeWindowButtons(string $objects[])
+{	 
+	button -edit -visible 0 applyButton;
+	button  -edit -visible 0 resetButton;
+	button	-edit -enable 1 executeButton;
+	showStatus ("Please Select a Curve for the Geometry");
+}
+
+global proc selectCurve(string $objects[])
+{
+	disableWindow();
+	
+	select -clear;
+	
+	changeWindowButtons($objects);
+}
+
+global proc applyWindow ()
+{
+	string $objectName = getObjectName();
+	string $objects[]  = getObjects();
+	int    $nObj       = numberOfObjects($objects);
+	
+	if ( $nObj < 1)
+			{
+			showStatus("Error: Please Cancel and Select Geometry First");
+			disableWindow();
+			}
+	else
+		{
+		if (`size $objectName`< 1) 
+			{
+			textField -edit -text "Please Enter Name for New Objects" StatusLine;
+			textFieldGrp -edit -editable 1 -text "" ObjectNameText;
+			}
+		else
+			selectCurve($objects);
+		}
+}
+
+global proc resetWindow ()
+{
+	radioCollection -edit -select axisButton1	AxisButtons;
+	radioCollection -edit -select upaxisButton2	upAxisButtons;
+	intSliderGrp    -edit -value  50		 	ProfileNumberSlider;
+	intSliderGrp    -edit -value  10 -enable 0	 	curveCVSlider;
+	intSliderGrp    -edit -value  3	-enable 0 		curveDegreeSlider;
+	text 			-edit -enable 0 userCurveParamText;
+	textFieldGrp	-edit -editable 1 -text   ""			ObjectNameText;
+	textField 		-edit -text "Parameters Reset: Please enter new Parameters" StatusLine;
+	checkBox		-edit -value off bankBox;
+	checkBox		-edit -value on  curveBox;
+}
+
+global proc followcurve ()
+{	
+	float  $winWidth = 400;
+	global string $objects[], $objectName=""; 
+	int    $SingleNodeFlag = false, $nObj = 0, $sliderValue;
+	
+	$objects        = getObjects();
+	$nObj           = numberOfObjects($objects);
+	$SingleNodeFlag	= getObjectState($objects);
+	$initialString  = getInitStatusString($nObj);
+	
+if ( (`window -ex FollowCurveWindow`) == true) deleteUI FollowCurveWindow;
+window -title "Follow Curve Input Window" -width $winWidth -resizeToFitChildren true FollowCurveWindow;
+    columnLayout ColumnLayout;
+
+    frameLayout -labelVisible false -marginWidth 5 -marginHeight 5;
+        columnLayout;
+
+			text -label "Axis to Use for Geometry:" AxisText;
+            rowLayout -numberOfColumns 3;
+                string $axisLabel1 = "X-Axis";
+                string $axisLabel2 = "Y-Axis";
+                string $axisLabel3 = "Z-Axis";
+                radioCollection AxisButtons;
+                	radioButton -label $axisLabel1 axisButton1;
+                	radioButton -label $axisLabel2 axisButton2;
+                	radioButton -label $axisLabel3 axisButton3;
+                setParent ..;
+			
+			separator -style "in" -horizontal 1 -width $winWidth;
+			separator -style "in" -horizontal 1 -width $winWidth;
+			
+			text -label "Up Axis:" upAxisText;
+            rowLayout -numberOfColumns 3;
+                string $upaxisLabel1 = "X-Axis";
+                string $upaxisLabel2 = "Y-Axis";
+                string $upaxisLabel3 = "Z-Axis";
+                radioCollection upAxisButtons;
+                	radioButton -label $upaxisLabel1 upaxisButton1;
+                	radioButton -label $upaxisLabel2 upaxisButton2;
+                	radioButton -label $upaxisLabel3 upaxisButton3;
+                setParent ..;
+
+			separator -style "in" -horizontal 1 -width $winWidth;
+			separator -style "in" -horizontal 1 -width $winWidth;
+    		
+    		text -label "Curve Specifications:" checkBoxLabel;
+    		rowColumnLayout -numberOfColumns 2 -columnWidth 1 180 -columnWidth 2 220;
+    			checkBox -label "Use Curve Banking" bankBox;
+    			checkBox -label "Keep Existing Curve Parameters" curveBox;
+    			setParent ..;
+    		
+    		separator -style "in" -horizontal 1 -width $winWidth;
+			separator -style "in" -horizontal 1 -width $winWidth;
+    		
+    		text -label "User-Specified Curve Paramaterization" -enable 0 userCurveParamText;
+    		intSliderGrp
+    			-enable 0 
+				-label "Curve Degree" -field true 
+       			-minValue 1 -maxValue 7 
+       			-fieldMinValue 1 -fieldMaxValue 7
+       			-value 3 
+       			-step 2
+       			-fieldStep 2
+       			-sliderStep 2
+       			-columnAlign 1 "left"
+       			curveDegreeSlider;
+    		
+    		intSliderGrp   
+    			-enable 0 
+				-label "Number of CV's" -field true 
+       			-minValue 2 -maxValue 100 
+       			-fieldMinValue 2 -fieldMaxValue 100
+       			-value 10 
+       			-step 1
+       			-columnAlign 1 "left"
+       			curveCVSlider;
+    		
+    		separator -style "in" -horizontal 1 -width $winWidth;
+			separator -style "in" -horizontal 1 -width $winWidth;
+    		
+    		text -label "Single Object Input Parameters:" -enable $SingleNodeFlag SingleNodeText;
+    		intSliderGrp   
+    			-enable $SingleNodeFlag 
+				-label "Repeat Number" -field true 
+       			-minValue 5 -maxValue 100 
+       			-fieldMinValue 5 -fieldMaxValue 100
+       			-value 50 
+       			-step 1
+       			-columnAlign 1 "left"
+       			ProfileNumberSlider;
+		
+			separator -style "in" -horizontal 1 -width $winWidth;
+			separator -style "in" -horizontal 1 -width $winWidth;
+			
+			textFieldGrp
+				-label "New Object Name:"
+				-text ""
+				-editable 1
+				-columnAlign 1 "left"
+				ObjectNameText;
+				
+			separator -style "in" -horizontal 1 -width $winWidth;
+			separator -style "in" -horizontal 1 -width $winWidth;
+			
+			rowColumnLayout -numberOfColumns 4;	
+				button -label "Next"  applyButton;
+				button -label "Reset"  resetButton;
+                button -label "Cancel" cancelButton;
+                button -label "Execute" -enable 0 executeButton;
+            setParent ..;
+            
+			separator -style "in" -horizontal 1 -width $winWidth;
+			separator -style "in" -horizontal 1 -width $winWidth;
+			
+			text -label "Status:" StatusText;
+			rowColumnLayout -numberOfRows 1 -rowHeight 1 30;
+				textField  -editable false -width $winWidth StatusLine;
+			setParent ..;
+		setParent ..;
+
+	// Set Callbacks
+	button -edit -command "cancelWindow" cancelButton;
+	button -edit -command "applyWindow()"  applyButton;
+	button -edit -command "resetWindow"  resetButton;
+	button -edit -command "putGeometryOnCurve($objects)" executeButton;
+	textFieldGrp -edit -changeCommand "showNewName()" ObjectNameText;
+	intSliderGrp -edit -changeCommand "showProfileSliderValue()" ProfileNumberSlider;
+	intSliderGrp -edit -changeCommand "showCVSliderValue()" curveCVSlider;
+	intSliderGrp -edit -changeCommand "showDegreeSliderValue()" curveDegreeSlider;
+	radioButton -edit -onCommand "showStatus(\"X-Axis: Selected\")" upaxisButton1;
+    radioButton -edit -onCommand "showStatus(\"Y-Axis: Selected\")" upaxisButton2;
+    radioButton -edit -onCommand "showStatus(\"Z-Axis: Selected\")" upaxisButton3;
+	radioButton -edit -onCommand "showStatus(\"X-Axis: Selected\")" axisButton1;
+    radioButton -edit -onCommand "showStatus(\"Y-Axis: Selected\")" axisButton2;
+    radioButton -edit -onCommand "showStatus(\"Z-Axis: Selected\")" axisButton3;
+	radioCollection -edit -select upaxisButton2 upAxisButtons;
+	radioCollection -edit -select axisButton1 AxisButtons;
+	textField -edit -text $initialString StatusLine;
+	checkBox -edit 
+		-value off 	
+		-onCommand "showStatus(\"Curve Banking: ON\")" 
+		-offCommand "showStatus(\"Curve Banking: OFF\")" bankBox;
+	checkBox -edit
+		-value on
+		-onCommand "showCurveOptionsOn()"
+		-offCommand "showCurveOptionsOff()" curveBox; 
+	
+	if ($nObj < 1) 
+		{
+		showStatus("Error: Please Cancel and Select Geometry First");
+		disableWindow();
+		}
+
+showWindow FollowCurveWindow;
+} 

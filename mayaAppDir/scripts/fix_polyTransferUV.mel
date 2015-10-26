@@ -1,0 +1,6 @@
+global proc fix_polyTransferUV( )
+{
+
+string $meshName = `createNode "mesh"`;
+
+}

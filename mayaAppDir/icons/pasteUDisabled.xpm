@@ -1,0 +1,39 @@
+/* XPM */
+static char *pasteUDisabled[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #545254",
+". c #949694",
+"# c #bcbbbc",
+"a c #64729c",
+"b c #d0ced0",
+"c c #868886",
+"d c #5e6b8c",
+"e c #b3b2b3",
+/* pixels */
+"eeeeeeee#ee#eeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeeeee#e",
+"eeeeeeeeeeaaaee#ee#eeeee",
+"eeeeeee#..ada.eeeeeee#ee",
+"eee#....cbadd`c.c.eeeeee",
+"eee.bbbcbeddd.`eee`#eeee",
+"eee.bbcbb#ada..`.edeeeee",
+"eee.bb````add```ee`#eeee",
+"eee.b#bb##adaeee.edeeeee",
+"eee.#bb#b#addeeeee`eeeee",
+"eee.bb#b##adae.e.e`#eeee",
+"eee.#b##beadd......eeeee",
+"eee.bb####ddabbbbb.deee#",
+"eee.b####edadbbbbb.#deee",
+"eee.#b###eddacccbb.``dee",
+"eee.####eedddbbbbbb##dee",
+"eee.eeeee.adaccccccc#`#e",
+"ee#ed`d```addbbbbbbb#dee",
+"eeeeeeeeeeadaccccccc#dee",
+"eeeeeeee#edad########`#e",
+"eeee#eeeeeadd````d`dddee",
+"eeeeeeeeeeadaeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"ee#eeee#eeeeeeeeeeeeeee#"
+};

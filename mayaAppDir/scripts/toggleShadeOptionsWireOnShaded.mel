@@ -1,0 +1,75 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: toggleShadeOptionsXrayHotkey v1.0
+''    Author: Dennis Conze
+''    Last Updated: February 13, 2001
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=interface#836
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//
+//  Author D. Conze, Germany
+//  eMail: d.conze@usa.net
+//
+//  Creation Date:  February 13 2001
+//
+//
+//  Description:
+//		Toggle Shading->Shade Options->X-Ray by pressing "Alt-x" in active modeling panel.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      None.
+//
+
+global proc toggleShadeOptionsWireOnShaded()
+//
+//  Description: 
+//		Key event-handler
+//
+//
+{
+	//
+	// Get current active modeling panel
+	// 
+	string $currPanel = `getPanel -withFocus`;
+	if ("" != $currPanel && ("modelPanel" == `getPanel -to $currPanel`))
+	{
+		//
+		// Get state of WOS-option and toggle flag
+		//
+		int $xrayonoff = `modelEditor -q -wos $currPanel`;
+
+		switch ($xrayonoff)
+		{
+	
+			case 0: modelEditor -e -wos true $currPanel;
+				break;
+
+			case 1: modelEditor -e -wos false $currPanel;
+				break;
+
+			default: break;
+
+		}
+
+		$xrayonoff = `modelEditor -q -wos $currPanel`;
+  		print("Shading->Shade Options->Wire On Shaded="+$xrayonoff+"\n");		
+	} else {
+		error "No modeling panel selected or invalid.";
+	}
+}
+
+//
+// Set HotKey to "Alt-x"
+//
+//nameCommand -ann "The X-Ray Tool" -c "toggleShadeOptionsXray()" xrayToolNameCommand;
+//hotkey -keyShortcut "x" -altModifier -name "xrayToolNameCommand";

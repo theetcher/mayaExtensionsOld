@@ -1,0 +1,400 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: recallSelectionUI.mel v1.0
+''    Author: Oliver Shyal Beardsley
+''    Last Updated: July 24, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=interface#1826
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//-=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=-//
+//-=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=-//
+
+/*
+Script:	recallSelectionUI V1.0
+Author: 	Oliver Shyal Beardsley [AKA] Shydo
+Email: 	osb@swanimator.com
+Website: 	www.swanimator.com
+
+=-=-=-=-=-=-=-=-=-=-=
+TO LAUNCH THE SCRIPT:
+=-=-=-=-=-=-=-=-=-=-=
+source recallSelectionUI.mel;
+
+=-=-=-=-=-=
+DESCRIPTION:
+=-=-=-=-=-=
+
+recallSelectionUI enables you to store your current selection
+into memory for later retreival.
+This script is a quicker alternative to quick selection sets.
+Pretty handy when texturing polygons.
+
+//-=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=-//
+//-=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=--=0=-//*/
+
+// OH MONKEY! 0{õ ó}0
+//              ( -)
+
+// I first wrote the code for only *one* "store" button, and *one "recall" button.
+// Then made them work from the $num variable that can be carried right after calling
+// a procedure (i.e rsUI_store 0).
+// The buttons are a looping statement that simply work off $i.
+
+global string $RSUIname = "recallSelectionUI";
+global string $RSUIshort = "rsUI";
+global string $RSUIMainWin;
+$RSUIMainWin = $RSUIshort + "_ui";
+global string $RSUIMainWinIconName;
+global string $RSUIversion = " v1.0";
+$RSUIMainWinIconName = ( "RSUI " + $RSUIversion );
+global string $RSUIcreated = "22/07/2002";
+global string $RSUIlastEdited = "24/07/2002";
+global string $RSUIMainWinTitle;
+$RSUIMainWinTitle = $RSUIname + " " + $RSUIversion + " " + $RSUIlastEdited;
+global string $RSUIdesc;
+$RSUIdesc = $RSUIshort + "_desc";
+global string $RSUIinfo;
+$RSUIinfo = $RSUIshort + "_info";
+
+if ( `window -exists  $RSUIMainWin` ) deleteUI  $RSUIMainWin;
+
+window
+-wh 500 400
+-resizeToFitChildren false
+-maximizeButton  false
+-menuBar true
+-menuBarVisible true
+-te 100
+-title $RSUIMainWinTitle
+-iconName  $RSUIMainWinIconName $RSUIMainWin;
+
+
+
+
+menu
+-label "File"
+-tearOff false;
+
+menuItem
+-label "New"
+-c "source recallSelectionUI.mel";
+
+menuItem
+-label "Exit"
+-c "deleteUI  pcsd_ui";
+
+menu
+-label "Help"
+-tearOff false;
+
+menuItem
+-label "Description"
+-c $RSUIdesc;  menuItem
+-label "Script Information"
+-c $RSUIinfo;  menuItem -divider true;
+
+menuItem -label "Go to website"
+-c "system(\"load http://www.swanimator.com\")";
+
+menuItem
+-label "Give Feedback.."
+-c "system(\"load http://www.swanimator.com/aboutcv/recallselectionUIfeedbackform.htm\")";
+
+
+columnLayout
+-parent $RSUIMainWin
+-cw 500
+-adjustableColumn false
+-columnAttach "both" 5
+-rowSpacing 5
+MainColumnLayout;
+
+rowLayout
+-parent MainColumnLayout
+-numberOfColumns 6
+-w 500
+-columnWidth6 50 5 30 25 55 80;
+
+intField -cc "rs_layoutUI" -enable false numOfColumns;
+text " ";
+button -label " + " -c "rsUI_add;" plus;
+
+button -label " - " -c "rsUI_substract;" minus;
+
+global string $rsUI_isShiftOn = "-r";
+
+checkBox
+-label "SHIFT"
+-onCommand "$rsUI_isShiftOn = \"-tgl\""
+-offCommand "$rsUI_isShiftOn = \"-r\"";
+
+//button -label "Del Selections" -c "rsUI_delSelections";
+
+global proc rsUI_substract ()
+{
+	int $numOfColumns = ` intField -q -value numOfColumns `;
+	$minusOne  = $numOfColumns - 1;
+	eval ("deleteUI Store_Selection_" + $minusOne);
+	eval ("deleteUI Recall_Selection_" + $minusOne);
+	eval ("intField -e -value " + $minusOne + " numOfColumns");
+	rs_layoutUI;
+}
+
+global proc rsUI_add ()
+{
+	int $numOfColumns = `intField -q -value numOfColumns`;
+	$plusOne  = $numOfColumns + 1;
+	eval ("intField -e -value " + $plusOne + " numOfColumns");
+	rs_layoutUI;
+}
+
+
+
+setParent ..;
+setParent ..;
+
+rowColumnLayout
+-numberOfColumns 2
+-columnWidth 1 100
+-columnWidth 2 150
+rsUIMainRowColumnLayout;
+
+rs_layoutUI;
+
+intField -e -value 5 numOfColumns;
+rs_layoutUI;
+
+
+
+global proc rs_layoutUI ()
+{
+	int $numOfColumns = ` intField -q -value numOfColumns `;
+
+	for ($i = 0; $i < $numOfColumns; $i ++)
+	{
+		global string $buttonTwoName;
+		string $buttonOneName = "Store_Selection_" + $i;
+		$buttonTwoName = "Recall_Selection_" + $i;
+
+		if (` button -ex $buttonOneName `)
+		{
+			$size = $i * 22 + 105;
+			rsUI_resize $size;
+		}
+
+		else
+		{
+			$size = $i * 22 + 105;
+			rsUI_resize $size;
+			eval ("button -p rsUIMainRowColumnLayout -c \"rsUI_store " + $i + "\" -label \"Store Selection " + $i + "\"" + " Store_Selection_" + $i);
+		}
+
+		if (` button -ex $buttonTwoName `);
+		else
+		{
+			eval ("button -p rsUIMainRowColumnLayout  -en false -c \"rsUI_recall " + $i + "\"-label \"Recall Selection " + $i + "\"" + " Recall_Selection_" + $i);
+			rsUI_buttonName $i;
+		}
+	}
+
+}
+
+
+global proc rsUI_store (int $num)
+{
+	eval("global string $selection" + $num + "[]");
+	eval ("$selection" + $num + " = `ls -sl`");
+	eval ("print $selection" + $num);
+	refresh;
+	global string $hello;
+	$hello = ` eval ("$thisOne = $selection" + $num + "[0]") `;
+	refresh;
+	global string $theButtonToEdit;
+	$theButtonToEdit = "Recall_Selection_" + $num;
+	button -e -label ($hello + "...") -en true $theButtonToEdit;
+}
+
+global proc rsUI_recall (int $num)
+{
+	global string $rsUI_isShiftOn;
+
+	eval ("global string $selection" + $num + "[]");
+	eval ("select $rsUI_isShiftOn $selection" + $num);
+	eval ("print $selection" + $num);
+}
+
+global proc rsUI_buttonName (int $num)
+{
+	eval("global string $selection" + $num + "[]");
+	global string $theButtonToEdit;
+	global string $RSUI_finalButtonName;
+	$RSUI_finalButtonName = ` eval ("$thisOne = $selection" + $num + "[0]") `;
+	$theButtonToEdit = "Recall_Selection_" + $num;
+	if ($RSUI_finalButtonName != "")
+	{
+		button -e -label ($RSUI_finalButtonName + "...") -en true $theButtonToEdit;
+	}
+
+	else;
+}
+
+/*
+// under construction ;)
+global proc rsUI_delSelections ()
+{
+
+
+int $numOfColumns = ` intField -q -value numOfColumns `;
+for ($i = 0; $i < $numOfColumns; $i ++)
+{
+
+eval("global string $selection" + $i + "[]");
+global string $theButtonToEdit;
+global string $RSUI_finalButtonName;
+$RSUI_finalButtonName = ` eval ("$thisOne = \"Recall Selection " + $i + "\"") `;
+$theButtonToEdit = "Recall_Selection_" + $i;
+
+button -e -enable false -label ($RSUI_finalButtonName) -en true $theButtonToEdit;
+
+}
+
+}
+
+*/
+
+showWindow $RSUIMainWin;
+
+global proc rsUI_info()
+{
+	global string $RSUIMainWin;
+	global string $RSUIinfo;
+	global string $RSUIname;
+	global string $RSUIversion;
+	global string $RSUIcreated;
+	global string $RSUIlastEdited;
+
+	window -e -iconify 1 $RSUIMainWin;
+
+	if ( `window -exists  $RSUIinfo` )  deleteUI  $RSUIinfo;
+
+	window
+	-width 300
+	-height 200
+	-resizeToFitChildren false
+	-title "Description"
+	-iconName  "help" $RSUIinfo;
+
+	columnLayout
+	-parent $RSUIinfo
+	-adjustableColumn true
+	-columnAttach "both" 5
+	-rowSpacing 5;
+
+	text -label "" desc_1;
+
+	separator;
+
+	text -label "" desc_2;
+
+	separator;
+
+	text -label "" desc_3;
+
+	separator;
+
+	button
+	-l "back"
+	-c "deleteUI  $RSUIinfo; window -e -iconify 0 $RSUIMainWin;";
+
+	string $RSUIdesc_1 = $RSUIname + $RSUIversion;
+	string $RSUIdesc_2 = "Script created on " + $RSUIcreated + "\nLast edited " + $RSUIlastEdited;
+	string $RSUIdesc_3 = "Creator: Oliver Shyal Beardsley \n" +
+	"Email: osb@swanimator.com \n" +
+	"Website: www.swanimator.com";
+
+	text -edit -label $RSUIdesc_1 desc_1;
+	text -edit -label $RSUIdesc_2 desc_2;
+	text -edit -label $RSUIdesc_3 desc_3;
+
+	showWindow;
+	window -e -wh 250 180 $RSUIinfo;
+}
+
+global proc rsUI_desc()
+{
+	global string $RSUIMainWin;
+	global string $RSUIname;
+	global string $RSUIdesc;
+
+	window -e -iconify 1 $RSUIMainWin;
+
+	if ( `window -exists  $RSUIdesc` ) 	deleteUI  $RSUIdesc;
+
+	window
+	-width 350
+	-height 250
+	-resizeToFitChildren false
+	-title "Description"
+	-iconName  "help" $RSUIdesc;
+	frameLayout -label "" descFrameLayout;
+	columnLayout
+	-parent $RSUIdesc
+	-adjustableColumn true
+	-columnAttach "both" 5
+	-rowSpacing 0;
+
+	text -label "recallSelectionUI enables you to store your current selection";
+	text -label "into memory for later retrieval.";
+	text -label "This script is a quicker alternative to quick selection sets.";
+	text -label "Pretty handy when texturing polygons.";
+
+	text -label "";
+	text -label "When \"Shift\" is checked, the recalled selections will be added";
+	text -label "to the current selection (select -tgl) as opposed to making a";
+	text -label "new one (select -r)";
+	text -label " ";
+	text -label "Please send me any comments/requests/bugs by using the";
+	text -label "Feedback Form (script's main window > help > give feedback)";
+	text -label "or by mail: osb@swanimator.com";
+
+
+
+	text -label "";
+
+	button 	-l "back"
+	-c "deleteUI  $RSUIdesc; window -e -iconify 0 $RSUIMainWin;";
+
+	showWindow $RSUIdesc;
+	window -e -wh 350 290 $RSUIdesc;
+
+}
+
+
+global proc rsUI_resize (int $size)
+{
+	int $height;
+	int $height = $height + $size;
+
+	global string $RSUIMainWin;
+	window -e -wh 268 $height $RSUIMainWin;
+}
+
+
+
+;
+
+
+
+
+
+
+
+
+

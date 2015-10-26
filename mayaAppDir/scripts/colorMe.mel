@@ -1,0 +1,268 @@
+//---------------------------------------------------------------------------------------------
+// Name: colorMe.mel
+// Version: 1.5
+// Original Author:  Chris Rock ( FrostByte )
+// Written: July 2, 1999
+// Contact: digrock@gte.net
+//---------------------------------------------------------------------------------------------
+//	This simple MEL script allows the user to select an object and using this dialog 
+// turn the color of the selected wire frame from the normal default color, to one of 8 User 
+// Defined colors, very handy on those extremly complex scenes where all the wireframes seem to 
+// blend together. The 8 colors are derived from the saved User Defined Colors, the bottom 
+// rollout allows you to change the color value of each of the 8 User Defined colors, and then 
+// saves the values directly into the Maya UI after each change, so when scenes are reloaded the 
+// colors are the same as you had last changed them to. 
+//---------------------------------------------------------------------------------------------
+// Side Note: The colors that are saved in the User Defined color slots are not saved in the scene
+// they are saved in the Maya UI directly, there fore if you have a just worked on a project were
+// an object is User Defined Color 1 which was red, and you then loaded up a scene where you had 
+// assigned an object User Defined Color 1 when it had been blue, it will now be red because you 
+// had set the User Defined Color 1 in Maya as red. With this in mind have fun with this, any 
+// suggestions would be appreciated.
+//---------------------------------------------------------------------------------------------
+// The author assumes no responsibility to the usage of this plugin. Use at own risk.
+//---------------------------------------------------------------------------------------------
+
+global proc string rgbSliderWidget(string $colorName) 
+{
+	return ($colorName + "RGBColorSlider");
+}
+
+global proc updateRGBColor (string $colorName) 
+{
+	string $widgetName = rgbSliderWidget($colorName);
+	float $col[];
+	$col=`colorSliderGrp -q -rgb $widgetName`;
+	displayRGBColor $colorName $col[0] $col[1] $col[2];
+	savePrefs -colors;
+
+}
+
+proc createRGBSlider( string $label, string $colorName ) 
+{
+	float $rgb[];
+    if ( !catch($rgb = `displayRGBColor -q $colorName`) ) {
+		string $widgetName = rgbSliderWidget($colorName);
+		colorSliderGrp -l $label
+					   -rgb $rgb[0] $rgb[1] $rgb[2]
+					   -cc ("updateRGBColor " + $colorName)
+					   $widgetName;
+	}
+}
+
+proc updateRGBSlider( string $colorName ) 
+{
+	string $widgetName = rgbSliderWidget($colorName);
+	if ( `colorSliderGrp -exists $widgetName` ) {
+		float $rgb[] = `displayRGBColor -q $colorName`;
+		colorSliderGrp -edit -rgb $rgb[0] $rgb[1] $rgb[2] $widgetName;
+	}
+}
+
+
+
+
+
+// main code
+global proc colorMe ( )
+{
+if ( (`window -ex colorMe`) == true ) deleteUI colorMe;
+
+// declaration of all names and widgets
+string $colorName1 = "userDefined1";
+string $widgetName1 = rgbSliderWidget($colorName1);
+string $colorName2 = "userDefined2";
+string $widgetName2 = rgbSliderWidget($colorName2);
+string $colorName3 = "userDefined3";
+string $widgetName3 = rgbSliderWidget($colorName3);
+string $colorName4 = "userDefined4";
+string $widgetName4 = rgbSliderWidget($colorName4);
+string $colorName5 = "userDefined5";
+string $widgetName5 = rgbSliderWidget($colorName5);
+string $colorName6 = "userDefined6";
+string $widgetName6 = rgbSliderWidget($colorName6);
+string $colorName7 = "userDefined7";
+string $widgetName7 = rgbSliderWidget($colorName7);
+string $colorName8 = "userDefined8";
+string $widgetName8 = rgbSliderWidget($colorName8);
+
+
+
+
+window
+	-width 425
+	-height 122
+	-title "colorMe Control Panel"
+colorMe;
+
+
+
+
+scrollLayout scrollLayout;
+    		columnLayout -adjustableColumn true;
+
+frameLayout -label "User Defined Colors" -cll 1 -bv 1 -bs etchedIn UserDefinedColors;
+
+rowLayout
+-nc 9 -cw 1 50 -cw 2 50 -cw 3 50 -cw 4 50 -cw 5 50 -cw 6 50 -cw 7 50 -cw 8 50 -cw 9 50;
+
+
+// buttons
+button
+	-label "User 1"
+	-width 50
+	-command "color -ud 1"
+
+buttonUser1;
+
+button
+	-label "User 2"
+	-width 50
+	-command "color -ud 2"
+buttonUser2;
+
+button
+	-label "User 3"
+	-width 50
+	-command "color -ud 3"
+buttonUser3;
+
+button
+	-label "User 4"
+	-width 50
+	-command "color -ud 4"
+buttonUser4;
+
+button
+	-label "User 5"
+	-width 50
+	-command "color -ud 5"
+buttonUser5;
+
+button
+	-label "User 6"
+	-width 50
+	-command "color -ud 6"
+buttonUser6;
+
+button
+	-label "User 7"
+	-width 50
+	-command "color -ud 7"
+buttonUser7;
+
+button
+	-label "User 8"
+	-width 50
+	-command "color -ud 8"
+buttonUser8;
+
+button
+	-label "Default"
+	-width 50
+	-command "color"
+buttonUser9;
+
+setParent ..;
+setParent ..;
+
+
+
+frameLayout -label "Edit Defined Colors" -cll 1 -cl 0 -bv 1 -bs etchedIn EditDefinedColors;
+
+rowColumnLayout
+-numberOfRows 8;
+
+
+
+
+float $user1[] = `displayRGBColor -query userDefined1`;
+colorSliderGrp -label "User Defined 1" -rgb $user1[0] $user1[1] $user1[2] -cc ("updateRGBColor " + $colorName1)
+					   $widgetName1;
+
+
+
+
+
+
+
+float $user2[] = `displayRGBColor -query userDefined2`;
+colorSliderGrp -label "User Defined 2" -rgb $user2[0] $user2[1] $user2[2] -cc ("updateRGBColor " + $colorName2)
+					   $widgetName2;
+
+
+
+
+
+
+
+
+float $user3[] = `displayRGBColor -query userDefined3`;
+colorSliderGrp -label "User Defined 3" -rgb $user3[0] $user3[1] $user3[2] -cc ("updateRGBColor " + $colorName3)
+					   $widgetName3;
+
+
+
+
+
+
+
+
+
+float $user4[] = `displayRGBColor -query userDefined4`;
+colorSliderGrp -label "User Defined 4" -rgb $user4[0] $user4[1] $user4[2] -cc ("updateRGBColor " + $colorName4)
+					   $widgetName4;
+
+
+
+
+
+
+
+
+float $user5[] = `displayRGBColor -query userDefined5`;
+colorSliderGrp -label "User Defined 5" -rgb $user5[0] $user5[1] $user5[2] -cc ("updateRGBColor " + $colorName5)
+					   $widgetName5;
+
+
+
+
+
+
+
+
+float $user6[] = `displayRGBColor -query userDefined6`;
+colorSliderGrp -label "User Defined 6" -rgb $user6[0] $user6[1] $user6[2] -cc ("updateRGBColor " + $colorName6)
+					   $widgetName6;
+
+
+
+
+
+
+
+
+float $user7[] = `displayRGBColor -query userDefined7`;
+colorSliderGrp -label "User Defined 7" -rgb $user7[0] $user7[1] $user7[2] -cc ("updateRGBColor " + $colorName7)
+					   $widgetName7;
+
+
+
+
+
+
+
+
+float $user8[] = `displayRGBColor -query userDefined8`;
+colorSliderGrp -label "User Defined 8" -rgb $user8[0] $user8[1] $user8[2] -cc ("updateRGBColor " + $colorName8)
+					   $widgetName8;
+
+
+setParent ..;
+setParent ..;
+
+
+showWindow colorMe;
+
+}
+colorMe;

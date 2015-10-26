@@ -1,0 +1,828 @@
+//=============================
+// frdScatter v1.0 (10/2005)
+// by Micha Noordegraaf
+// Original by Dan Johansson
+// Interface Code Borrowed from massReplicate by Edvard Toth.
+//
+// This script is licenced under the GPL.
+//
+// Source it, and run frdScatter
+//=============================
+//CHANGELOG:
+// Oct 12th 2005
+// - First changed version for FRD. Added no intersect, and more scatter object functionality
+//
+
+global proc frdScatter()
+{
+	global string $scwin = "scatterUI";
+	if (`window -ex $scwin`) 
+	{
+		deleteUI $scwin;
+	}
+  	window -t "Scatter" -rtf 1 -w 300 -h 300 -s 1 -mnb 1 -mxb 0 -mb 1 $scwin;
+   	menu -label "File";
+		menuItem -label "Reset" -command "scScatter";
+		menuItem -label "Close" -command "deleteUI $scwin";
+
+      formLayout scButtonForm;	
+	      scrollLayout -cr 1 scScroll;
+			columnLayout -w 300 -columnWidth 300 -adjustableColumn false -cal "center" -rowSpacing 5 -cat "left" 10 MainColumn;
+	
+				frameLayout -label "Main" -collapse false -collapsable true -bs "etchedOut" ScatterFrame;
+					columnLayout -w 300 -columnWidth 300 -adjustableColumn false -cal "center" -rowSpacing 2 -cat "left" 5 ScatterColumn;
+	
+						global string $scReplaceType;
+						global string $scScaleType;
+						global string $scGroup;
+						global string $scNormal;
+						global string $scAxis;
+						//global string $scDelete;
+						global string $scNoIntersect;
+						global string $scParent;
+
+						text -al "left" -l "To use this script, select the distribtion surface then\nselect the distribution object. Set your options in this dialog\nand then click GO below.";
+
+						separator -st "single" -w 290 ;	
+								
+						intSliderGrp -cw 1 100 -cw 2 40 -l "Copies" -field true -min 0 -max 1000 -v 10 -annotation "Sets the number of copies of the original object." copies ;
+						$scReplaceType = `radioButtonGrp -numberOfRadioButtons 2 -label "Duplication Mode" -labelArray2 "Copy" "Instance" -cw 1 100  -cw 2 90 -sl 1 -ann "Method of duplication: Instance is more memory effcient. Copy allows more control to individual objects."` ;
+						
+						rowColumnLayout -cs 2 10 -w 290 -nc 2 -cw 1 90 -cw 2 180;
+							text -al "right" -w 80 -l "Scatter Mode";
+							rowColumnLayout -w 200 -nc 2 -cw 1 90 -cw 2 90;
+								radioCollection transMode;
+									/*radioButton -label "Bounding Box" -ann "This simplest form of scatter, but with the least control. Picks a random location within bouding box." rb1;
+									radioButton -label "Array" -ann "Even distribution. Uses scatter factor to provide randomization." rb2;                                                                           */
+									radioButton -label "Simple Noise" -ann "This uses simple noise to determine a threshold number for a given location. Then random to determine if object can be placed there." rb3;
+									radioButton -label "Perlin Noise" -ann "The most process intensive, but hopefully the most natural. Uses Perlin noise." rb4;
+									/*radioButton -en 0 -label "Vertex Color" -ann "Distributes with Vertex Color - Poly Only - Not Yet Working" rb5;
+									radioButton -label "Map Color" -ann "Uses selected map to determine distribution. - Nurbs Only" rb6;*/
+									setParent ScatterColumn;
+						
+						radioCollection -e -sl "rb3" transMode;
+									
+						
+						//$scTransMode = `radioButtonGrp -cc "scUIChangeScatter" -numberOfRadioButtons 2 -label "Transform Mode" -labelArray4 "Array" "Bounding Box" "Simple Noise" "Perlin Noise" -cw 1 100  -cw 2 80 -sl 1 -ann "Array attempts to keep an even distribtion, while bounding box is randomized within the box"` ;
+						
+
+						
+						separator -st "single" -w 290;
+	
+						
+								
+						separator -st "single" -w 290;
+						
+						floatSliderGrp -en 1 -cw 1 100 -cw 2 40 -l "Scale" -field true -min 0 -max 100 -v 1 -annotation "Scale of the nose calculation. Larger scale, Less variation." SimpleScale;
+						floatSliderGrp -en 1  -cw 1 100 -cw 2 40 -l "Phase" -field true -min -100 -max 100 -v 0 -annotation "Postion of the noise." SimplePhase;
+						
+						separator -st "single" -w 290;
+						
+						intSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Octaves" -field true -min 1 -max 8 -v 1 -annotation "This basically controls of the detail of the noise. Also increases processing time." PerlinOctaves;
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Persistence" -field true -min 0 -max 1 -v 0.5 -s 0.05 -annotation "This is density variation. Low has a little varation." PerlinPersistence;
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Scale" -field true -min 0 -max 100 -v 1 -annotation "Scale of the nose calculation. Larger scale, Less variation." PerlinScale;
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Phase" -field true -min -100 -max 100 -v 0 -annotation "Postion of the noise." PerlinPhase;
+						
+						separator -st "single" -w 290;
+						
+						/*textFieldButtonGrp -eb 0 -ed 0 -bc "scGetSelected" -bl "Select Map" -l "Distribution Map" -ann "Map used for nurbs distribtion. Uses UV texture corrdinates."  -cw 1 100 -cw 2 125 DistMap;*/
+						
+						separator -st "single" -w 290;
+						rowColumnLayout -w 290 -nc 3 -cw 1 100 -cw 2 100 -cw 3 100;
+						
+							$scGroup = `checkBox -label "Group Objects" -ann "Group duplicated objects."` ;
+							//$scDelete = `checkBox -label "Delete Original" -ann "Delete original object."` ;
+							$scNoIntersect = `checkBox -label "No Intersections" -ann "Avoid new objects intersecting."` ;
+							$scParent = `checkBox -label "Parent Objects" -ann "Parent Objects to Distribution Object. If Group is On, then the group will be parented to distribtion object."` ;
+							
+							setParent ScatterColumn;
+						setParent MainColumn;
+	
+				frameLayout -label "Rotation Randomness" -collapse true -collapsable true -bs "etchedOut" RotationFrame;
+					columnLayout -w 300 -columnWidth 300 -adjustableColumn false -cal "center" -rowSpacing 2 -cat "left" 5 RotationColumn;
+							
+						text -al "left" -l "You can set the randomness of rotation in degrees for each\naxis or use Normals to constrain your rotation.";
+								
+						separator -st "single" -w 290 ;
+
+						$scNormal = `checkBoxGrp -label "Constrain Normal" -cw 1 100 -cw 2 80 -cc "scUIChangeRotation"` ;
+									
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "X-Axis Weight" -field true -min -0 -max 10 -v 0 scWeightx ;
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Y-Axis Weight" -field true -min -0 -max 10 -v 1 scWeighty ;
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Z-Axis Weight" -field true -min -0 -max 10 -v 0 scWeightz ;
+
+						separator -st "single" -w 290 ;
+
+						intSliderGrp -cw 1 100 -cw 2 40 -l "X-Axis Min" -field true -min -360 -max 360 -v 0 scRotminx ;
+						intSliderGrp -cw 1 100 -cw 2 40 -l "X-Axis Max" -field true -min -360 -max 360 -v 0 scRotmaxx ;
+							
+						intSliderGrp -cw 1 100 -cw 2 40 -l "Y-Axis Min" -field true -min -360 -max 360 -v 0 scRotminy ;
+						intSliderGrp -cw 1 100 -cw 2 40 -l "Y-Axis Max" -field true -min -360 -max 360 -v 0 scRotmaxy ;
+							
+						intSliderGrp -cw 1 100 -cw 2 40 -l "Z-Axis Min" -field true -min -360 -max 360 -v 0 scRotminz ;
+						intSliderGrp -cw 1 100 -cw 2 40 -l "Z-Axis Max" -field true -min -360 -max 360 -v 0 scRotmaxz ;
+	
+						setParent MainColumn;
+								
+						
+				frameLayout -label "Scaling Randomness" -collapse true -collapsable true -bs "etchedOut" ScalingFrame;
+					columnLayout -w 300 -columnWidth 300 -adjustableColumn false -cal "center" -rowSpacing 2 -cat "left" 5 ScalingColumn;
+								
+						text -l "Scaling-factor values are multipliers of the original scale.";
+								
+						separator -st "single" -w 290 ;
+		
+						$scScaleType = `radioButtonGrp -numberOfRadioButtons 2 -label "Scaling Mode" -labelArray2 "Uniform" "Non-Uniform" -cw 1 100  -cw 2 90 -sl 1 -cc "scUIChangeScale"` ;
+								
+						separator -st "single" -w 290 ;
+								
+						floatSliderGrp -cw 1 100 -cw 2 40 -l "Uniform Min" -field true -min 0 -max 10 -v 1 scUnimin ;
+						floatSliderGrp -cw 1 100 -cw 2 40 -l "Uniform Max" -field true -min 0 -max 10 -v 1 scUnimax ;
+							
+						separator -st "single" -w 290 ;
+								
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "X-Scale Min" -field true -min 0 -max 10 -v 1 scScalminx ;
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "X-Scale Max" -field true -min 0 -max 10 -v 1 scScalmaxx ;
+								
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Y-Scale Min" -field true -min 0 -max 10 -v 1 scScalminy ;
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Y-Scale Max" -field true -min 0 -max 10 -v 1 scScalmaxy ;
+								
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Z-Scale Min" -field true -min 0 -max 10 -v 1 scScalminz ;
+						floatSliderGrp -en 0 -cw 1 100 -cw 2 40 -l "Z-Scale Max" -field true -min 0 -max 10 -v 1 scScalmaxz ;
+								
+						setParent MainColumn;
+			setParent -top;	
+
+			$scGoButton = `button -h 30 -label "Go" -command "scMainFunc"`;
+			$scCloseButton = `button -h 30 -label "Close" -command "deleteUI $scwin"`;
+		
+	formLayout -edit
+
+	-attachForm $scGoButton "left" 2
+	-attachForm $scGoButton "bottom" 2
+	-attachPosition $scGoButton "right" 0 50
+
+	-attachControl $scCloseButton "left" 2 $scGoButton 
+	-attachForm $scCloseButton "bottom" 2
+	-attachForm $scCloseButton "right" 2
+
+	-attachForm scScroll "top" 1
+	-attachForm scScroll "left" 1
+	-attachForm scScroll "right" 1
+	-attachControl scScroll "bottom" 2 $scGoButton
+
+	scButtonForm;
+	
+  showWindow $scwin;
+  
+  radioButton -e -cc "scUIChangeScatter" rb3;
+  radioButton -e -cc "scUIChangeScatter" rb4;
+
+}
+// Set up proc
+global proc scSetup()
+{
+	// Setup Function. To be loaded with usersetup.mel
+	addNewShelfTab "scatter";
+	textToShelf ("Scatter","scScatter");
+}
+// About box
+global proc scAbout()
+{
+	confirmDialog -title "About Scatter" -message "Scatter is a MEL script created by Dan Johansson.\nThe purpose of the script is to take an object\nand duplicate it over a surface" -button "OK" -db "OK" -cb "OK";
+}
+// UI change Proc
+global proc scUIChangeScatter()
+{
+	string $scTransModeValue = `radioCollection -q -sl transMode`;
+
+        if($scTransModeValue == "rb3")
+	{
+		//floatSliderGrp -e  -en 0 ScatterFactor;
+						
+		floatSliderGrp -e  -en 1 SimpleScale;
+		floatSliderGrp -e  -en 1 SimplePhase;
+						
+		intSliderGrp -e  -en 0 PerlinOctaves;
+		floatSliderGrp -e  -en 0 PerlinPersistence;
+		floatSliderGrp -e  -en 0 PerlinScale;
+		floatSliderGrp -e  -en 0 PerlinPhase;
+		
+		//textFieldButtonGrp -e -eb 0 DistMap;
+	}
+	else if($scTransModeValue == "rb4")
+	{
+		//floatSliderGrp -e  -en 0 ScatterFactor;
+						
+		floatSliderGrp -e  -en 0 SimpleScale;
+		floatSliderGrp -e  -en 0 SimplePhase;
+						
+		intSliderGrp -e  -en 1 PerlinOctaves;
+		floatSliderGrp -e  -en 1 PerlinPersistence;
+		floatSliderGrp -e  -en 1 PerlinScale;
+		floatSliderGrp -e  -en 1 PerlinPhase;
+		
+		//textFieldButtonGrp -e -eb 0 DistMap;
+	}
+}
+// change UI proc
+global proc scUIChangeRotation()
+{
+	global string $scNormal;
+	int $scNormalValue = `checkBoxGrp -q -value1 $scNormal`;
+	if($scNormalValue==0)
+	{
+		floatSliderGrp -e -en 0 scWeightx;
+		floatSliderGrp -e -en 0 scWeighty;
+		floatSliderGrp -e -en 0 scWeightz;
+
+		intSliderGrp -e -en 1 scRotminx;
+		intSliderGrp -e -en 1 scRotmaxx;
+
+		intSliderGrp -e -en 1 scRotminy;
+		intSliderGrp -e -en 1 scRotmaxy;
+							
+		intSliderGrp -e -en 1 scRotminz;
+		intSliderGrp -e -en 1 scRotmaxz;
+	}
+	else if($scNormalValue==1)
+	{
+		floatSliderGrp -e -en 1 scWeightx ;
+		floatSliderGrp -e -en 1 scWeighty ;
+		floatSliderGrp -e -en 1 scWeightz ;
+
+		intSliderGrp -e -en 0 scRotminx ;
+		intSliderGrp -e -en 0 scRotmaxx ;
+							
+		intSliderGrp -e -en 0 scRotminy ;
+		intSliderGrp -e -en 0 scRotmaxy ;
+							
+		intSliderGrp -e -en 0 scRotminz ;
+		intSliderGrp -e -en 0 scRotmaxz ;
+	}
+}
+global proc scUIChangeScale()
+{
+	global string $scScaleType;
+	int $scScaleTypeValue = `radioButtonGrp -q -sl $scScaleType`;
+	if($scScaleTypeValue==1)
+	{
+		floatSliderGrp -e -en 1 scUnimin ;
+		floatSliderGrp -e -en 1 scUnimax ;
+				
+		floatSliderGrp -e -en 0 scScalminx ;
+		floatSliderGrp -e -en 0 scScalmaxx ;
+				
+		floatSliderGrp -e -en 0 scScalminy ;
+		floatSliderGrp -e -en 0 scScalmaxy ;
+				
+		floatSliderGrp -e -en 0 scScalminz ;
+		floatSliderGrp -e -en 0 scScalmaxz ;
+	}
+	else if($scScaleTypeValue==2)
+	{
+		floatSliderGrp -e -en 0 scUnimin ;
+		floatSliderGrp -e -en 0 scUnimax ;
+				
+		floatSliderGrp -e -en 1 scScalminx ;
+		floatSliderGrp -e -en 1 scScalmaxx ;
+				
+		floatSliderGrp -e -en 1 scScalminy ;
+		floatSliderGrp -e -en 1 scScalmaxy ;
+				
+		floatSliderGrp -e -en 1 scScalminz ;
+		floatSliderGrp -e -en 1 scScalmaxz ;
+	}	
+
+}
+
+global proc scGetSelected(){
+	global string $distMap;
+	string $selectedObjects[] = `ls -sl`;
+	if(size($selectedObjects) >= 1)
+	{
+		$distMap = $selectedObjects[0];
+		textFieldButtonGrp -e -text $distMap DistMap;
+	}
+	else
+	{
+		confirmDialog -title "Error" -message "Texture node not slected. Please select texture node before pushing Select Map" -button "OK" -db "OK" -cb "OK";
+	}
+}
+		
+///////////////////////////////////////////////////////////////////////////////////////////
+// scScatter
+// The main scatter function
+///////////////////////////////////////////////////////////////////////////////////////////
+
+global proc scMainFunc()
+{
+	//INIT Varables
+	string $objectIndex[];
+	 
+	global string $scReplaceType;
+	global string $scScaleType;
+	global string $scGroup;
+	global string $scNormal;
+	//global string $scDelete;
+	global string $scNoIntersect;
+	global string $scParent;
+	global string $distMap;
+
+	int $scReplaceTypeValue = `radioButtonGrp -q -sl $scReplaceType`;
+	int $scScaleTypeValue = `radioButtonGrp -q -sl $scScaleType`;
+	int $scGroupValue = `checkBox -q -v $scGroup`;
+	int $scNormalValue = `checkBoxGrp -q -value1 $scNormal`;
+//	int $scDeleteValue = `checkBox -q -v $scDelete`;
+	int $scNoIntersectValue = `checkBox -q -v $scNoIntersect`;
+        int $scParentValue = `checkBox -q -v $scParent`;
+			
+	int $objectCopies = `intSliderGrp -q -v copies`;	
+	
+	string $scatterMode = `radioCollection -q -sl transMode`;
+	
+//	float $scatterFactor = `floatSliderGrp -q -v ScatterFactor`;
+	
+	float $simpleScale = `floatSliderGrp -q -v SimpleScale`;
+	float $simplePhase = `floatSliderGrp -q -v SimplePhase`;
+						
+	int $perlinOctaves = `intSliderGrp -q -v PerlinOctaves`;
+	float $perlinPersistence = `floatSliderGrp -q -v PerlinPersistence`;
+	float $perlinScale = `floatSliderGrp -q -v PerlinScale`;
+	float $perlinPhase = `floatSliderGrp -q -v PerlinPhase`;
+	
+	float $scWX = `floatSliderGrp -q -v scWeightx`;
+	float $scWY = `floatSliderGrp -q -v scWeighty`;
+	float $scWZ = `floatSliderGrp -q -v scWeightz`;
+
+	int $scRotminx = `intSliderGrp -q -v scRotminx`;
+	int $scRotmaxx = `intSliderGrp -q -v scRotmaxx`;
+	int $scRotminy = `intSliderGrp -q -v scRotminy`;
+	int $scRotmaxy = `intSliderGrp -q -v scRotmaxy`;
+	int $scRotminz = `intSliderGrp -q -v scRotminz`;
+	int $scRotmaxz = `intSliderGrp -q -v scRotmaxz`;
+
+	float $scUnimin = `floatSliderGrp -q -v scUnimin`;
+	float $scUnimax = `floatSliderGrp -q -v scUnimax`;
+
+	float $scScalminx = `floatSliderGrp -q -v scScalminx`;
+	float $scScalmaxx = `floatSliderGrp -q -v scScalmaxx`;
+	float $scScalminy = `floatSliderGrp -q -v scScalminy`;
+	float $scScalmaxy = `floatSliderGrp -q -v scScalmaxy`;
+	float $scScalminz = `floatSliderGrp -q -v scScalminz`;
+	float $scScalmaxz = `floatSliderGrp -q -v scScalmaxz`;
+	
+	string $shape;
+	
+	// Will be the two largest dimensions
+	float $surWidth;
+	float $surLength;
+	
+	string $dWidth;
+	string $dLength;
+	
+	float $spansU;
+	float $spansV;
+	
+	float $ratioFactor;
+	float $xDist;
+	float $yDist;
+	
+	float $u;
+	float $v;
+	
+	//print "Init Complete\n";
+	
+	// Start with getting objects
+	string $selectedObjects[] = `ls -sl`;
+	//if(size($selectedObjects) == 2)
+	if(1==1)
+	{
+		$surface = $selectedObjects[0];
+		// move this to random func for each copy
+                //$dObject = $selectedObjects[1];
+		
+		// More Checking
+		string $ShapeList[] = `listRelatives $surface`;
+		$shape =$ShapeList[0];
+		string $type = `objectType $ShapeList[0]`;
+		
+		int $dontRun = 0;
+		
+		if($dontRun==0)
+		{
+			//print("Selected Objects:\n");
+			//print($selectedObjects);
+			// Do object type detection if needed.
+			
+			// Get surface bounding box data.
+		        float $surCenter[];
+			float $surDim[];
+                        clear $surDim;
+		        clear $surCenter;
+		        //print ("surface = " + $surface + "\n");
+			$surCenter = `getAttr ($surface + ".center")`;
+			$surDim = `getAttr ($surface + ".boundingBoxSize")`;
+			// Get largest dimensions
+
+			float $tempArray[3]=sort($surDim);
+                        $surWidth = $tempArray[1];
+			$surLength = $tempArray[2];
+
+			//print("Surface Width: "+$surWidth);
+			//print("\nSurface Length: "+$surLength);
+
+			if($surDim[0]==$surWidth)
+			{
+				$dWidth = "x";
+				if($surDim[1]==$surLength)
+				{
+					$dLength = "y";
+				}
+				else if($surDim[2]==$surLength)
+				{
+					$dLength = "z";
+				}
+			}
+			else if($surDim[1]==$surWidth)
+			{
+				$dWidth = "y";
+				if($surDim[0]==$surLength)
+				{
+					$dLength = "x";
+				}
+				else if($surDim[2]==$surLength)
+				{
+					$dLength = "z";
+				}
+				
+			}
+			else if($surDim[2]==$surWidth)
+			{
+				$dWidth = "z";
+				if($surDim[0]==$surLength)
+				{
+					$dLength = "x";
+				}
+				else if($surDim[1]==$surLength)
+				{
+					$dLength = "y";
+				}
+			}
+		
+			
+			
+			$ratioFactor = sqrt($objectCopies/($surWidth*$surLength));
+			$xDist = ceil($surWidth*$ratioFactor);
+			$yDist = ceil($surLength*$ratioFactor);
+
+			int $counter;
+			int $curXPos=1;
+			int $curYPos=1;
+			
+			if($type == "nurbsSurface")
+			{
+			         print "nurbses\n";
+			}
+			
+			for($counter = 0; $counter < $objectCopies; $counter++){
+				//MICHA: $dObject = $selectedObjects[1];
+                                //print("\nDuplicate: "+$counter);
+                                //$dObject = $selectedObjects[1];
+				$dObject = `rndObjectFromArray($selectedObjects)`;
+				// Create duplicate
+				switch ($scReplaceTypeValue)
+				{
+					case 1:
+						string $objectHolder[] = `duplicate $dObject`;
+					break;
+					case 2:
+						string $objectHolder[] = `instance $dObject`;
+					break;
+				}
+				$objectIndex[$counter]=$objectHolder[0];
+
+				//---------------------------------------------------------------------------------------
+				// SPIN - ROTATION
+				//
+				
+				int $scRotX = rand($scRotminx, $scRotmaxx);				
+				int $scRotY = rand($scRotminy, $scRotmaxy);				
+				int $scRotZ = rand($scRotminz, $scRotmaxz);
+				
+				//print("\nX rot: "+$scRotX+" Y rot: "+$scRotY+" Z rot: "+$scRotZ);
+				
+				if ($scNormalValue == 1)
+				{
+					normalConstraint -aimVector $scWX $scWY $scWZ -wut "vector" $surface $objectIndex[$counter];
+				}
+				else
+				{
+					rotate -os $scRotX $scRotY $scRotZ $objectIndex[$counter];
+				}
+				
+				//---------------------------------------------------------------------------------------
+				// RESIZE - SCALE
+				//
+				
+				float $scUni = rand ($scUnimin, $scUnimax);
+				
+				float $scScalX = rand ($scScalminx, $scScalmaxx);
+				float $scScalY = rand ($scScalminy, $scScalmaxy);
+				float $scScalZ = rand ($scScalminz, $scScalmaxz);
+				
+				if ($scScaleTypeValue == 1)
+				{
+					scale -r $scUni $scUni $scUni $objectIndex[$counter];
+				}
+				if ($scScaleTypeValue == 2)
+				{
+					scale -r $scScalX $scScalY $scScalZ $objectIndex[$counter];
+				}
+
+
+                                //-------------------------------------------------------------------------------------
+				// MOVE - TRANSFORM
+				// Now its time for the transform and constraint
+				// Start with moving to the center of the surface.
+				if($scatterMode=="rb3")
+				{
+					if($type != "nurbsSurface")
+					{
+						move -a $surCenter[3] $surCenter[4] $surCenter[5] $objectIndex[$counter];
+						
+						// simple noise
+						geometryConstraint $surface $objectIndex[$counter];
+						
+						int $x=0;
+						int $bbIntersect = 0;
+						float $newX = 0;
+						float $newY = 0;
+						float $noiseT =0;
+						float $noiseR =0;
+						
+						//print("\nDuplicate: "+$counter);
+						
+						do{
+							$newX = rand((0-($surWidth/2)),($surWidth/2));
+							$newY = rand((0-($surLength/2)),($surLength/2));
+							$noiseT = ((`noise<<(($newX+$simplePhase)/$simpleScale),(($newY+$simplePhase)/$simpleScale),0>>`)+1)/2;
+							$noiseR = rand(0,1);
+							
+							//print("\nRandom X: "+$newX+" Random Y: "+$newY+"NoiseT: "+$noiseT+"NoiseR: "+$noiseR);
+
+							// test position to determine if its good
+							if($noiseR <= $noiseT)
+                                                        {
+                                                                // move it
+                                                                directionMove($objectIndex[$counter],$dWidth,$dLength,$newX,$newY);
+                                                                $x = 1;
+                                                                // check if it intersects any other created object.
+        	                                                if ($scNoIntersectValue == 1)
+                                                                          {
+                                                                              for ($obj in $objectIndex)
+                                                                                 {
+                                                                                        if ($obj != $objectIndex[$counter])
+                                                                                        {
+                                                                                           $bbIntersect = `checkBBIntersect $objectIndex[$counter] $obj`;
+                                                                                           if ($bbIntersect == 1)
+                                                                                            {
+                                                                                            $x = 0;
+                                                                                            //print ("Checking BB Intersect: " + $objectIndex[$counter] + " " + $obj +" Intersect: " + $bbIntersect + "\n");
+                                                                                            }
+                                                                                        }
+                                                                                 }
+                                                                          }
+                                                        }
+
+						}while ($x==0);
+
+						//print("\nFinal X: "+$newX+" Final Y: "+$newY);
+
+						
+					}	
+				}
+				else if($scatterMode=="rb4")
+				{
+					if($type != "nurbsSurface")
+					{
+						// perlin noise
+						move -a $surCenter[3] $surCenter[4] $surCenter[5] $objectIndex[$counter];
+						
+						// simple noise
+						geometryConstraint $surface $objectIndex[$counter];
+						
+						int $x=0;
+						float $newX = 0;
+						float $newY = 0;
+						float $noiseT =0;
+						float $noiseR =0;
+						
+						//print("\nDuplicate: "+$counter);
+						
+						do{
+							$newX = rand((0-($surWidth/2)),($surWidth/2));
+							$newY = rand((0-($surLength/2)),($surLength/2));
+							$noiseT = perlin($newX,$newY,$perlinOctaves,$perlinPersistence,$perlinScale,$perlinPhase);
+							$noiseR = rand(0,1);
+
+							//print("\nRandom X: "+$newX+" Random Y: "+$newY+"NoiseT: "+$noiseT+"NoiseR: "+$noiseR);
+							
+							// test position to determine if its good
+							if($noiseR <= $noiseT)
+                                                        {
+							                                                                // move it
+                                                                directionMove($objectIndex[$counter],$dWidth,$dLength,$newX,$newY);
+                                                                $x = 1;
+                                                                // check if it intersects any other created object.
+                	                                        if ($scNoIntersectValue == 1)
+                                                                {
+                                                                        for ($obj in $objectIndex)
+                                                                           {
+                                                                                if ($obj != $objectIndex[$counter])
+                                                                                {
+                                                                                   $bbIntersect = `checkBBIntersect $objectIndex[$counter] $obj`;
+                                                                                   if ($bbIntersect == 1)
+                                                                                    {
+                                                                                    $x = 0;
+                                                                                    print ("Checking BB Intersect: " + $objectIndex[$counter] + " " + $obj +" Intersect: " + $bbIntersect + "\n");
+                                                                                    }
+                                                                                }
+
+                                                                           }
+                                                                }
+							}
+											
+						}while($x==0);
+						
+						//print("\nFinal X: "+$newX+" Final Y: "+$newY);
+
+					}
+					else
+					{
+                                                 print "nurbses\n";
+					}
+				}
+
+			}
+			delete -all -cn;
+			// Group Objects If set
+			string $groupname;
+			if($scGroupValue == 1)
+			{
+				$command = "group ";
+				for($obj in $objectIndex)
+				{
+					$command = $command+$obj+" ";
+				}
+				$groupname = eval($command);
+			}
+/*			if($scDeleteValue == 1)
+			{
+				delete $dObject;
+			}                         */
+			if($scParentValue == 1)
+			{
+				if($groupname){
+					parent $groupname $surface;
+				}
+				else
+				{
+					for($obj in $objectIndex)
+					{
+						parent $obj $surface;
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+			confirmDialog -title "Error" -message "Select two objects. First the distribution surface,\nthen the distribution object" -button "OK" -db "OK" -cb "OK";
+	}	
+}
+// ADDED BY MICHA
+global proc string rndObjectFromArray(string $objects[])
+{
+	string $returnObject;
+	int $index;
+	int $numObjects = `size($objects)`;
+	$index = `rand 1 $numObjects`;
+	$returnObject = $objects[$index];
+	return $returnObject;
+
+}
+
+global proc int checkBBIntersect(string $obj1, string $obj2)
+{
+    float $b1min[] = `getAttr ($obj1 +".boundingBoxMin")`;
+    float $b1max[] = `getAttr ($obj1 +".boundingBoxMax")`;
+    float $b2min[] = `getAttr ($obj2 +".boundingBoxMin")`;
+    float $b2max[] = `getAttr ($obj2 +".boundingBoxMax")`;
+
+    if(($b1min[0]>$b2max[0])||($b1max[0]<$b2min[0])||
+       ($b1min[1]>$b2max[1])||($b1max[1]<$b2min[1])||
+       ($b1min[2]>$b2max[2])||($b1max[2]<$b2min[2]))
+      return 0;//false -- not intersect
+    else
+      return 1;//true -- they do intersect
+}
+
+
+
+ // END ADDITION
+global proc directionMove(string $object,string $dw,string $dl,float $x ,float $y)
+{
+	if($dw == "x" && $dl == "y")
+	{
+		move -r $x $y 0 $object;
+	}
+	else if($dw == "x" && $dl == "z")
+	{
+		move -r $x 0 $y $object;
+	}
+	else if($dw == "y" && $dl == "x")
+	{
+		move -r $y $x 0 $object;
+	}
+	else if($dw == "y" && $dl == "z")
+	{
+		move -r 0 $x $y $object;
+	}
+	else if($dw == "z" && $dl == "x")
+	{
+		move -r $y 0 $x $object;
+	}
+	else if($dw == "z" && $dl == "y")
+	{
+		move -r 0 $y $x $object;
+	}
+}
+
+global proc float[] getPostion(float $width, float $length, int $xpos, int $ypos, float $xtotal, float $ytotal,int $zerocenter)
+{
+	float $x;
+	float $y;
+	
+	if($zerocenter == 1){
+		// Calulcate by pretending orgin is at lower left corner
+		$x = (($width/$xtotal)*$xpos)-(($width/$xtotal)/2)-($width/2);
+		$y = (($length/$ytotal)*$ypos)-(($length/$ytotal)/2)-($length/2);
+	}
+	else
+	{
+		$x = (($width/$xtotal)*$xpos)-(($width/$xtotal)/2);
+		$y = (($length/$ytotal)*$ypos)-(($length/$ytotal)/2);
+	}		
+	//print("New X: "+$x+" New Y: "+$y);
+	float $returnArray[2]={$x, $y};
+	return $returnArray;
+}
+global proc float perlin(float $x, float $y, int $octaves, float $p,float $scale, float $phase)
+{
+	float $total = 0;
+	for($i=1;$i<=$octaves;$i++)
+	{
+		float $frequency = `pow 2 $i`;
+		float $amplitude = `pow $p $i`;
+
+		$total = $total + interpolatedNoise((($x+$phase)/$scale) * $frequency, (($y+$phase)/$scale) * $frequency) * $amplitude;
+	}
+
+	return $total;
+}
+
+global proc float interpolatedNoise (float $x, float $y)
+{
+	int $int_x = trunc($x);
+	float $f_x = $x - $int_x;
+
+	int $int_y = trunc($y);
+	float $f_y = $y - $int_y;
+
+	float $v1 = SmoothedNoise($int_x,$int_y);
+	float $v2 = SmoothedNoise($int_x+1,$int_y);
+	float $v3 = SmoothedNoise($int_x,$int_y+1);
+	float $v4 = SmoothedNoise($int_x+1,$int_y+1);
+
+	float $i1 = Interpolate($v1,$v2,$f_x);
+	float $i2 = Interpolate($v3,$v4,$f_x);
+
+	return Interpolate($v3,$v4,$f_y);
+}
+
+global proc float Interpolate(float $a, float $b, float $x)
+{
+
+	float $ft = $x * 3.1415927;
+	float $f = (1-cos($ft))*.5;
+	return $a*(1-$f)+$b*$f;
+}
+
+global proc float SmoothedNoise(float $x, float $y)
+{
+	  float $corners = (`noise<<($x-1), ($y-1),0>>`+`noise<<($x+1), ($y-1),0>>`+`noise<<($x-1), ($y+1),0>>`+`noise<<($x+1), ($y+1),0>>` ) / 16;
+    float $sides   = (`noise<<($x-1), ($y),0>>`+`noise<<($x+1), ($y),0>>`+`noise<<($x), ($y-1),0>>`+`noise<<($x), ($y+1),0>>` ) / 8;
+    float $center  =  `noise<<($x), ($y),0>>` / 4;
+    return $corners + $sides + $center;
+}

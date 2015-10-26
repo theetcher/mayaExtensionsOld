@@ -1,0 +1,9 @@
+global proc defaultTexShading()
+{
+ 	$fileTextures = `ls -typ file`;
+	for ($tex in $fileTextures)
+		{
+		eval("setAttr "+$tex+".dc -type float3 0.228 0.514 1");
+		}
+//	setAttr lambert1.color -type float3 0.228 0.514 1;
+}

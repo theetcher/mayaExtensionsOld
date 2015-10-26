@@ -1,0 +1,17 @@
+global proc MyTransUV( )
+{
+
+	string $tmp[] =`ls -sl -l`;
+	string $target;
+	int $lastElem = size ($tmp) - 1;
+	for ($target in $tmp)
+		{
+		if ($target != $tmp[$lastElem]) 
+			{
+//			select $target;
+			polyTransfer -uv 1 -ao $tmp[$lastElem] $target;
+			}
+		}
+//	select $tmp[$lastElem];
+
+}

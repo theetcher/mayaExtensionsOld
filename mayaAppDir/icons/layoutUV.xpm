@@ -1,0 +1,39 @@
+/* XPM */
+static char *layoutUV[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #180e73",
+". c #9e93aa",
+"# c #b60f0e",
+"a c #c2c0c3",
+"b c #5f556c",
+"c c #e94344",
+"d c #472e61",
+"e c #fa0d0e",
+/* pixels */
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aa````aaa```aaaaaaaaaaaa",
+"aa`..`aaa`.`aaaaaaaaaaaa",
+"aa`aa`.``aaa``aaaaaaaaaa",
+"aa`.a.d`aaaaadaaaaaaaaaa",
+"aa`.aa``aaaaa`aaaaaaaaaa",
+"aa`aa``aa`b`aa``aaaaaaaa",
+"aa`.`.aaa`aabaa`aaaaaaaa",
+"aa`.a`.a`..````daaaaaaaa",
+"aa`aaa`d.aa`a`aaaaaaaaaa",
+"aa``````````aaaaaaaaaaaa",
+"aaae.aaaaaaaaaaaaaaaaaaa",
+"aaeeeaa````aa``````````a",
+"aa.#eca.ca`aa`.aaaaaa.`a",
+"aaa`#ecee.````d`.aaaaa`a",
+"aaa.b#eeeeaa`..`aaaaa.`a",
+"aaaaa#eeeeaa``a``daaaa`a",
+"aaaaadeeeeeaa`aaa`aaa.`a",
+"aaaaa`deeeeaa```a``daa`a",
+"aaaaaabdeeeaaa.`aa.`a.`a",
+"aaaaaaa`a.a.a..daaa`.a`a",
+"aaaaaaa`````````aaa````a",
+"aaaaaaaaaaaaaaaaaaaaaaaa",
+"aaaaaaaaaaaaaaaaaaaaaaaa"
+};

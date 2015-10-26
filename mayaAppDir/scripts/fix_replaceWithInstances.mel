@@ -1,0 +1,39 @@
+// first select objects which you wanna replace with instance
+// then select object to instantiate
+
+global proc fix_replaceWithInstances()
+{
+	string $selectedObjects[] = `ls -sl -l`;
+	string $objToInst = $selectedObjects[(size($selectedObjects) - 1)];
+	stringArrayRemoveAtIndex((size($selectedObjects) - 1), $selectedObjects);
+
+	vector $tr, $trInst, $rot, $sc;
+	
+	string $tmpArr[];
+	string $instName;
+	string $instParent;
+	string $objShortName[];
+	
+	for ($obj in $selectedObjects) {
+		$tmpArr = `instance $objToInst`;
+		$instName = $tmpArr[0];
+
+		$instParent = firstParentOf($obj);
+		if ( ($instParent == "") && ($instParent != firstParentOf($instName)) ) $tmpArr = `parent -w $instName`;
+			else if ( $instParent != firstParentOf($instName) ) $tmpArr = `parent $instName $instParent`;
+		$instName = $tmpArr[0];
+		
+		$tr = `xform -q -ws -rp $obj`;
+		$trInst = `xform -q -ws -rp $instName`;
+		$tr = $tr - $trInst;
+		$rot = `xform -q -r -ro $obj`;
+		$sc = `xform -q -r -s $obj`;
+		xform -ws -r -t ($tr.x) ($tr.y) ($tr.z) $instName;
+		xform -ro ($rot.x) ($rot.y) ($rot.z) -s ($sc.x) ($sc.y) ($sc.z) $instName;
+		delete $obj;
+		tokenize $obj "|" $objShortName;
+		rename $instName ($objShortName[size($objShortName)-1]);
+	}
+	
+}
+

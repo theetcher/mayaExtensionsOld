@@ -1,0 +1,39 @@
+/* XPM */
+static char *rotateUVcw[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #fc0405",
+". c #d48b8a",
+"# c #ec3e3f",
+"a c #c5b4b5",
+"b c #f5201f",
+"c c #e35f5f",
+"d c #cc9d9d",
+"e c #c4c2c4",
+/* pixels */
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeeeeeee",
+"eeeeeeed#``````#aaeeeeee",
+"eeeeeac``bbbbbb``ceeeeee",
+"eeeeec`b#deeeed#``ceeeee",
+"eeeac``.aeeeeeee.``caeee",
+"eeea`b.eeeeeeeeee.b`aeee",
+"eee#`#aeeeeeeeeeee#`#eee",
+"eee`b.eeeeeeaeeeeedb`eee",
+"eee`beeeeeeeeeeeeaeb`eae",
+"eee`beeeeeeeeeeeeeeb`eee",
+"eee`beeeeeaeeeeaeeeb`eee",
+"eee`beeeeeeeeee..eeb`eee",
+"eee`bdeeeeeeeea`#edb`eee",
+"eee#`#aeeeeeaea``c#`#eee",
+"eeea`b.eeaeeeea`````aeee",
+"eeeac``.eeeeeea````baeee",
+"eeeeec`#aeeeeed`````#eee",
+"eeeeeac`.eeeaec``````#ee",
+"eeeaeeeaaeeeeec``````bee",
+"eeeeeeeaeeeeeeedaeeeaeee",
+"eeeeeeeeeeeaeeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeeeeeee"
+};

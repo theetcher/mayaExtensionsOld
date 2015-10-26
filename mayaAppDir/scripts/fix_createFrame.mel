@@ -1,0 +1,7 @@
+global proc fix_createFrame()
+{
+string $frame[] = `polyTorus -r 1 -sr 0.1 -tw 45 -sx 4 -sy 4 -ax 0 0 1 -tx 1 -ch 1`;
+rotate -a 0 0 45 $frame[0];
+makeIdentity -apply true -t 0 -r 1 -s 0 $frame[0];
+}
+

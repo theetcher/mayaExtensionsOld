@@ -1,0 +1,229 @@
+/*
+MEL SCRIPT FILE
+---------------
+
+SCRIPT NAME: copyShade.mel
+VERSION: 1.1
+(C) 2000 Light Engine 3d
+
+AUTHOR: Mark Davies
+lightengine3d@hotmail.com
+
+MODIFIED: oct 24, 2000
+
+DESCRIPTION: interface for switching shelves
+
+USAGE:
+1. in the multilister, select the source shading element then select the target shading element.
+2. type `copyShader;`
+3. click "List Shared Attrs"
+4. select the attributes you want to copy (optional)
+5. click "copyShader"
+
+INPUTS: 
+
+RETURN: none
+
+NOTES:
+ */
+
+
+global proc copyShade()
+{
+// delete any existing windows with same name
+	if (`window -exists copyShadeUI`)
+	deleteUI copyShadeUI;
+
+window -w 180 -maximizeButton 0 -resizeToFitChildren 1
+	-title "copyShade v1.0" -iconName "copyShade" copyShadeUI;
+
+	columnLayout -adjustableColumn 1 -cal "left" -cat "left" 0 mainCol;
+
+separator -style "none" -h 8;
+
+rowColumnLayout -nc 1 
+-columnWidth 1 80
+-columnAttach 1 "left" 10;
+text -label "Attributes to modify";
+separator -style "none" -h 8;
+radioButtonGrp
+-select 1 -numberOfRadioButtons 2
+-labelArray2 "Selected" "All existing" 
+attrModeRBG;
+separator -style "none" -h 8;
+
+checkBox -label "Override existing connections"
+-align "left" -value 1
+connectCBG;
+setParent ..;
+separator -style "none" -h 8;
+
+rowColumnLayout -nc 1
+-columnWidth 1 180
+-columnAttach 1 "left" 10;
+
+button -w 180 -l "List Shared Attrs" -annotation "List Attrs of source shader4" -al "center" 
+-c "textScrollList -e -ra attrList1; getAttrList(1)" listAttrsUIbtn;
+setParent ..;
+separator -style "none" -h 8;
+
+rowLayout -nc 2
+	-columnWidth 1 180
+	-columnAttach 1 "left" 10;
+textScrollList -w 180 -numberOfRows 24 -allowMultiSelection 1
+ -showIndexedItem 1 attrList1;
+setParent ..;
+separator -style "none" -h 8;
+
+rowLayout -nc 2 -adj 1 buttonRow;
+
+button -w 60 -l "copyShade" -annotation "copyShade" -al "center" -c "copyShadeGO()" copyShadeBtn;
+button -w 60 -l "Close" -annotation "Close window" -al "center" -c "deleteUI copyShadeUI" closeBtn;
+setParent ..;
+
+showWindow;
+}
+
+
+
+
+global proc copyShadeGO()
+{
+global string $sourceShaderAttrs[];
+int $attrMode = `radioButtonGrp -q -sl attrModeRBG`;
+int $breakConnect = `checkBox -q -v connectCBG`;
+string $listReturn[] = getAttrList(0);
+
+if ($attrMode == 1)
+{$sourceShaderAttrs = `textScrollList -q -si attrList1`;}
+if ($attrMode == 2)
+{$sourceShaderAttrs = `textScrollList -q -ai attrList1`;}
+int $attrSize = `size $sourceShaderAttrs`;
+
+		for ($attr in $sourceShaderAttrs)
+		{
+		string $targetConnected[] = `listConnections -p 1 ($listReturn[3] +  "." + $attr)`;
+		if (`size $targetConnected` > 0)
+		{
+			for ($connected in $targetConnected)
+			{
+				if (`objectType $connected` != "shadingEngine" && $breakConnect == 1)
+				{
+				disconnectAttr $connected ($listReturn[3] + "." + $attr);
+				}
+			}
+		}
+
+		string $sourceConnected[] = `listConnections -p 1 ($listReturn[2] + "." + $attr)`;
+
+		if (`size $sourceConnected` > 0)
+		{
+			for ($connected in $sourceConnected)
+			{
+				if (`objectType $connected` != "shadingEngine" && $breakConnect == 1)
+				{
+				connectAttr -f $sourceConnected[0] ($listReturn[3] + "." + $attr);			}
+			}
+		}
+
+
+		int $isConnected = `connectionInfo -id ($listReturn[2] + "." + $attr)`; 
+		if ($isConnected != 1)
+		{
+			string $attrType = `getAttr -type ($listReturn[2] + "." + $attr)`;
+
+			if ($attrType != "TdataCompound" && $attrType != "float3" && $attrType != "float2")
+			{
+			float $getAttr = returnAttr1($attr, $attrType, $listReturn[2]);
+
+			setAttr ($listReturn[3] + "." + $attr) $getAttr;
+			}
+
+			if ($attrType != "TdataCompound" && $attrType == "float3" || $attrType == "float2")
+			{
+			float $getAttr[] = returnAttr3($attr, $attrType, $listReturn[2]);
+
+			setAttr ($listReturn[3] + "." + $attr) $getAttr[0] $getAttr[1] $getAttr[2];
+			}
+		}
+
+		}
+print ("Copied " + $attrSize + " attribute(s) from: \"" + $listReturn[0] + "\" to \"" + $listReturn[1] + "\".\n");
+}
+
+
+
+
+global proc float returnAttr1(string $attr, string $attrType, string $sourceMaterial)
+{
+global float $floatAttr1;
+string $attrTypes1[] = {"float","bool","byte","enum","long","short"};
+
+
+	for ($type in $attrTypes1)
+	{
+	$floatAttr1 = `getAttr ($sourceMaterial + "." + $attr)`;
+	return $floatAttr1;
+	}
+}
+
+
+global proc float[] returnAttr3(string $attr, string $attrType, string $sourceMaterial)
+{
+global float $floatAttr3[];
+string $attrTypes3[] = {"float3"};
+
+	for ($type in $attrTypes3)
+	{
+	$floatAttr3 = `getAttr ($sourceMaterial + "." + $attr)`;
+	return $floatAttr3;
+	}
+}
+
+
+
+
+
+global proc string[] getAttrList(int $state)
+{
+int $attrMode = `radioButtonGrp -q -sl attrModeRBG`;
+
+string $shaderSelList[] = `listerEditor -q -hl multiListerPanel1TopTab1`;
+if (`size $shaderSelList` < 2 || `size $shaderSelList` > 2)
+error "No valid selection. Select 1 source and 1 target shading element in multilister and run script.";
+
+string $sourceShader = $shaderSelList[0];
+string $targetShader = $shaderSelList[1];
+string $sourceMaterial[];
+string $targetMaterial[];
+
+	if (`objectType $sourceShader` == "shadingEngine")
+	{$sourceMaterial = `listConnections -s 1 -d 0 ($sourceShader + ".surfaceShader")`;}
+	else
+	{$sourceMaterial[0] = $sourceShader;}
+
+	if (`objectType $targetShader` == "shadingEngine")
+	{$targetMaterial = `listConnections -s 1 -d 0 ($targetShader + ".surfaceShader")`;}
+	else
+	{$targetMaterial[0] = $targetShader;}
+	
+	
+	string $sourceType = `objectType $sourceMaterial[0]`;
+	string $targetType = `objectType $targetMaterial[0]`;
+
+	if ($sourceType != $targetType)
+	warning ("\"" + $targetShader + "\"" + "(" + $targetType + ")" + " is not the same type as \"" + $sourceShader + "\"" + "(" + $sourceType + ")" + ". building list of shared attrs...\n");
+
+	if ($state == 1)
+	{
+	string $sourceShaderAttrs[] = `listAttr -v $sourceMaterial[0]`;
+		for ($attr in $sourceShaderAttrs)
+		{
+		if (`attributeQuery -n $targetMaterial[0] -ex $attr`)
+		textScrollList -e -font "plainLabelFont" -append $attr attrList1;
+		}
+	}
+string $listReturn[] = {$sourceShader, $targetShader, $sourceMaterial[0], $targetMaterial[0]};
+
+return $listReturn;
+}

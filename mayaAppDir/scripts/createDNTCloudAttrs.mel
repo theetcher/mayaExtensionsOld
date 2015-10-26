@@ -1,0 +1,202 @@
+global proc createDNTCloudAttrs ( )
+{
+	string $target[];
+	$target = `ls -sl`;
+
+//////////////////////////////////
+//////////////////////////////////
+
+	addAttr -ln _1_ -dt "string" ;
+	eval("setAttr -e -keyable false -lock true "+$target[0]+"._1_ -type \"string\" \"   Volume Shading Controls\"");
+
+//////////////////////////////////
+
+	addAttr -ln _1_1_ -dt "string" ;
+	eval("setAttr -e -keyable false -lock true "+$target[0]+"._1_1_ -type \"string\" \"   Light Scattering Properties\"");
+	
+	addAttr -ln LightScattColor -usedAsColor -at float3; 
+		addAttr -ln LightScattColorR -at "float" -p LightScattColor;
+		addAttr -ln LightScattColorG -at "float" -p LightScattColor;
+		addAttr -ln LightScattColorB -at "float" -p LightScattColor;
+	eval("setAttr -e -keyable true "+$target[0]+".LightScattColor -type \"float3\" 0.85 0.85 0.85");
+		
+	addAttr -ln LightScattIntensity -at double -min 0;
+	eval("setAttr -e -keyable true "+$target[0]+".LightScattIntensity 0.5");
+
+	addAttr -ln Visibility -at double -min 0;
+	eval("setAttr -e -keyable true "+$target[0]+".Visibility 2");
+
+	addAttr -ln Opacity -at double -min 0;
+	eval("setAttr -e -keyable true "+$target[0]+".Opacity 2");
+
+	addAttr -ln Spread -at double -min 0 -max 1;
+	eval("setAttr -e -keyable true "+$target[0]+".Spread 0.035");
+
+/////////////////////////////////
+
+	addAttr -ln _1_2_ -dt "string" ;
+	eval("setAttr -e -keyable false -lock true "+$target[0]+"._1_2_ -type \"string\" \"   Shadow Properties\"");
+
+	addAttr -ln SelfShadow -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".SelfShadow true");
+
+	addAttr -ln ShadowColor -usedAsColor -at float3; 
+		addAttr -ln ShadowColorR -at "float" -p ShadowColor;
+		addAttr -ln ShadowColorG -at "float" -p ShadowColor;
+		addAttr -ln ShadowColorB -at "float" -p ShadowColor;
+	eval("setAttr -e -keyable true "+$target[0]+".ShadowColor -type \"float3\" 0.5 0.5 0.5");
+
+	addAttr -ln ShadIntensity -at double -min 0 -max 1;
+	eval("setAttr -e -keyable true "+$target[0]+".ShadIntensity 0.5");
+
+	addAttr -ln Cutoff -at double -min 0 -max 1;
+	eval("setAttr -e -keyable true "+$target[0]+".Cutoff 0.15");
+
+	addAttr -ln Gradient -at double -min 0 -max 10;
+	eval("setAttr -e -keyable true "+$target[0]+".Gradient 0.7");
+
+//////////////////////////////////
+//////////////////////////////////
+
+	addAttr -ln _2_ -dt "string" ;
+	eval("setAttr -e -keyable false -lock true "+$target[0]+"._2_ -type \"string\" \"   Cloud Texture Controls\"");
+
+	addAttr -ln ComputeCloudTexture -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".ComputeCloudTexture true");
+	
+//////////////////////////////////
+
+	addAttr -ln _2_1_ -dt "string" ;
+	eval("setAttr -e -keyable false -lock true "+$target[0]+"._2_1_ -type \"string\" \"   Texture Structure\"");
+
+	addAttr -ln AvgDensity -at double -min 0 -max 20;
+	eval("setAttr -e -keyable true "+$target[0]+".AvgDensity 4");
+
+	addAttr -ln Fuzziness -at double -min 0 -max 5;
+	eval("setAttr -e -keyable true "+$target[0]+".Fuzziness 2");
+
+	addAttr -ln Puffiness -at double -min 0 -max 5;
+	eval("setAttr -e -keyable true "+$target[0]+".Puffiness 1.5");
+
+	addAttr -ln NoiseScale -at double -min 0 -max 100;
+	eval("setAttr -e -keyable true "+$target[0]+".NoiseScale 2");
+
+//	addAttr -ln RandomSeed -at short -min 0 -max 10000;
+//	eval("setAttr -e -keyable true "+$target[0]+".RandomSeed 8379");
+
+//////////////////////////////////
+
+	addAttr -ln _2_2_ -dt "string" ;
+	eval("setAttr -e -keyable false -lock true "+$target[0]+"._2_2_ -type \"string\" \"   Time Evolution\"");
+	
+	addAttr -ln ActivateTimeEvolution -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".ActivateTimeEvolution false");
+
+	addAttr -ln SizeScaleBias -at double -min 0 -max 100;
+	eval("setAttr -e -keyable true "+$target[0]+".SizeScaleBias 1");
+
+	addAttr -ln TimeScale -at double -min 0 -max 1000;
+	eval("setAttr -e -keyable true "+$target[0]+".TimeScale 2");
+
+//////////////////////////////////
+//////////////////////////////////
+
+	addAttr -ln _3_ -dt "string" ;
+	eval("setAttr -e -keyable false -lock true "+$target[0]+"._3_ -type \"string\" \"   Particle Texture Mask Controls\"");
+
+	addAttr -ln ComputeParticleTextureMask -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".ComputeParticleTextureMask true");
+
+	addAttr -ln ParticleWeight -at double -min 0;
+	eval("setAttr -e -keyable true "+$target[0]+".ParticleWeight 1");
+
+	addAttr -ln ParticleRadius -at double -min 0;
+	eval("setAttr -e -keyable true "+$target[0]+".ParticleRadius 2.4");
+
+	addAttr -ln ParticleSharpness -at double -min 0.01;
+	eval("setAttr -e -keyable true "+$target[0]+".ParticleSharpness 0.5");
+
+	addAttr -ln MinMaskWeight -at double -min 0;
+	eval("setAttr -e -keyable true "+$target[0]+".MinMaskWeight 0");
+
+	addAttr -ln MaxMaskWeight -at double -min 0;
+	eval("setAttr -e -keyable true "+$target[0]+".MaxMaskWeight 10");
+
+	addAttr -ln RadiusPP -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".RadiusPP false");
+
+	addAttr -ln DensityPP -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".DensityPP false");
+
+//////////////////////////////////
+//////////////////////////////////
+
+	addAttr -ln _4_ -dt "string" ;
+	eval("setAttr -e -keyable false -lock true "+$target[0]+"._4_ -type \"string\" \"   Texture Resolution Controls\"");
+
+	addAttr -ln EdgeTaperPercent -at double -min 0 -max 50;
+	eval("setAttr -e -keyable true "+$target[0]+".EdgeTaperPercent 0");
+
+	addAttr -ln VoxelBlurLevel -at short -min 0 -max 10;
+	eval("setAttr -e -keyable true "+$target[0]+".VoxelBlurLevel 0");
+
+	addAttr -ln LatticeScaleFactor -at double -min 0;
+	eval("setAttr -e -keyable true "+$target[0]+".LatticeScaleFactor 1");
+
+	addAttr -ln AutoLatticeSize -at short -min 4 -max 12;
+	eval("setAttr -e -keyable true "+$target[0]+".AutoLatticeSize 6");
+
+	addAttr -ln ManualLatticeSize -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".ManualLatticeSize false");
+
+	addAttr -ln XLatticeSize -at short -min 4 -max 12;
+	eval("setAttr -e -keyable true "+$target[0]+".XLatticeSize 6");
+
+	addAttr -ln YLatticeSize -at short -min 4 -max 12;
+	eval("setAttr -e -keyable true "+$target[0]+".YLatticeSize 6");
+
+	addAttr -ln ZLatticeSize -at short -min 4 -max 12;
+	eval("setAttr -e -keyable true "+$target[0]+".ZLatticeSize 6");
+
+//////////////////////////////////
+//////////////////////////////////
+
+	addAttr -ln _5_ -dt "string" ;
+	eval("setAttr -e -keyable false -lock true "+$target[0]+"._5_ -type \"string\" \"   Render Controls\"");
+
+	addAttr -ln ComputeTransparency -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".ComputeTransparency true");
+	
+	addAttr -ln FixedTransparency -at double;
+	eval("setAttr -e -keyable true "+$target[0]+".FixedTransparency 1");
+
+	addAttr -ln ComputeMatteOpacity -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".ComputeMatteOpacity false");
+
+	addAttr -ln FixedMatteOpacity -at double;
+	eval("setAttr -e -keyable true "+$target[0]+".FixedMatteOpacity 0");
+
+	addAttr -ln RaytraceInside -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".RaytraceInside false");
+
+	addAttr -ln RaytraceOutside -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".RaytraceOutside false");
+
+	addAttr -ln TreshholdDensity -at double -min 0 -max 1;
+	eval("setAttr -e -keyable true "+$target[0]+".TreshholdDensity 0");
+
+	addAttr -ln StepSize -at double -min 0 -max 1;
+	eval("setAttr -e -keyable true "+$target[0]+".StepSize 0.25");
+
+	addAttr -ln MarchLimit -at double -min -8 -max 0;
+	eval("setAttr -e -keyable true "+$target[0]+".MarchLimit -4");
+
+	addAttr -ln Supersampling -at double -min -8 -max 0;
+	eval("setAttr -e -keyable true "+$target[0]+".Supersampling -3");
+
+	addAttr -ln UpdateLightsIPR -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".UpdateLightsIPR");
+
+	addAttr -ln GenerateRW -at bool;
+	eval("setAttr -e -keyable true "+$target[0]+".GenerateRW");
+}

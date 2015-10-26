@@ -1,0 +1,39 @@
+/* XPM */
+static char *uvIsolateSelectRemove[] = {
+/* width height num_colors chars_per_pixel */
+"    24    24        8            1",
+/* colors */
+"` c #143494",
+". c #9c9a9c",
+"# c #fc0406",
+"a c #ec1e1f",
+"b c #c4c2c4",
+"c c #e42a2c",
+"d c #fc1010",
+"e c #cccacc",
+/* pixels */
+"bbbbbbbbebebbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bbb```````````........bb",
+"bbb```````````........bb",
+"bbb``bbbbbbb``bbbbbb..bb",
+"bbb``bbbbbbb``bbbbbb..bb",
+"bbb``bbbbbbb``bbbbbb..bb",
+"bbb``bbbbbbb``bbbbbb..bb",
+"bbb``bbbbbbb``bbbbbb..bb",
+"bbb``bbbbbbb``bbbbbb..bb",
+"bbb``bbbbbbb``bbbbbb..bb",
+"bbb```````````........bb",
+"bbb```````````........bb",
+"bbb..bbbbbbb..bbbbbb..bb",
+"bbb..bbbbbbb..bbbbbb..bb",
+"bbb..bbbbbbb.a####d#c.bb",
+"bbb..bbbbbbb.a######a.bb",
+"bbb..bbbbbbb..bbbbbb..bb",
+"bbb..bbbbbbb..bbbbbb..bb",
+"bbb..bbbbbbb..bbbbbb..bb",
+"bbb...................bb",
+"bbb...................bb",
+"bbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbb"
+};

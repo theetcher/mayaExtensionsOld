@@ -1,0 +1,689 @@
+//  activePolySmoothOptions.mel || by Tal Shrestha || version 1.6
+//
+//  Release date: 17th of December, 2004.
+//
+
+proc setOptionVars (int $forceFactorySettings)
+{
+// -mth/method option
+	if ($forceFactorySettings || !`optionVar -exists activePolySmoothMethod`)
+		optionVar -intValue activePolySmoothMethod 1;
+//   -df/divisions option 
+	if ($forceFactorySettings || !`optionVar -exists activePolyDivisions`)
+		optionVar -intValue activePolyDivisions 1;
+//   -c/continuity option 
+	if ($forceFactorySettings || !`optionVar -exists activePolyContinuity`)
+		optionVar -intValue activePolyContinuity 1;
+// -kb/-keepBorder option: Keep edges on geometry border
+	if ($forceFactorySettings || !`optionVar -exists activePolySmoothKeepBorder`)
+		optionVar -intValue activePolySmoothKeepBorder 1;	
+// -ksb/-keepSelectionBorder option: Keep edges on selection border
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothKeepSelectionBorder`)
+		optionVar -intValue activePolySmoothKeepSelectionBorder 1;	
+// -khe/-keepHardEdge option: Keep hard edges
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothKeepHardEdge`)
+		optionVar -intValue activePolySmoothKeepHardEdge 0;	
+// -kt/-keepTesselation option: Reuse initial subdivisions on animated objects
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothKeepTesselation`)
+		optionVar -intValue activePolySmoothKeepTesselation 1;
+// -suv/-smoothUVs option: Smooth UV values
+		if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothSmoothUVs`)
+		optionVar -intValue activePolySmoothSmoothUVs 1;
+// -kmb/-keepMapBorders option: Perserve the UV Map Border (Smooth UVs on only)
+	if ($forceFactorySettings || !`optionVar -exists activePolySmoothKeepMapBorders`)
+		optionVar -intValue activePolySmoothKeepMapBorders 2;
+
+
+// linear smooth options
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothNumIter`)
+		optionVar -intValue activePolySmoothNumIter 1;	
+
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothEdivisions`)
+		optionVar -intValue activePolySmoothEdivisions 1;	
+
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothVolume`)
+		optionVar -floatValue activePolySmoothVolume 0.1;	
+
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothRoundness`)
+		optionVar -floatValue activePolySmoothRoundness 1.0;	
+	// activeSmoothPoly Features	
+	if ($forceFactorySettings 
+			|| !`optionVar -exists activePolySmoothSmoothingRadiusEnabled`)
+		optionVar -intValue activePolySmoothSmoothingRadiusEnabled 1;
+
+	if ($forceFactorySettings 
+			|| !`optionVar -exists activePolySmoothSmoothingRadius`)
+		optionVar -intValue activePolySmoothSmoothingRadius 2;
+	
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothHideWireframe`)
+		optionVar -intValue activePolySmoothHideWireframe 0;
+	
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothHideVertices`)
+		optionVar -intValue activePolySmoothHideVertices 0;
+	
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothHideFaces`)
+		optionVar -intValue activePolySmoothHideFaces 0;
+	
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothHideEdges`)
+		optionVar -intValue activePolySmoothHideEdges 0;
+	
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothHotkeyMode`)
+		optionVar -intValue activePolySmoothHotkeyMode 1;
+	
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothState`)
+		optionVar -intValue activePolySmoothState 0;
+	
+	if ($forceFactorySettings
+			|| !`optionVar -exists activePolySmoothUndoQueueState`)
+		optionVar -intValue activePolySmoothUndoQueueState 1;
+}
+
+global proc activePolySmoothVisibility()
+//  Description:
+//		Dim/show any bevel options as required by the output surface type
+//
+{
+	//  smooth options
+	int $method = `radioButtonGrp -q -select activePolySmoothMethod`;
+	if(1 == $method) { // exponential options
+		tabLayout -e -st activePolySmoothMethodExponential activePolySmoothOptions;
+	} else if(2 == $method) { // linear options
+		tabLayout -e -st activePolySmoothMethodLinear activePolySmoothOptions;
+	}
+	int $sradius = `checkBoxGrp -q -v1 activePolySmoothSmoothingRadiusEnabled`;
+	if (1 == $sradius)
+		intSliderGrp -e  -enable true activePolySmoothSmoothingRadius;
+	else
+		intSliderGrp -e  -enable false activePolySmoothSmoothingRadius;
+}
+
+global proc performActivePolySmoothSetup (string $parent, int $forceFactorySettings)
+{
+	setOptionVars($forceFactorySettings);
+	setParent $parent;
+
+// -mth/method option
+	int $ival = `optionVar -query activePolySmoothMethod`;		
+	radioButtonGrp -edit -select $ival activePolySmoothMethod;
+
+// smooth options
+	$ival = `optionVar -query activePolyDivisions`;
+	intSliderGrp -edit -value $ival activePolyDivisions;
+
+	float $fval = `optionVar -query activePolyContinuity`;
+	floatSliderGrp -edit -value $fval activePolyContinuity;
+
+	$ival = `optionVar -query activePolySmoothKeepBorder`;		
+	checkBoxGrp -edit -value1 $ival activePolySmoothKeepBorder;
+
+	$ival = `optionVar -query activePolySmoothKeepSelectionBorder`;		
+	checkBoxGrp -edit -value1 $ival activePolySmoothKeepSelectionBorder;
+
+	$ival = `optionVar -query activePolySmoothKeepHardEdge`;		
+	checkBoxGrp -edit -value1 $ival activePolySmoothKeepHardEdge;
+
+	$ival = `optionVar -query activePolySmoothKeepTesselation`;		
+	checkBoxGrp -edit -value1 $ival activePolySmoothKeepTesselation;
+
+	$ival = `optionVar -query activePolySmoothSmoothUVs`;
+	checkBoxGrp -edit -value1 $ival activePolySmoothSmoothUVs;
+
+	$ival = `optionVar -query activePolySmoothKeepMapBorders`;
+	radioButtonGrp -edit -select $ival activePolySmoothKeepMapBorders;
+
+	// linear options
+	$ival = `optionVar -query activePolySmoothNumIter`;
+	intSliderGrp -edit -value $ival activePolySmoothNumIter;
+
+	$ival = `optionVar -query activePolySmoothEdivisions`;
+	intSliderGrp -edit -value $ival activePolySmoothEdivisions;
+
+	$fval = `optionVar -query activePolySmoothVolume`;
+	floatSliderGrp -edit -value $fval activePolySmoothVolume;
+
+	$fval = `optionVar -query activePolySmoothRoundness`;
+	floatSliderGrp -edit -value $fval activePolySmoothRoundness;
+
+	$ival = `optionVar -query activePolySmoothSmoothingRadiusEnabled`;
+	checkBoxGrp -e -v1 $ival activePolySmoothSmoothingRadiusEnabled;
+	
+	$ival = `optionVar -query activePolySmoothSmoothingRadius`;
+	intSliderGrp -edit -value $ival activePolySmoothSmoothingRadius;
+	
+	$ival = `optionVar -query activePolySmoothHideWireframe`;
+	checkBoxGrp -e -v1 $ival activePolySmoothHideWireframe;
+	
+	$ival = `optionVar -query activePolySmoothHideVertices`;
+	checkBoxGrp -e -v1 $ival activePolySmoothHideVertices;
+	
+	$ival = `optionVar -query activePolySmoothHideFaces`;
+	checkBoxGrp -e -v1 $ival activePolySmoothHideFaces;
+	
+	$ival = `optionVar -query activePolySmoothHideEdges`;
+	checkBoxGrp -e -v1 $ival activePolySmoothHideEdges;
+	
+	$ival = `optionVar -query activePolySmoothHotkeyMode`;
+	radioButtonGrp -e -select $ival activePolySmoothHotkeyMode;
+	
+	$ival = `optionVar -query activePolySmoothUndoQueueState`;
+	checkBoxGrp -e -v1 $ival activePolySmoothUndoQueueState;
+	
+	activePolySmoothVisibility();
+
+}
+
+global proc performActivePolySmoothCallback (string $parent, int $doIt)
+{
+	setParent $parent;
+	optionVar -intValue activePolySmoothMethod
+		`radioButtonGrp -q -select activePolySmoothMethod`;
+	optionVar -intValue activePolyDivisions
+		`intSliderGrp -query -value activePolyDivisions`;
+	optionVar -floatValue activePolyContinuity
+		`floatSliderGrp -query -value activePolyContinuity`;
+	optionVar -intValue activePolySmoothKeepBorder
+		`checkBoxGrp -query -value1 activePolySmoothKeepBorder`;
+	optionVar -intValue activePolySmoothKeepSelectionBorder
+		`checkBoxGrp -query -value1 activePolySmoothKeepSelectionBorder`;
+	optionVar -intValue activePolySmoothKeepHardEdge
+		`checkBoxGrp -query -value1 activePolySmoothKeepHardEdge`;
+	optionVar -intValue activePolySmoothKeepTesselation
+		`checkBoxGrp -query -value1 activePolySmoothKeepTesselation`;
+	optionVar -intValue activePolySmoothSmoothUVs
+		`checkBoxGrp -query -value1 activePolySmoothSmoothUVs`;
+	optionVar -intValue activePolySmoothKeepMapBorders
+		`radioButtonGrp -query -select activePolySmoothKeepMapBorders`;
+
+	// linear options
+	optionVar -intValue activePolySmoothNumIter
+		`intSliderGrp -query -value activePolySmoothNumIter`;
+	optionVar -intValue activePolySmoothEdivisions
+		`intSliderGrp -query -value activePolySmoothEdivisions`;
+	optionVar -floatValue activePolySmoothVolume
+		`floatSliderGrp -query -value activePolySmoothVolume`;
+	optionVar -floatValue activePolySmoothRoundness
+		`floatSliderGrp -query -value activePolySmoothRoundness`;
+	
+	// Smoothing Radius options
+	optionVar -floatValue activePolySmoothSmoothingRadiusEnabled
+		`checkBoxGrp -query -v1 activePolySmoothSmoothingRadiusEnabled`;
+  optionVar -intValue activePolySmoothSmoothingRadius
+		`intSliderGrp -query -value activePolySmoothSmoothingRadius`;
+	optionVar -intValue activePolySmoothHideWireframe
+		`checkBoxGrp -query -v1 activePolySmoothHideWireframe`;
+	optionVar -intValue activePolySmoothHideVertices
+		`checkBoxGrp -query -v1 activePolySmoothHideVertices`;
+	optionVar -intValue activePolySmoothHideFaces
+		`checkBoxGrp -query -v1 activePolySmoothHideFaces`;
+	optionVar -intValue activePolySmoothHideEdges
+		`checkBoxGrp -query -v1 activePolySmoothHideEdges`;
+	optionVar -intValue activePolySmoothHotkeyMode
+		`radioButtonGrp -query -select activePolySmoothHotkeyMode`;
+	optionVar -intValue activePolySmoothUndoQueueState
+		`checkBoxGrp -query -v1 activePolySmoothUndoQueueState`;
+/*	if ($doIt) {
+		performActivePolySmooth 1;
+		addToRecentCommandQueue "performActivePolySmooth 1" "ActivePolySmooth";
+	}*/
+}
+
+proc activePolySmoothOptions ()
+{
+	string $commandName = "performActivePolySmooth";
+	string $callback = ($commandName + "Callback");
+	string $setup = ($commandName + "Setup");
+	   
+	string $layout = getOptionBox();
+	setParent $layout;
+	setUITemplate -pushTemplate DefaultTemplate;
+	
+	string $parent = `columnLayout -adjustableColumn 1`;
+
+	radioButtonGrp -nrb 2 -label "Subdivision Method"
+		-label1 "Exponential" -da1 0
+		-label2 "Linear" -da2 1 -select 1
+		-cc1 "activePolySmoothVisibility()"
+		-cc2 "activePolySmoothVisibility()"
+		activePolySmoothMethod;
+
+	string $tab = `tabLayout -tabsVisible false activePolySmoothOptions`;
+
+    columnLayout activePolySmoothMethodExponential;
+
+	frameLayout -label "Exponential Smoothing Controls" -labelAlign "center"
+		-borderStyle "etchedIn" -cl false -cll false;
+		columnLayout;
+
+	  intSliderGrp -label "Subdivision Levels" -min 1 -max 4 -s 1 activePolyDivisions;
+	  floatSliderGrp -label "Continuity" -min 0 -max 1 -s 1 activePolyContinuity;
+	  checkBoxGrp -label1 "Smooth UVs"
+	    -on1 ("disable -v false activePolySmoothKeepMapBorders;")
+	    -of1 ("disable -v true activePolySmoothKeepMapBorders;")
+		activePolySmoothSmoothUVs;
+
+	  // Properties to preserve
+	  //
+      frameLayout -label "Preserve Properties" -labelAlign "center"
+		  -borderStyle "etchedIn" -cl false -cll false;
+
+        columnLayout;
+	    checkBoxGrp -label1 "Keep Geometry Borders" activePolySmoothKeepBorder;
+	    checkBoxGrp -label1 "Keep Selection Borders" activePolySmoothKeepSelectionBorder;
+	    checkBoxGrp -label1 "Keep Hard Edges" activePolySmoothKeepHardEdge;
+	    checkBoxGrp -label1 "Keep Tessellation" activePolySmoothKeepTesselation;
+		radioButtonGrp -nrb 3 -label "Keep Map Borders"
+		 		-label1 "None" -da1 0
+		 		-label2 "Internal" -da2 1
+		 		-label3 "All" -da3 2 -select 2
+		activePolySmoothKeepMapBorders;
+
+        //setUITemplate -popTemplate;
+
+	setParent $tab;
+    columnLayout activePolySmoothMethodLinear;
+
+	frameLayout -label "Linear Smoothing Controls" -labelAlign "center"
+		-borderStyle "etchedIn" -cl false -cll false;
+		columnLayout;
+		// linear options
+	  intSliderGrp -label "Subdivision Levels"   -min 1 -max 4 -s 1 activePolySmoothNumIter;
+	  intSliderGrp -label "Divisions Per Face"   -min 1 -max 10 -s 1 activePolySmoothEdivisions;
+	  floatSliderGrp -label "Push Strength"  -min -1 -max 1 -s 0.1  activePolySmoothVolume;
+	  floatSliderGrp -label "Roundness" -min -10 -max 10 -s 1 activePolySmoothRoundness;
+
+	setParent $parent;
+	
+	columnLayout activeSmoothFeaturesColumn;
+		frameLayout -label "Active Smooth Features" -labelAlign "center"
+			-borderStyle "etchedIn" -cl false -cll false;
+			columnLayout;
+			
+				checkBoxGrp -label1 "Don't add ActiveSmoothPoly to undo queue" activePolySmoothUndoQueueState;
+			
+				frameLayout -label "When displaying smoothed mesh:" -labelAlign "center"
+							-borderStyle "etchedIn" -cl false -cll false;	
+					columnLayout;
+					checkBoxGrp -label1 "Hide wireframe" activePolySmoothHideWireframe;
+					checkBoxGrp -label1 "Hide selected vertices" activePolySmoothHideVertices;
+					checkBoxGrp -label1 "Hide selected faces" activePolySmoothHideFaces;
+					checkBoxGrp -label1 "Hide selected edges" activePolySmoothHideEdges;
+		  		setParent ..;
+		  	setParent ..;
+
+				frameLayout -label "When vertices/faces/edges are selected:" -labelAlign "center"
+							-borderStyle "etchedIn" -cl false -cll false;
+					columnLayout;
+						checkBoxGrp -label "Use Smoothing Radius" -cc "activePolySmoothVisibility()" activePolySmoothSmoothingRadiusEnabled;
+						intSliderGrp -label "Smoothing Radius" -min 0 -max 20 -s 1 activePolySmoothSmoothingRadius;
+					setParent ..;
+			setParent ..;
+			
+				frameLayout -label "Hotkey Operation Mode" -labelAlign "center" 
+							-borderStyle "etchedIn" -cl false -cll false;
+					columnLayout;
+					radioButtonGrp -nrb 2 -l1 "Active" -l2 "Toggle" -adjustableColumn 1 -columnAlign 1 "left" -columnOffset2 30 30 -w 451 activePolySmoothHotkeyMode;
+				setParent ..;
+			setParent ..;
+			
+	setParent $parent;	
+		
+		
+		
+	string $applyAndCloseBtn = getOptionBoxApplyAndCloseBtn();
+	button -edit -label "Update"
+	       -command ($callback + " " + $parent + " " + 0)
+		$applyAndCloseBtn;
+	string $applyBtn = getOptionBoxApplyBtn();
+	button -edit -label "Update and Close" 
+				 -command ($callback+ " " + $parent + " " + 0 + "; hideOptionBox")
+		$applyBtn;
+	
+	// menuItems:
+	string $saveBtn = getOptionBoxSaveBtn();
+	button -edit
+		-command ($callback + " " + $parent + " " + 0 + "; hideOptionBox")
+		$saveBtn;
+	string $resetBtn = getOptionBoxResetBtn();
+	button -edit
+		-command ($setup + " " + $parent + " " + 1)
+		$resetBtn;
+	// end of menuItems
+
+	setOptionBoxTitle("Active Polygon Smooth Options");
+
+	//	Customize the 'Help' menu item text.
+	//
+	setOptionBoxHelpTag( "ActivePolygonsSmooth" );
+
+	eval (($setup + " " + $parent + " " + 0));      
+	showOptionBox();
+}
+
+global proc string performActivePolySmooth (int $option)
+
+{
+	string $cmd="";
+
+	if ($option!=3 && `optionVar -query activePolySmoothHotkeyMode`==2)
+	{
+		int $state=(`optionVar -query activePolySmoothState`+1)%4;
+		optionVar -intValue activePolySmoothState $state;
+		switch ($state) {
+			case 1:	$option=1;
+					break;
+			case 3: $option=0;
+				 	break;
+			default: $option=2;
+					break;
+		}
+	}
+	switch ($option) {
+	// 0=deactivate
+	// 1=activate
+	// 2=do nothing
+	// 3=options
+	case 1:									
+		// initiate ActiveSmooth
+		setOptionVars(false);
+		int $mth = `optionVar -query activePolySmoothMethod` - 1;
+		int $dv = `optionVar -query activePolyDivisions`;
+		float $cont = `optionVar -query activePolyContinuity`;
+		int $kb = `optionVar -query activePolySmoothKeepBorder`;
+		int $ksb = `optionVar -query activePolySmoothKeepSelectionBorder`;
+		int $khe = `optionVar -query activePolySmoothKeepHardEdge`;
+		int $kt = `optionVar -query activePolySmoothKeepTesselation`;
+		int $kmb = `optionVar -query activePolySmoothKeepMapBorders` -1;
+		int $suvs = `optionVar -query activePolySmoothSmoothUVs`;
+		// linear options
+		int $niter = `optionVar -query activePolySmoothNumIter`;
+		int $ediv = `optionVar -query activePolySmoothEdivisions`;
+        float $volume = `optionVar -query activePolySmoothVolume`;
+        float $roundness = `optionVar -query activePolySmoothRoundness`;
+		//string $objList=stringArrayToString($objs," ");
+		$cmd = "polySmooth " + " -mth " + $mth  // + " -sd " + $sd + " -tr " + $tr
+			+ " -dv " + $dv + " -c "
+			+ $cont + " -kb " + $kb + " -ksb " + $ksb + " -khe " + $khe + " -kt " + $kt
+			+ " -kmb " + $kmb + " -suv " + $suvs
+			+ " -sl " + $niter + " -dpe " + $ediv + " -ps " + $volume + " -ro " + $roundness+ " -ch 1";
+
+		// standard activePolySmooth
+		activePolyPerformAction 1 $cmd ;
+		break;
+	case 0:											// deinitiate ActiveSmooth
+		activePolyPerformAction 0 "";
+		break;
+	case 2: // version 1.5 : no action to take (hotkey toggle release)
+		break;
+	default : // activate option box
+		activePolySmoothOptions;
+		break;
+	}
+	return $cmd;
+}
+
+
+global proc activePolyPerformAction(int $option,string $cmd)
+{
+	switch($option) 
+	{
+////////////////// activate ///////////////////////////////////////////////////
+	case 1:
+		{
+			if (`optionVar -query activePolySmoothUndoQueueState`==1)
+				undoInfo -stateWithoutFlush 0;
+			string $verts[]=`filterExpand -selectionMask 31`;
+			string $faces[]=`filterExpand -selectionMask 34`;
+			string $poly[]=`filterExpand -selectionMask 12`;
+			string $edges[]=`filterExpand -selectionMask 32`;
+			int $i;
+			
+			// version 1.3 ////////
+			optionVar -clearArray activeSmoothPolys;
+			for ($i=0; $i<size($poly); $i++)
+				optionVar -stringValueAppend activeSmoothPolys $poly[$i];
+			optionVar -clearArray activeSmoothVerts;
+			for ($i=0; $i<size($verts); $i++)
+				optionVar -stringValueAppend activeSmoothVerts $verts[$i];
+			optionVar -clearArray activeSmoothFaces;
+			for ($i=0; $i<size($faces); $i++)
+				optionVar -stringValueAppend activeSmoothFaces $faces[$i];
+			optionVar -clearArray activeSmoothEdges;
+			for ($i=0; $i<size($edges); $i++)
+				optionVar -stringValueAppend activeSmoothEdges $edges[$i];
+			////////////////////
+			
+			string $newVerts[];
+					
+			if (size($poly)==0 && size($faces)==0 && size($verts)==0 && size($edges)==0)	// $verts is a poly
+				error "Please select a polygonal related node (poly/face/vertex/edge)";
+			else
+				{
+					if (size($poly)!=0) // a poly object is selected
+					{
+						eval ($cmd+" "+stringArrayToString($poly," "));
+						//version 1.3
+						if (`optionVar -query activePolySmoothHideWireframe`==0)
+							select -r $poly;
+						else
+							select -clear;
+						//////
+					}			
+					else if (size($verts)!=0)	// no faces selected: smooth all the object
+					{
+						string $rels[]=`listRelatives -p $verts`;
+						if (`optionVar -query activePolySmoothSmoothingRadiusEnabled`)
+						{
+								for ($i=0; $i<`optionVar -query activePolySmoothSmoothingRadius`; $i++)
+									GrowPolygonSelectionRegion;
+								$newVerts=`filterExpand -selectionMask 31`;
+								eval ($cmd+" "+stringArrayToString($newVerts," "));
+						}
+						else
+								eval ($cmd+" "+stringArrayToString($rels," "));
+						if (`optionVar -query activePolySmoothHideWireframe`==1)
+									hilite -unHilite `listRelatives -p $rels[0]`;
+						if (`optionVar -query activePolySmoothHideVertices`==1)
+							select -clear;
+						else
+							select $verts;
+					}
+					else if (size($faces)!=0) // faces are selected: smooth only the selected faces
+					{
+						string $rels[]=`listRelatives -p $faces`;
+						if (`optionVar -query activePolySmoothSmoothingRadiusEnabled`)
+						{
+							// implementation of smoothing radius for faces
+							select $faces;
+							ConvertSelectionToVertices;
+							$newVerts=`filterExpand -selectionMask 31`; 
+							for ($i=0; $i<`optionVar -query activePolySmoothSmoothingRadius`; $i++) 
+										GrowPolygonSelectionRegion;
+							$newVerts=`filterExpand -selectionMask 31`;
+							eval ($cmd+" "+stringArrayToString($newVerts," "));
+							// end of smoothing radius
+						}
+						else 
+							eval ($cmd+" "+stringArrayToString($faces," "));
+						if (`optionVar -query activePolySmoothHideWireframe`==1)
+									hilite -unHilite `listRelatives -p $rels[0]`;
+						if (`optionVar -query activePolySmoothHideFaces`==1)
+							select -clear;
+						else
+							select $faces;
+					}
+					else if (size($edges)!=0) // it sure is
+					{
+						string $rels[]=`listRelatives -p $edges`;
+						if (`optionVar -query activePolySmoothSmoothingRadiusEnabled`)
+						{
+							// implementation of smoothing radius for faces
+							select $edges;
+							ConvertSelectionToVertices;
+							$newVerts=`filterExpand -selectionMask 31`; 
+							for ($i=1; $i<`optionVar -query activePolySmoothSmoothingRadius`; $i++) 
+										GrowPolygonSelectionRegion;
+							$newVerts=`filterExpand -selectionMask 31`;
+							eval ($cmd+" "+stringArrayToString($newVerts," "));
+							// end of smoothing radius
+						}
+						else 
+							eval ($cmd+" "+stringArrayToString($edges," "));
+						if (`optionVar -query activePolySmoothHideWireframe`==1)
+									hilite -unHilite `listRelatives -p $rels[0]`;
+						if (`optionVar -query activePolySmoothHideEdges`==1)
+							select -clear;
+						else
+							select $edges;
+					}
+				}
+			if (`optionVar -query activePolySmoothUndoQueueState`==1)
+				undoInfo -stateWithoutFlush 1;
+			print "(+) activeSmooth\n";	
+		}
+		break;		
+		//////////////////////////////////// deActivate //////////////////////////////////
+	case 0:
+		{
+			if (`optionVar -query activePolySmoothUndoQueueState`==1)
+				undoInfo -stateWithoutFlush 0;
+			string $verts[]=`filterExpand -selectionMask 31`;
+			string $faces[]=`filterExpand -selectionMask 34`;
+			string $edges[]=`filterExpand -selectionMask 32`;
+			string $poly[];//=`filterExpand -selectionMask 12`;
+			if (size($poly)==0 && size($faces)==0 && size($verts)==0 && size($edges)==0)	
+			{				
+				// this section restores selection as before
+				if (`optionVar -arraySize activeSmoothVerts`>=1)
+					$verts=`optionVar -query activeSmoothVerts`;
+				if (`optionVar -arraySize activeSmoothFaces`>=1)
+					$faces=`optionVar -query activeSmoothFaces`;	
+				if (`optionVar -arraySize activeSmoothPolys`>=1)
+					$poly=`optionVar -query activeSmoothPolys`;
+				if (`optionVar -arraySize activeSmoothEdges`>=1)
+					$edges=`optionVar -query activeSmoothEdges`;
+					// end of section
+			}
+			// starting execution
+			{
+					if (size($poly)!=0)	// selected is a polyObject
+					{
+						string $tmp[]=`listHistory $poly`;
+						string $pSFace[]=`ls -exactType "polySmoothFace" $tmp`;
+						if (size($pSFace)!=0)
+						{
+							setAttr ($pSFace[0]+".divisions") 0;
+							delete $pSFace[0];
+							select $poly;
+						}
+					}
+					else if (size($verts)!=0) 	// selected are vertices
+					{
+						int $i;
+						string $rels[]=`listRelatives -p $verts`;
+						string $tmp[]=`listHistory $rels`;
+						string $pSFace[]=`ls -exactType "polySmoothFace" $tmp`;
+						if (size($pSFace)!=0)
+						{
+							select -clear;
+							setAttr ($pSFace[0]+".divisions") 0;
+							delete $pSFace[0];
+							
+							int $vertexNumber[]=`polyEvaluate -vertex $rels[0]`; // for vertex verification
+							int $tempInt;
+							string $tempBuffer[]; // for tokenize
+							
+							for ($i=0; $i<size($verts); $i++)
+							{
+									tokenize $verts[$i] "[]" $tempBuffer;
+									$tempInt=$tempBuffer[1];
+									if ($tempInt<$vertexNumber[0])
+											select -add $verts[$i];
+							}
+							if (`optionVar -query activePolySmoothHideWireframe`==1)
+							{
+								hilite `listRelatives -p $rels[0]`;
+								doMenuComponentSelection(stringArrayToString(`listRelatives -p $rels[0]`,""), "vertex");
+							}
+						}
+					}
+					else if (size($faces)!=0) // selected are faces
+					{
+						int $i;
+						string $rels[]=`listRelatives -p $faces`;
+						string $tmp[]=`listHistory $rels`;
+						string $pSFace[]=`ls -exactType "polySmoothFace" $tmp`;
+						if (size($pSFace)!=0)
+						{
+							select -clear;
+							setAttr ($pSFace[0]+".divisions") 0;
+							delete $pSFace[0];		
+							
+							int $faceNumber[]=`polyEvaluate -face $rels[0]`; // for vertex verification
+							int $tempInt;
+							string $tempBuffer[]; // for tokenize
+										
+							for ($i=0; $i<size($faces); $i++)
+							{		
+									tokenize $faces[$i] "[]" $tempBuffer;
+									$tempInt=$tempBuffer[1];
+									if ($tempInt<$faceNumber[0])
+											select -add $faces[$i];
+							}
+							if (`optionVar -query activePolySmoothHideWireframe`==1)
+							{
+								hilite `listRelatives -p $rels[0]`;
+								doMenuComponentSelection(stringArrayToString(`listRelatives -p $rels[0]`,""), "facet");
+							}
+						}
+					}
+					else if (size($edges)!=0)
+					{
+						int $i;
+						string $rels[]=`listRelatives -p $edges`;
+						string $tmp[]=`listHistory $rels`;
+						string $pSFace[]=`ls -exactType "polySmoothFace" $tmp`;
+						if (size($pSFace)!=0)
+						{
+							select -clear;
+							setAttr ($pSFace[0]+".divisions") 0;
+							delete $pSFace[0];		
+							
+							int $edgeNumber[]=`polyEvaluate -edge $rels[0]`; // for vertex verification
+							int $tempInt;
+							string $tempBuffer[]; // for tokenize
+													
+							for ($i=0; $i<size($edges); $i++)
+							{
+									tokenize $edges[$i] "[]" $tempBuffer;
+									$tempInt=$tempBuffer[1];
+									if ($tempInt<$edgeNumber[0])
+											select -add $edges[$i];
+							}
+							if (`optionVar -query activePolySmoothHideWireframe`==1)
+							{
+								hilite `listRelatives -p $rels[0]`;
+								doMenuComponentSelection(stringArrayToString(`listRelatives -p $rels[0]`,""), "edge");
+							}
+						}
+					}	
+			print "(-) activeSmooth\n";
+			if (`optionVar -query activePolySmoothUndoQueueState`==1)
+				undoInfo -stateWithoutFlush 1;
+			}
+		}
+	}
+}

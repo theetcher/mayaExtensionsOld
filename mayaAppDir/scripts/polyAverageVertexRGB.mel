@@ -1,0 +1,250 @@
+// polyAverageVertexRGB ------------------------------------------ //
+//                                                                 //
+// Script Name:   polyAverageVertexRGB.mel                         //
+//                                                                 //
+// Creation Date: 03/02/01                                         //
+//                                                                 //
+// Last Updated:  04/18/03                                         //
+//                                                                 //
+// Author:        Morris Olmsted                                   //
+//                                                                 //
+// Description:   This script is used to make seams where poly     //
+//                meshes meet seem up without any break in color.  //
+//                Depending on user set variables like distance    //
+//                and setting the color to higher, lower, or       //
+//                average of the RGBs for the verts that are less  //
+//                than or equel to the distance specified.         //
+//                                                                 //
+//                                                                 //
+// --------------------------------------------------------------- //
+global string $mergeRGBWin;
+global float $dist;
+
+
+// --------------------------------------------------------------- //
+// This procedure simply launches the GUI for this tool.           //
+// --------------------------------------------------------------- //
+global proc polyAverageVertexRGB()
+{
+    global string $mergeRGBWin = "PolyAverageVertexRGBWin";    // define a variable to hold the name of the window object //
+    waitCursor -st 1;
+
+    if (!`window -ex $mergeRGBWin`)    // simple check to make sure $RepWindow doesn't already egsist //
+        RGBAverageWin();    // call procedure Controller which runs the guts of this MEL script //
+
+    showWindow $mergeRGBWin;    // call to display the window //
+    waitCursor -st 0;
+
+}    // end of procedure polyAverageVertexRGB //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply finds selected verticies from different   //
+// poly meshes and depending on the selected force-color type that //
+// the user has choosen, set both vert RGB colors to the higher,   //
+// lower, or an average of the two.
+// --------------------------------------------------------------- //
+global proc averageRGB()
+{
+    global float $dist = 0;
+
+    string $sVerts[0] = `ls -sl -fl`;    // capture the name of the selected verts to be merged //
+    int $whichOption = `radioButtonGrp -q -sl forceRGBColorize`;    // capture the option that the user has choosen //
+    int $vertNums = `size $sVerts`;
+
+    $dist = `floatSliderGrp -q -v dVSlider`;    // floating variable to hold the distance value to be used to merge RGBs //
+
+    if ($vertNums > 1)
+    {
+        for ($x=0; $x<$vertNums; $x++)    // per point in of the selection //
+        {
+            if ($sVerts[$x] != "EMPTY")
+            {
+                string $origVert = $sVerts[$x];    // set $compVert to the name of the first vert to be compared //
+                $sVerts[$x] = "EMPTY";    // put something at this address so I know I have already been here //
+
+                string $inDistance[];    // string array that holds the names of the verts within $dist of each other //
+                int $currentIndex = 0;    // an integer variable to hold the index value for the array $inDistance //
+
+                $inDistance[$currentIndex] = $origVert;    // set the test vert is within the distance, add to the $inDistance array //
+                $currentIndex++;    // increment the counter one //
+
+                for ($y=($x+1); $y<$vertNums; $y++)
+                {
+                    if ($sVerts[$y] != "EMPTY")
+                    {
+                        float $origVertsDist[0] = `pointPosition $origVert`;    // capture the xyz coordinates for the orriginal vert //
+                        float $testVertDist[0] = `pointPosition $sVerts[$y]`;    // capture the xyz coordinate for consectutive verts //
+
+                         // get the actual vector distance between the two points //
+                        float $vectDist = sqrt( ( ($origVertsDist[0]-$testVertDist[0]) * ($origVertsDist[0]-$testVertDist[0]) ) +
+                                        ( ($origVertsDist[1]-$testVertDist[1]) * ($origVertsDist[1]-$testVertDist[1]) ) +
+                                        ( ($origVertsDist[2]-$testVertDist[2]) * ($origVertsDist[2]-$testVertDist[2]) ) );
+
+                        if ( ($vectDist <= $dist) && ($vectDist >= ($dist*-1) ) )
+                        {
+                            $inDistance[$currentIndex] = $sVerts[$y];    // set the test vert is within the distance, add to the $inDistance array //
+                            $sVerts[$y] = "EMPTY";    // put something at this address so I know I have already been here //
+
+                            $currentIndex++;    // increment the counter one //
+
+                        }    // end of if loop //
+
+                    }    // end of if loop //
+
+                }    // end of for loop //
+
+                if (`size $inDistance` > 1)    // get the highs, lows, or averages of RGBs //
+                {
+                    float $testRGB[0] = `polyColorPerVertex -q -rgb $inDistance[0]`;    // get the vals for the first comparing vart //
+
+                    // floating vars to calculate for the higher values //
+                    float $MaxR = $testRGB[0];
+                    float $MaxG = $testRGB[1];
+                    float $MaxB = $testRGB[2];
+
+                    // floating vars to calulate for the lower values //
+                    float $MinR = $testRGB[0];
+                    float $MinG = $testRGB[1];
+                    float $MinB = $testRGB[2];
+
+                    // floating vars to calulate for the average of the values //
+                    float $AvgR = $testRGB[0];
+                    float $AvgG = $testRGB[1];
+                    float $AvgB = $testRGB[2];
+
+                    for ($z=1; $z<`size $inDistance`; $z++)
+                    {
+                        $testRGB = `polyColorPerVertex -q -rgb $inDistance[$z]`;    // get the vals for all other vert vals //
+
+                        if ($testRGB[0]>$MaxR)    // if new R is greater than $MaxR then reset $MaxR to new R //
+                            $MaxR = $testRGB[0];
+
+                        if ($testRGB[1]>$MaxG)    // if new G is greater than $MaxG then reset $MaxG to new G //
+                            $MaxG = $testRGB[1];
+
+                        if ($testRGB[2]>$MaxB)    // if new B is greater than $MaxB then reset $MaxB to new B //
+                            $MaxB = $testRGB[2];
+
+                        if ($testRGB[0]<$MinR)    // if new R is greater than $MinR then reset $MinR to new R //
+                            $MinR = $testRGB[0];
+
+                        if ($testRGB[1]<$MinG)    // if new G is greater than $MinG then reset $MinG to new G //
+                            $MinG = $testRGB[1];
+
+                        if ($testRGB[2]<$MinB)    // if new B is greater than $MinB then reset $MinB to new B //
+                            $MinB = $testRGB[2];
+
+                        $AvgR = ($AvgR+$testRGB[0]);    // add the new R value to the $AvgR variable //
+                        $AvgG = ($AvgG+$testRGB[1]);    // add the new G value to the $AvgG variable //
+                        $AvgB = ($AvgB+$testRGB[2]);    // add the new B value to the $AvgB variable //
+
+                    }    // end of for loop //
+
+                    $AvgR = ($AvgR/`size $inDistance`);    // devide by total number of verts evaluated to get average //
+                    $AvgG = ($AvgG/`size $inDistance`);    // devide by total number of verts evaluated to get average //
+                    $AvgB = ($AvgB/`size $inDistance`);    // devide by total number of verts evaluated to get average //
+
+                    print ("\n");
+
+                    switch ($whichOption)
+                    {
+                        case 1:     // user wants to use Higher values //
+                                    for ($tmpName in $inDistance)
+                                        polyColorPerVertex -r $MaxR -g $MaxG -b $MaxB -a 1 $tmpName;
+
+                                    break;    // call to break out of the case loop //
+
+                        case 2:     // user want to use lower values //
+                                    for ($tmpName in $inDistance)
+                                        polyColorPerVertex -r $MinR -g $MinG -b $MinB -a 1 $tmpName;
+
+                                    break;    // call to break out of the case loop //
+
+                        case 3:     //user wants to use Average of values //
+                                    for ($tmpName in $inDistance)
+                                        polyColorPerVertex -r $AvgR -g $AvgG -b $AvgB -a 1 $tmpName;
+
+                                    break;    // call to break out of the case loop //
+
+                    }    // end of case loop //
+
+                clear $inDistance;
+
+                }     // end of for loop //
+
+            }    // end of if loop //
+
+        }    // end of for loop //
+
+        print ("\n\nFinished!\n\n");
+
+    }    // end of if loop //
+
+    else
+    {
+        source XFormUV;
+        messageWin ("DOH!!    You must select at least two verts for this to work!");
+
+    }    // end of else loop //
+
+}    // end of procedure averageRGB //
+
+
+// --------------------------------------------------------------- //
+// This procedure simply sets up the GUI for the function.         //
+// --------------------------------------------------------------- //
+global proc RGBAverageWin()
+{
+    global string $mergeRGBWin;
+    global float $dist;
+
+    window
+        -w 400
+        -h 100
+        -t "Poly Average Vertex RGB"
+        -in "Average RGB"
+        -mb 1
+        -tb 1
+        -mnb 1
+        -mxb 0
+        -rtf 1
+        -s 1
+      $mergeRGBWin;
+
+        columnLayout;
+            floatSliderGrp
+                -l "Distance Value"
+                -f 1
+                -v 0.050
+                -min 0.001
+                -max 2.000
+                -pre 3
+                -cc "$dist = `floatSliderGrp -q -v dVSlider`;"
+              dVSlider;
+
+            radioButtonGrp
+                -nrb 3
+                -sl 3
+                -cw4 100 60 60 60
+                -l "Force RGB      "
+                -la3 "Higher" "Lower" "Average"
+                forceRGBColorize;
+
+            separator
+                -w 400
+                -height 10
+                -style "out";
+
+            rowColumnLayout -nc 2 -cw 1 200 -cw 2 200;
+                button
+                    -l "Set RGBs"
+                    -c "averageRGB";
+
+                button
+                    -l "Close"
+                    -c "deleteUI $mergeRGBWin";
+
+}    // end of procedure RGBAverageWin //
+
+

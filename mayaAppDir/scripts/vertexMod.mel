@@ -1,0 +1,335 @@
+// Copyright (C) 1997-2002 Alias|Wavefront,
+// a division of Silicon Graphics Limited.
+//
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias|Wavefront.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias|Wavefront license agreement, without fee.
+//
+// ALIAS|WAVEFRONT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS|WAVEFRONT BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+//
+// Alias|Wavefront Script File
+// MODIFY THIS AT YOUR OWN RISK
+//
+// vertexMod.mel
+// authors: tc and kp
+//
+// updated: jan 2002
+//			tc added $userLength flag and control
+//
+//			mar 2002
+//			cpam added offset attr with expression
+//
+// usage: select a vertex to modify and 
+//			vertexMod 0 1 1 0.3;	chamfers vertex 0.3 along edges away from
+//									vertex keeping edges an equal length and
+//									creates an expression to adjust the edges
+//									with history
+//			vertexMod 2 1 0 0.6;	extrudes vertex with move normal tool 0.6 
+//									along edges away from vertex keeping edges
+//									an equal length - no expression is created
+//
+// input arguments: int $vertexModMode, float $userLength
+//		$vertexModMode
+//			0: chamfer vertex
+//			1: extrude vertex with move component tool
+//			2: extrude vertex with move normal tool
+//		$equilateral
+//			make all new edges the same length - defaults on (off not used)
+//		$expression
+//			create an expression to adjust the edge offset after creation
+//		$userLength
+//			distance of new edges from selected vertex
+//
+// note:	bgVertexModExpression will break down if multiple verts are
+//			processed at a single time because it cannot properly keep
+//			track of edge lengths in such a case. May 2002, tried adjusting
+//			the expression with the arclen command but it must be made with
+//			construction history for proper evaluation. Because it requires
+//			extra construction history nodes it was decided not to do it
+//			at this time.
+
+global proc bgVertexModExpression(string $v_e_Buffer[],
+								float $edgeLengths[],
+								float $edgeOffset,
+								string $vertex,
+								string $splitNode,
+								int $vertexModMode){
+	
+/*	
+	print "\nv e buffer: ";
+	print $v_e_Buffer;
+	print "\nedge lengths: ";
+	print $edgeLengths;
+	print "\nedge offset";
+	print $edgeOffset;
+	print "\nvertex: ";
+	print $vertex;
+	
+	print "\nsplit node: ";
+	print $splitNode;
+*/
+	
+	string $shapeNode[] = `listRelatives -parent $vertex`;
+	
+	switch ($vertexModMode)
+	{
+	case 0:
+		$splitNode = `rename $splitNode "chamferVertex#"`;
+		break;
+	case 1:
+		$splitNode = `rename $splitNode "extrudeVertex#"`;
+		//performPolyMove "" 0 ;
+		break;
+	case 2:
+		$splitNode = `rename $splitNode "extrudeVertex#"`;
+		//MoveTool;
+		//manipMoveContext -e -mode 3 Move;
+		break;
+	}
+	
+	//	add offset attr to control edge length with history	
+	addAttr -ln "edgeOffset" 
+		-dv $edgeOffset
+		-at double 
+		-min 0.01 
+		//-max 0.99
+		$splitNode;	
+	
+	setAttr -e 
+		-keyable true 
+		($splitNode + ".edgeOffset");
+	
+	//	connect attr to edge attrs with an expression
+	
+	string $expressionCmd = "expression -s \"";
+	float $edges[] = getAttr ($splitNode + ".edge");
+	//print "\nsize edges: ";
+	//print `size($edges)`;
+	int $sizeEdges = `size($edges)`;
+	$sizeEdges = $sizeEdges - 1;
+	
+	int $i;
+	//for ($edge in $edges){
+	for ($i=0; $i<$sizeEdges; $i++){
+		string $edgeName = ($splitNode + ".edge[" + $i + "]");
+		string $offsetName = ($splitNode + ".edgeOffset");
+		float $edgeVal = `getAttr $edgeName`;
+		string $expressionMid;
+		//
+		//print "\n edge name ";
+		//print $edgeName;
+		//print "\n edge val ";
+		//print $edgeVal;
+		//
+		
+		string $splitEdge = ($shapeNode[0] + ".e[" + $v_e_Buffer[$i+2] + "]");
+		//print "\nsplit edge: ";
+		//print $splitEdge;
+		
+		float $edgeLength = `arclen $splitEdge`;
+		//print "\nedge length: ";
+		//print $edgeLength;
+		//print " = ";
+		//print $edgeOffset;
+
+		// truncate the value - there is a numeric precision issue
+		$edgeLength = ($edgeLength * 1000) ;
+		$edgeLength = trunc ($edgeLength);
+		$edgeLength = ($edgeLength / 1000) ;
+
+		//print "\ndivide: ";
+		//print ($edgeOffset / $edgeLength);
+		
+		//if ($edgeOffset == $edgeLength){
+		if ($edgeOffset / $edgeLength){
+			$expressionMid = ($edgeName + " = (" + $offsetName );
+			//print "\nedge length: ";
+			//print $edgeLength;
+			//print " = ";
+			//print $edgeOffset;
+		} else {
+			$expressionMid = ($edgeName + " = 1 - (" + $offsetName );
+			//print "\nedge length: ";
+			//print $edgeLength;
+			//print " != ";
+			//print $edgeOffset;
+		}
+		string $expressionEnd = (" / " + $edgeLengths[$i] + ") ;");
+		$expressionCmd = $expressionCmd + $expressionMid + $expressionEnd;
+		//$i++;
+	}
+	$expressionCmd = $expressionCmd + "\"" + 
+		("-name " + $splitNode + "Expression");
+	
+	//print "\nexpression: ";
+	//print $expressionCmd;
+	
+	eval ($expressionCmd);
+	
+	//	set offset attr to user value
+	setAttr ($splitNode + ".edgeOffset") ($edgeOffset);
+
+}
+
+
+global proc int vertexMod( int $vertexModMode, 
+						  int $equilateral,
+						  int $expression,
+						  float $userLength )
+{
+	//	node created by split operation - will to reflect
+	//	operation - chamfer or extrude
+
+	string $splitNode[], $polySplitCmdResult[];
+	
+	//	use preset $userLength for expression creation ease
+	//	and set the $userLength back after the expression is done
+	
+	float $userLengthStorage;
+	if (!$equilateral){
+		$userLengthStorage = $userLength;
+		$userLength = 0.4001;
+	}
+
+	string $vertToExtrude[] = `filterExpand -expand true 
+		-selectionMask 31`;
+	string $currVert;
+	int $vertNum = 0;
+
+	//	multiple verts may have been selected so process each
+	int $i;
+	$i = 0;
+
+	for ($currVert in $vertToExtrude) 
+		{
+		string $vertToEdge[] = `polyInfo -vertexToEdge
+			$vertToExtrude[$vertNum]` ;
+		string $edgeToVert[];
+		string $v_e_Buffer[], $e_v_buffer[];
+		int $edgeCounter ;
+		int $infoCounter = 2, $counter = 0 ;
+		string $polySplitCmd = "polySplit" ;
+		float $edgeSplitPercent[];
+
+		//new
+		float $edgeLengths[];
+
+		do
+		{
+			tokenize($vertToEdge[0], " :", $v_e_Buffer) ;
+			string $nameBuffer[];
+			tokenize($vertToExtrude[$vertNum],".", $nameBuffer);
+			$edgeToVert = `polyInfo -ev ($nameBuffer[0] 
+				+ ".e[" + $v_e_Buffer[$infoCounter] +"]")`;
+			tokenize($edgeToVert[0], " ", $e_v_buffer);
+			float $edgeLength = `arclen($nameBuffer[0] + 
+				".e[" + $v_e_Buffer[$infoCounter] +"]")`;
+
+			//new
+			$edgeLengths[$counter] = $edgeLength;
+		
+			if ($equilateral){
+				if ($v_e_Buffer[1] == $e_v_buffer[2])
+				{
+					
+					if (($userLength/$edgeLength)>1)
+						$edgeSplitPercent[$counter] = 1;
+					else
+						$edgeSplitPercent[$counter] = ($userLength/$edgeLength);
+				}
+				else
+				{
+					
+					if ((1 - ($userLength/$edgeLength))<0)
+						$edgeSplitPercent[$counter] = 0;
+					else
+						$edgeSplitPercent[$counter] = (1 - ($userLength/$edgeLength));
+				}
+			} else {
+				if ($v_e_Buffer[1] == $e_v_buffer[2])
+					$edgeSplitPercent[$counter] = $userLength;
+				else
+					$edgeSplitPercent[$counter] = (1 - $userLength);
+			}
+
+			$edgeCounter = size($v_e_Buffer) ;
+			$polySplitCmd += (" " + "-ep" + " "
+				+ $v_e_Buffer[$infoCounter] + " " 
+				+ $edgeSplitPercent[$counter]) ;
+			$infoCounter++;
+			$counter++;
+			
+		}
+		while ($infoCounter < ($edgeCounter - 1)) ;
+		$vertNum++;
+		$polySplitCmd += (" " + "-ep" + " " + $v_e_Buffer[2] + " " 
+			+ $edgeSplitPercent[0]) ;
+		print $polySplitCmd;
+
+		string $shape[] = `listRelatives -parent $currVert`;
+		$polySplitCmd += (" " + $shape[0] + ";");
+		//string $bob = `eval ($polySplitCmd)`;
+		//$splitNode[$i] = `eval ($polySplitCmd)`;
+		$polySplitCmdResult = `eval ($polySplitCmd)`;
+		$splitNode[0] = $polySplitCmdResult[0];
+
+		if ($expression){
+			bgVertexModExpression $v_e_Buffer $edgeLengths $userLength $currVert $splitNode[0] $vertexModMode;
+		} else {
+			switch ($vertexModMode)
+			{
+			case 0:
+				//DeleteVertex $currVert;
+				rename $splitNode "chamferVertex#";
+				break;
+			case 1:
+				//select -replace $currVert;
+				//performPolyMove "" 0 ;
+				rename $splitNode[0] "extrudeVertex#";
+				break;
+			case 2:
+				//select -replace $currVert;
+				//MoveTool;
+				//manipMoveContext -e -mode 3 Move;
+				rename $splitNode "extrudeVertex#";
+				break;
+			}
+
+		}
+
+		//string $shape[] = `listRelatives -parent $currVert`;
+		//select -replace $shape[0];
+		//print "\nswitch done: ";
+
+		//print "\nsplit node: ";
+		//print $splitNode;
+
+		$i++;
+
+	}
+	
+	switch ($vertexModMode)
+	{
+	case 0:
+		DeleteVertex $vertToExtrude;
+		break;
+	case 1:
+		select -replace $vertToExtrude;
+		performPolyMove "" 0 ;
+		break;
+	case 2:
+		select -replace $vertToExtrude;
+		MoveTool;
+		manipMoveContext -e -mode 3 Move;
+		break;
+	}
+	
+	return 0;
+}

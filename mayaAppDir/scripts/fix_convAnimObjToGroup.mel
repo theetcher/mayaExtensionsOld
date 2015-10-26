@@ -1,0 +1,28 @@
+global proc fix_convAnimObjToGroup( )
+{
+/*
+string $fullPathName[] = `ls -sl -l`;
+delete (`listRelatives -s $fullPathName`);
+*/
+
+string $fullObjNames[] = `ls -sl -l`;
+string $objShape[];
+string $tempTransform;
+string $objShapeNewTrans[];
+//string &obj;
+
+for ($obj in $fullObjNames) {
+	$objShape = `listRelatives -f -s $obj`;
+	$tempTransform  = `createNode "transform" -n "tempTrans"`;
+	$objShape = `parent -s $objShape[0] $tempTransform`;
+	$objShortName = `ls $obj`;
+	$obj = `rename $obj ($objShortName[0]+"_animGroup")`;
+	$objShape = `parent -s $objShape[0] $obj`;
+	$objShapeNewTrans = `listRelatives -p -f`;
+	rename $objShapeNewTrans $objShortName;
+	delete $tempTransform;
+	
+}
+
+
+}

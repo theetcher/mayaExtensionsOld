@@ -1,0 +1,31 @@
+
+// Combines objects, parents it to the first selected object's parent and deletes history //
+
+global proc fix_planarMapping (string $projType)
+{
+
+	source watch;
+
+	string $objects[] = `ls -sl -o -typ "mesh"`;
+	string $planarProjNode[];
+	float $projWidth;
+
+	switch ($projType) {
+		case "x": 
+			break;
+		case "xSquare": $planarProjNode = `listConnections -s 1 -p 0 ($objects[0]+".inMesh")`;
+				$projWidth = `getAttr ($planarProjNode[0]+".pw")`;
+				setAttr ($planarProjNode[0]+".ph") $projWidth;
+//				watchStrArr($planarProjNode,"$planarProjNode");
+				break;
+		case "y":
+			break;
+		case "ySquare":
+			break;
+		case "z":
+			break;
+		case "zSquare":
+			break;
+	}
+
+}

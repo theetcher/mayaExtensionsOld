@@ -1,0 +1,476 @@
+// #  dynDelCurRendType.mel
+// # _______________________________________________________________________
+// # |
+// # |   Original Author:
+// # |  Paul Anand  <panand@aw.sgi.com>
+// # |
+// # |   Description:
+// # |  Removes the attributes that are added when you "Add Current Render Type"
+// # |
+// # |                 Copyright (C) 1998
+// # |
+// # |   Unpublished -- rights reserved under the Copyright Laws of 
+// # |                  the United States.
+// # |
+// # _______________________________________________________________________
+// #
+//
+// Copyright (C) 1997-1998 Alias|Wavefront,
+// a division of Silicon Graphics Limited.
+//
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias|Wavefront.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias|Wavefront license agreement, without fee.
+//
+// ALIAS|WAVEFRONT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS|WAVEFRONT BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+//
+// Alias|Wavefront Script File
+// MODIFY THIS AT YOUR OWN RISK
+//
+
+global proc dynDelCurRendType ( )
+{
+
+  $currentSelection = `ls -sl -type particle`;
+
+  if (size($currentSelection) == 0) {
+    pickWalk -d down;
+  }
+
+  $currentSelection = `ls -sl -type particle`;
+
+  if (size($currentSelection) == 0) {
+    error("You must select a particle object");
+  }
+
+  $nodeName = $currentSelection[0];
+
+  int		$useAttrAry[];
+  string	$renderAttrAry[];
+  int		$i;
+  
+  $i = 0;
+  $renderAttrAry[$i++] = "attributeName";
+  $renderAttrAry[$i++] = "betterIllumination";
+  $renderAttrAry[$i++] = "colorAccum";
+  $renderAttrAry[$i++] = "colorBlue";
+  $renderAttrAry[$i++] = "colorGreen";
+  $renderAttrAry[$i++] = "colorRed";
+  $renderAttrAry[$i++] = "lineWidth";
+  $renderAttrAry[$i++] = "multiCount";
+  $renderAttrAry[$i++] = "multiRadius";
+  $renderAttrAry[$i++] = "normalDir";
+  $renderAttrAry[$i++] = "opacity";
+  $renderAttrAry[$i++] = "pointSize";
+  $renderAttrAry[$i++] = "radius";
+  $renderAttrAry[$i++] = "radius0";
+  $renderAttrAry[$i++] = "radius1";
+  $renderAttrAry[$i++] = "selectedOnly";
+  $renderAttrAry[$i++] = "shapeName";
+  $renderAttrAry[$i++] = "spriteNum";
+  $renderAttrAry[$i++] = "spriteScaleX";
+  $renderAttrAry[$i++] = "spriteScaleY";
+  $renderAttrAry[$i++] = "spriteTwist";
+  $renderAttrAry[$i++] = "surfaceShading";
+  $renderAttrAry[$i++] = "tailFade";
+  $renderAttrAry[$i++] = "tailSize";
+  $renderAttrAry[$i++] = "threshold";
+  $renderAttrAry[$i++] = "useLighting";
+  
+  $renderAttrCnt = $i;
+  
+  
+  // Get the current render type of the particle object,
+  // and set the delete for each of the render
+  // attributes.
+  //
+  string	$nodeAttr = $nodeName + ".renderType";
+  int 	$value = `getAttr $nodeAttr`;
+  
+  switch ( $value )
+    {
+    case 0: // MultiPoint
+      
+      $i = 0;
+      $useAttrAry[$i++] = 0;  // attributeName;
+      $useAttrAry[$i++] = 0;  // betterIllumination;
+      $useAttrAry[$i++] = 1;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 0;  // lineWidth;
+      $useAttrAry[$i++] = 1;  // multiCount;
+      $useAttrAry[$i++] = 1;  // multiRadius;
+      $useAttrAry[$i++] = 1;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 1;  // pointSize;
+      $useAttrAry[$i++] = 0;  // radius;
+      $useAttrAry[$i++] = 0;  // radius0;
+      $useAttrAry[$i++] = 0;  // radius1;
+      $useAttrAry[$i++] = 0;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 0;  // spriteNum;
+      $useAttrAry[$i++] = 0;  // spriteScaleX;
+      $useAttrAry[$i++] = 0;  // spriteScaleY;
+      $useAttrAry[$i++] = 0;  // spriteTwist;
+      $useAttrAry[$i++] = 0;  // surfaceShading;
+      $useAttrAry[$i++] = 0;  // tailFade;
+      $useAttrAry[$i++] = 0;  // tailSize;
+      $useAttrAry[$i++] = 0;  // threshold;
+      $useAttrAry[$i++] = 1;  // useLighting;
+      break;
+      
+      
+    case 1: // MultiStreak
+      
+      $i = 0;
+      $useAttrAry[$i++] = 0;  // attributeName;
+      $useAttrAry[$i++] = 0;  // betterIllumination;
+      $useAttrAry[$i++] = 1;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 1;  // lineWidth;
+      $useAttrAry[$i++] = 1;  // multiCount;
+      $useAttrAry[$i++] = 1;  // multiRadius;
+      $useAttrAry[$i++] = 1;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 0;  // pointSize;
+      $useAttrAry[$i++] = 0;  // radius;
+      $useAttrAry[$i++] = 0;  // radius0;
+      $useAttrAry[$i++] = 0;  // radius1;
+      $useAttrAry[$i++] = 0;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 0;  // spriteNum;
+      $useAttrAry[$i++] = 0;  // spriteScaleX;
+      $useAttrAry[$i++] = 0;  // spriteScaleY;
+      $useAttrAry[$i++] = 0;  // spriteTwist;
+      $useAttrAry[$i++] = 0;  // surfaceShading;
+      $useAttrAry[$i++] = 1;  // tailFade;
+      $useAttrAry[$i++] = 1;  // tailSize;
+      $useAttrAry[$i++] = 0;  // threshold;
+      $useAttrAry[$i++] = 1;  // useLighting;
+      break;
+      
+      
+    case 2: // Numeric
+      
+      $i = 0;
+      $useAttrAry[$i++] = 1;  // attributeName;
+      $useAttrAry[$i++] = 0;  // betterIllumination;
+      $useAttrAry[$i++] = 0;  // colorAccum;
+      $useAttrAry[$i++] = 0;  // colorBlue;
+      $useAttrAry[$i++] = 0;  // colorGreen;
+      $useAttrAry[$i++] = 0;  // colorRed;
+      $useAttrAry[$i++] = 0;  // lineWidth;
+      $useAttrAry[$i++] = 0;  // multiCount;
+      $useAttrAry[$i++] = 0;  // multiRadius;
+      $useAttrAry[$i++] = 0;  // normalDir;
+      $useAttrAry[$i++] = 0;  // opacity;
+      $useAttrAry[$i++] = 1;  // pointSize;
+      $useAttrAry[$i++] = 0;  // radius;
+      $useAttrAry[$i++] = 0;  // radius0;
+      $useAttrAry[$i++] = 0;  // radius1;
+      $useAttrAry[$i++] = 1;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 0;  // spriteNum;
+      $useAttrAry[$i++] = 0;  // spriteScaleX;
+      $useAttrAry[$i++] = 0;  // spriteScaleY;
+      $useAttrAry[$i++] = 0;  // spriteTwist;
+      $useAttrAry[$i++] = 0;  // surfaceShading;
+      $useAttrAry[$i++] = 0;  // tailFade;
+      $useAttrAry[$i++] = 0;  // tailSize;
+      $useAttrAry[$i++] = 0;  // threshold;
+      $useAttrAry[$i++] = 0;  // useLighting;
+      break;
+      
+      
+    case 3: // Points
+      
+      $i = 0;
+      $useAttrAry[$i++] = 0;  // attributeName;
+      $useAttrAry[$i++] = 0;  // betterIllumination;
+      $useAttrAry[$i++] = 1;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 0;  // lineWidth;
+      $useAttrAry[$i++] = 0;  // multiCount;
+      $useAttrAry[$i++] = 0;  // multiRadius;
+      $useAttrAry[$i++] = 1;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 1;  // pointSize;
+      $useAttrAry[$i++] = 0;  // radius;
+      $useAttrAry[$i++] = 0;  // radius0;
+      $useAttrAry[$i++] = 0;  // radius1;
+      $useAttrAry[$i++] = 0;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 0;  // spriteNum;
+      $useAttrAry[$i++] = 0;  // spriteScaleX;
+      $useAttrAry[$i++] = 0;  // spriteScaleY;
+      $useAttrAry[$i++] = 0;  // spriteTwist;
+      $useAttrAry[$i++] = 0;  // surfaceShading;
+      $useAttrAry[$i++] = 0;  // tailFade;
+      $useAttrAry[$i++] = 0;  // tailSize;
+      $useAttrAry[$i++] = 0;  // threshold;
+      $useAttrAry[$i++] = 1;  // useLighting;
+      break;
+
+
+    case 4: // Spheres
+      
+      $i = 0;
+      $useAttrAry[$i++] = 0;  // attributeName;
+      $useAttrAry[$i++] = 0;  // betterIllumination;
+      $useAttrAry[$i++] = 0;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 0;  // lineWidth;
+      $useAttrAry[$i++] = 0;  // multiCount;
+      $useAttrAry[$i++] = 0;  // multiRadius;
+      $useAttrAry[$i++] = 0;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 0;  // pointSize;
+      $useAttrAry[$i++] = 1;  // radius;
+      $useAttrAry[$i++] = 0;  // radius0;
+      $useAttrAry[$i++] = 0;  // radius1;
+      $useAttrAry[$i++] = 0;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 0;  // spriteNum;
+      $useAttrAry[$i++] = 0;  // spriteScaleX;
+      $useAttrAry[$i++] = 0;  // spriteScaleY;
+      $useAttrAry[$i++] = 0;  // spriteTwist;
+      $useAttrAry[$i++] = 0;  // surfaceShading;
+      $useAttrAry[$i++] = 0;  // tailFade;
+      $useAttrAry[$i++] = 0;  // tailSize;
+      $useAttrAry[$i++] = 0;  // threshold;
+      $useAttrAry[$i++] = 0;  // useLighting;
+      break;
+      
+      
+    case 5: // Sprites
+      
+      $i = 0;
+      $useAttrAry[$i++] = 0;  // attributeName;
+      $useAttrAry[$i++] = 0;  // betterIllumination;
+      $useAttrAry[$i++] = 0;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 0;  // lineWidth;
+      $useAttrAry[$i++] = 0;  // multiCount;
+      $useAttrAry[$i++] = 0;  // multiRadius;
+      $useAttrAry[$i++] = 0;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 0;  // pointSize;
+      $useAttrAry[$i++] = 0;  // radius;
+      $useAttrAry[$i++] = 0;  // radius0;
+      $useAttrAry[$i++] = 0;  // radius1;
+      $useAttrAry[$i++] = 0;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 1;  // spriteNum;
+      $useAttrAry[$i++] = 1;  // spriteScaleX;
+      $useAttrAry[$i++] = 1;  // spriteScaleY;
+      $useAttrAry[$i++] = 1;  // spriteTwist;
+      $useAttrAry[$i++] = 0;  // surfaceShading;
+      $useAttrAry[$i++] = 0;  // tailFade;
+      $useAttrAry[$i++] = 0;  // tailSize;
+      $useAttrAry[$i++] = 0;  // threshold;
+      $useAttrAry[$i++] = 1;  // useLighting;
+      break;
+      
+      
+    case 6: // Streak
+      
+      $i = 0;
+      $useAttrAry[$i++] = 0;  // attributeName;
+      $useAttrAry[$i++] = 0;  // betterIllumination;
+      $useAttrAry[$i++] = 1;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 1;  // lineWidth;
+      $useAttrAry[$i++] = 0;  // multiCount;
+      $useAttrAry[$i++] = 0;  // multiRadius;
+      $useAttrAry[$i++] = 1;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 0;  // pointSize;
+      $useAttrAry[$i++] = 0;  // radius;
+      $useAttrAry[$i++] = 0;  // radius0;
+      $useAttrAry[$i++] = 0;  // radius1;
+      $useAttrAry[$i++] = 0;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 0;  // spriteNum;
+      $useAttrAry[$i++] = 0;  // spriteScaleX;
+      $useAttrAry[$i++] = 0;  // spriteScaleY;
+      $useAttrAry[$i++] = 0;  // spriteTwist;
+      $useAttrAry[$i++] = 0;  // surfaceShading;
+      $useAttrAry[$i++] = 1;  // tailFade;
+      $useAttrAry[$i++] = 1;  // tailSize;
+      $useAttrAry[$i++] = 0;  // threshold;
+      $useAttrAry[$i++] = 1;  // useLighting;
+      break;
+      
+      
+    case 7: // Blobby Surface (s/w)
+      
+      $i = 0;
+      $useAttrAry[$i++] = 0;  // attributeName;
+      $useAttrAry[$i++] = 0;  // betterIllumination;
+      $useAttrAry[$i++] = 0;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 0;  // lineWidth;
+      $useAttrAry[$i++] = 0;  // multiCount;
+      $useAttrAry[$i++] = 0;  // multiRadius;
+      $useAttrAry[$i++] = 0;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 0;  // pointSize;
+      $useAttrAry[$i++] = 1;  // radius;
+      $useAttrAry[$i++] = 0;  // radius0;
+      $useAttrAry[$i++] = 0;  // radius1;
+      $useAttrAry[$i++] = 0;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 0;  // spriteNum;
+      $useAttrAry[$i++] = 0;  // spriteScaleX;
+      $useAttrAry[$i++] = 0;  // spriteScaleY;
+      $useAttrAry[$i++] = 0;  // spriteTwist;
+      $useAttrAry[$i++] = 0;  // surfaceShading;
+      $useAttrAry[$i++] = 0;  // tailFade;
+      $useAttrAry[$i++] = 0;  // tailSize;
+      $useAttrAry[$i++] = 1;  // threshold;
+      $useAttrAry[$i++] = 0;  // useLighting;
+      break;
+      
+      
+    case 8: //"Cloud (s/w)":
+      
+      $i = 0;
+      $useAttrAry[$i++] = 0;  // attributeName;
+      $useAttrAry[$i++] = 1;  // betterIllumination;
+      $useAttrAry[$i++] = 0;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 0;  // lineWidth;
+      $useAttrAry[$i++] = 0;  // multiCount;
+      $useAttrAry[$i++] = 0;  // multiRadius;
+      $useAttrAry[$i++] = 0;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 0;  // pointSize;
+      $useAttrAry[$i++] = 1;  // radius;
+      $useAttrAry[$i++] = 0;  // radius0;
+      $useAttrAry[$i++] = 0;  // radius1;
+      $useAttrAry[$i++] = 0;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 0;  // spriteNum;
+      $useAttrAry[$i++] = 0;  // spriteScaleX;
+      $useAttrAry[$i++] = 0;  // spriteScaleY;
+      $useAttrAry[$i++] = 0;  // spriteTwist;
+      $useAttrAry[$i++] = 1;  // surfaceShading;
+      $useAttrAry[$i++] = 0;  // tailFade;
+      $useAttrAry[$i++] = 0;  // tailSize;
+      $useAttrAry[$i++] = 1;  // threshold;
+      $useAttrAry[$i++] = 0;  // useLighting;
+      break;
+      
+      
+    case 9: // Tube (s/w)
+      
+      $i = 0;
+      $useAttrAry[$i++] = 0;  // attributeName;
+      $useAttrAry[$i++] = 0;  // betterIllumination;
+      $useAttrAry[$i++] = 0;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 0;  // lineWidth;
+      $useAttrAry[$i++] = 0;  // multiCount;
+      $useAttrAry[$i++] = 0;  // multiRadius;
+      $useAttrAry[$i++] = 0;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 0;  // pointSize;
+      $useAttrAry[$i++] = 0;  // radius;
+      $useAttrAry[$i++] = 1;  // radius0;
+      $useAttrAry[$i++] = 1;  // radius1;
+      $useAttrAry[$i++] = 0;  // selectedOnly;
+      $useAttrAry[$i++] = 0;  // shapeName;
+      $useAttrAry[$i++] = 0;  // spriteNum;
+      $useAttrAry[$i++] = 0;  // spriteScaleX;
+      $useAttrAry[$i++] = 0;  // spriteScaleY;
+      $useAttrAry[$i++] = 0;  // spriteTwist;
+      $useAttrAry[$i++] = 0;  // surfaceShading;
+      $useAttrAry[$i++] = 0;  // tailFade;
+      $useAttrAry[$i++] = 1;  // tailSize;
+      $useAttrAry[$i++] = 0;  // threshold;
+      $useAttrAry[$i++] = 0;  // useLighting;
+      break;
+      
+      
+    default:
+      
+      $i = 0;
+      $useAttrAry[$i++] = 1;  // attributeName;
+      $useAttrAry[$i++] = 1;  // betterIllumination;
+      $useAttrAry[$i++] = 1;  // colorAccum;
+      $useAttrAry[$i++] = 1;  // colorBlue;
+      $useAttrAry[$i++] = 1;  // colorGreen;
+      $useAttrAry[$i++] = 1;  // colorRed;
+      $useAttrAry[$i++] = 1;  // lineWidth;
+      $useAttrAry[$i++] = 1;  // multiCount;
+      $useAttrAry[$i++] = 1;  // multiRadius;
+      $useAttrAry[$i++] = 1;  // normalDir;
+      $useAttrAry[$i++] = 1;  // opacity;
+      $useAttrAry[$i++] = 1;  // pointSize;
+      $useAttrAry[$i++] = 1;  // radius;
+      $useAttrAry[$i++] = 1;  // radius0;
+      $useAttrAry[$i++] = 1;  // radius0;
+      $useAttrAry[$i++] = 1;  // selectedOnly;
+      $useAttrAry[$i++] = 1;  // shapeName;
+      $useAttrAry[$i++] = 1;  // spriteNum;
+      $useAttrAry[$i++] = 1;  // spriteScaleX;
+      $useAttrAry[$i++] = 1;  // spriteScaleY;
+      $useAttrAry[$i++] = 1;  // spriteTwist;
+      $useAttrAry[$i++] = 1;  // surfaceShading;
+      $useAttrAry[$i++] = 1;  // tailFade;
+      $useAttrAry[$i++] = 1;  // tailSize;
+      $useAttrAry[$i++] = 1;  // threshold;
+      $useAttrAry[$i++] = 1;  // useLighting;
+      break;
+    }
+  
+  
+
+  string	$onAttrList = "";
+  string	$onAttrAry[];
+  
+  for ($i = 0; $i < $renderAttrCnt; $i++)
+    {
+      if ($useAttrAry[$i])
+	{
+	  $onAttrList += (" -st "+$renderAttrAry[$i]);
+	}
+    }
+
+
+  string	$cmd;
+  
+  $cmd = "listAttr "+$onAttrList+" "+$nodeName;
+  $onAttrAry = `eval( $cmd )`;
+  
+  for ($i = size( $onAttrAry ) - 1; $i >= 0; $i--)
+    {
+       setAttr -keyable false ($nodeName+"."+$onAttrAry[$i]);
+       deleteAttr -at $onAttrAry[$i] $nodeName;
+    }
+  
+}

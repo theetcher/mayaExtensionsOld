@@ -1,0 +1,49 @@
+/* ptb_setpivot.mel
+
+This script may be freely distributed. Modify at your own risk.
+
+Author:		Dirk Bialluch (DirkBi@Software2000.de)
+
+Creation Date:	22.05.98
+Last Update:	24.05.99
+*/
+
+//
+// Main procedure
+//
+
+global proc ptb_setpivot ()
+{
+	string $objList[] = `ptb_filterTransforms`;
+	int $count = `size ($objList)`;
+	$count -= 1;
+
+	for ($count; $count >= 0; $count--)
+	{
+		float $xyz[3] = `xform -q -ws -pivots $objList[$count]`;
+		if (`checkBox -q -value ptb1_xbox`)
+			$xyz[0] = `floatField -q -value ptb1_xvalue`;
+		if (`checkBox -q -value ptb1_ybox`)
+			$xyz[1] = `floatField -q -value ptb1_yvalue`;	
+		if (`checkBox -q -value ptb1_zbox`)
+			$xyz[2] = `floatField -q -value ptb1_zvalue`;
+
+		if (`radioButtonGrp -q -select ptb1_relMode` == 1)
+		{
+			if (`checkBox -q -value ptb1_spBox`)
+				xform -ws -a -sp $xyz[0] $xyz[1] $xyz[2] $objList[$count];
+			if (`checkBox -q -value ptb1_rpBox`)
+				xform -ws -a -rp $xyz[0] $xyz[1] $xyz[2] $objList[$count];
+		}
+		else
+		{
+			if (`checkBox -q -value ptb1_spBox`)
+				xform -ws -r -sp $xyz[0] $xyz[1] $xyz[2] $objList[$count];
+			if (`checkBox -q -value ptb1_rpBox`)
+				xform -ws -r -rp $xyz[0] $xyz[1] $xyz[2] $objList[$count];
+		}
+	}
+}
+
+// end of script
+

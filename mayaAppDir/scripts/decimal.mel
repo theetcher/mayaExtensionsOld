@@ -1,0 +1,79 @@
+/* This script may be freely distributed. Modify at your own risk.
+
+    Create by: Martin Larose (mart3d@hotmail.com) 22/04/00 last version 04/05/00
+
+Procedure name: decimal
+ 
+Description:
+	This simple script change de number of decimal in the channel box. The minimum number # is 2 and the maximum # is 15.
+                By default Maya is set to only show two decimal places of precision. Just enter the number of decimal and click on "Change Decimal"
+                button. To start 
+
+*/
+
+global proc decimal ()
+{
+    waitCursor -state on;
+    string $window = "precision";
+    if (! `window -exists $window`)
+        makeprecisionwin ($window);
+
+    showWindow $window;
+    waitCursor -state off;
+}
+
+global proc makeprecisionwin (string $window)
+{
+    window
+        -title "Decimal"
+        -iconName "Decimal"
+        -titleBar true
+        -minimizeButton true
+        -maximizeButton false
+        -sizeable true
+        $window;
+
+    columnLayout -rs 8 -adj true;
+
+    intSliderGrp
+        -l "Decimal Number"
+        -field true
+        -s 1
+        -min 2
+        -max 15
+        -v 6
+        decimalchange;
+
+    columnLayout -cat "both" 30 -adj true;
+
+    button
+        -l "Change Decimal"
+        -c "changedecimal () ";
+
+    setParent ..;
+
+    columnLayout -adj true;
+
+    separator -style "out";
+
+    setParent ..;
+
+    columnLayout -cat "both" 30 -adj true;
+
+    string $closeButton = `button
+        -l "Close"
+        -c ("window -e -vis 0 " + $window) `;
+
+    setParent ..;
+    setParent ..;
+
+}
+
+global proc changedecimal ()
+{
+    waitCursor -state on;
+    int $number = `intSliderGrp -q -v decimalchange`;
+    channelBox -edit -precision $number mainChannelBox;
+    waitCursor -state off;
+}
+;

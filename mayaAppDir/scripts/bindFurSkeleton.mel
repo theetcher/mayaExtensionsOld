@@ -1,0 +1,90 @@
+global proc bindFurSkeleton( )
+{
+	string $skeletons[] = `ls -sl -l`;
+	string $skeletonsShort[] = `ls -sl`;
+
+	eval("select "+$skeletons[0]);
+	string $sourceLocators[] = `listTransforms "-dag -ap -sl -l -type locator"`;
+        select -r $sourceLocators;
+
+	eval("select "+$skeletons[0]);
+	string $sourceJoints[] = `ls -dag -ap -sl -l -type joint`;
+        select -r $sourceJoints;
+
+	eval("select "+$skeletons[1]);
+	string $targetLocators[] = `listTransforms "-dag -ap -sl -l -type locator"`;
+        select -r $targetLocators;
+
+	eval("select "+$skeletons[1]);
+	string $targetJoints[] = `ls -dag -ap -sl -l -type joint`;
+        select -r $targetJoints;
+
+
+
+// DELETING "|"-symbol before joint names
+
+	int $tmp1;
+	for ( $tmp1 = 0; $tmp1 < size( $sourceJoints ); $tmp1++)
+		{
+		$sourceJoints[$tmp1] = substitute("^|", $sourceJoints[$tmp1], "");
+		}
+
+	for ( $tmp1 = 0; $tmp1 < size( $targetJoints ); $tmp1++)
+			{
+			$targetJoints[$tmp1] = substitute("^|", $targetJoints[$tmp1], "");
+		}
+
+
+//////////////////////////////////////////////////////////
+
+        string $replaceStr = "^"+$skeletonsShort[1];
+	for ( $tmp1 = 0; $tmp1 < size( $targetLocators ); $tmp1++)
+		{
+		$targetLocators[$tmp1] = substitute ($replaceStr, $targetLocators[$tmp1], $skeletonsShort[0]);
+		}
+
+        $replaceStr = "^"+$skeletonsShort[1];
+	string $newStr = $skeletonsShort[0];
+	for ( $tmp1 = 0; $tmp1 < size( $targetJoints ); $tmp1++)
+		{
+		$targetJoints[$tmp1] = substitute ($replaceStr, $targetJoints[$tmp1], $skeletonsShort[0]);
+		}
+
+
+
+        $replaceStr = "^"+$skeletonsShort[0];
+	string $newStr = $skeletonsShort[1];
+	string $tmpStr1;
+	string $tmpStr2;
+	for ( $tmpStr1 in $sourceLocators ) 
+		{
+		for ( $tmpStr2 in $targetLocators ) 
+			{
+			if ( $tmpStr1 == $tmpStr2 )
+				{
+                                $tmpStr2 = substitute ($replaceStr, $tmpStr2, $skeletonsShort[1]);
+				eval( "connectAttr "+$tmpStr2+".translate "+$tmpStr1+".translate" );
+				eval( "connectAttr "+$tmpStr2+".rotate "+$tmpStr1+".rotate" );
+				eval( "connectAttr "+$tmpStr2+".scale "+$tmpStr1+".scale" );
+				}
+			}
+    	 	}
+	
+	for ( $tmpStr1 in $sourceJoints ) 
+		{
+		for ( $tmpStr2 in $targetJoints ) 
+			{
+			if ( $tmpStr1 == $tmpStr2 )
+				{
+                                $tmpStr2 = substitute ($replaceStr, $tmpStr2, $skeletonsShort[1]);
+				eval( "connectAttr "+$tmpStr2+".translate "+$tmpStr1+".translate" );
+				eval( "connectAttr "+$tmpStr2+".rotate "+$tmpStr1+".rotate" );
+				eval( "connectAttr "+$tmpStr2+".scale "+$tmpStr1+".scale" );
+				}
+			}
+    	 	}
+
+	print ("DONE !!!");
+
+}
+

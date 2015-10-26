@@ -1,0 +1,29 @@
+global proc randSelection()
+{
+	string $result = `promptDialog
+		-title "Randomize Selection"
+		-message "Percentage: "
+		-text ""
+		-button "OK"
+		-button "Cancel"
+		-defaultButton "OK"
+		-cancelButton "Cancel"
+		-dismissString "Cancel"`;
+
+	if ( $result == "OK" ) {
+
+		float $ratio = `promptDialog -q`;
+
+		string $sourceSelection[] = `ls -sl -l`;
+		string $selection;
+		select -clear;
+		for ($selection in $sourceSelection)
+			if (rand (100) <= $ratio) select -add $selection; 
+		
+	}
+	
+}
+
+
+
+

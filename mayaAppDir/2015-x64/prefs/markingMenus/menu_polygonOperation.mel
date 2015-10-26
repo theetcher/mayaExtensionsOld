@@ -1,0 +1,384 @@
+
+    menuItem
+        -label "Split Polygon Tool" 
+        -divider 0
+        -subMenu 0
+        -command "SplitPolygonTool" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "N" 
+        -enableCommandRepeat 1
+        -image "polySplitFacet.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem3;
+
+    menuItem
+        -label "ELFdefaultMenuItem" 
+        -divider 0
+        -subMenu 0
+        -command "SplitPolygonToolOptions" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 1
+        -enable 1
+        -data 0
+        -radialPosition "N" 
+        -enableCommandRepeat 1
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem4;
+
+    menuItem
+        -label "Delete" 
+        -divider 0
+        -subMenu 0
+        -command "delete;" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "NE" 
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem36;
+
+    menuItem
+        -label "Combine" 
+        -divider 0
+        -subMenu 1
+        -tearOff 0
+        -enable 1
+        -data 0
+        -radialPosition "E" 
+        -allowOptionBoxes 1
+        -postMenuCommandOnce 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem17;
+
+        menuItem
+            -label "Combine And Merge" 
+            -divider 0
+            -subMenu 0
+            -command "fix_combine;\r\nstring $sel[] = `ls -sl -l`;\r\npolyMergeVertex -d 0.001 -ch 1 $sel;\r\nselect $sel;\r\npolyOptions -sb 4;\r\npolyOptions -r -displayBorder true;" 
+            -altModifier 0
+            -optionModifier 0
+            -commandModifier 0
+            -ctrlModifier 0
+            -shiftModifier 0
+            -optionBox 0
+            -enable 1
+            -data 0
+            -radialPosition "N" 
+            -enableCommandRepeat 1
+            -image "commandButton.xpm" 
+            -echoCommand 0
+            -italicized 0
+            -boldFont 0
+            menuEditorMenuItem18;
+
+        menuItem
+            -label "Combine" 
+            -divider 0
+            -subMenu 0
+            -command "fix_combine" 
+            -altModifier 0
+            -optionModifier 0
+            -commandModifier 0
+            -ctrlModifier 0
+            -shiftModifier 0
+            -optionBox 0
+            -enable 1
+            -data 0
+            -radialPosition "S" 
+            -enableCommandRepeat 1
+            -image "polyUnite.xpm" 
+            -echoCommand 0
+            -italicized 0
+            -boldFont 0
+            menuEditorMenuItem19;
+
+    setParent -m ..;
+
+    menuItem
+        -label "Collapse" 
+        -divider 0
+        -subMenu 0
+        -command "performPolyCollapse 0" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "SE" 
+        -enableCommandRepeat 1
+        -image "polyCollapseEdge.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem9;
+
+    menuItem
+        -label "Cut Faces Tool" 
+        -divider 0
+        -subMenu 0
+        -command "CutPolygon" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "S" 
+        -enableCommandRepeat 1
+        -image "polyCut.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem37;
+
+    menuItem
+        -label "ELFdefaultMenuItem" 
+        -divider 0
+        -subMenu 0
+        -command "CutPolygonOptions" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 1
+        -enable 1
+        -data 0
+        -radialPosition "S" 
+        -enableCommandRepeat 1
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem38;
+
+    menuItem
+        -label "Connect Verts/Edges/Faces Slide" 
+        -divider 0
+        -subMenu 0
+        -command "connectVertsEdgesFacesSlide" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "SW" 
+        -enableCommandRepeat 1
+        -image "connectEdges.bmp" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem6;
+
+    menuItem
+        -label "Merge Vertices" 
+        -divider 0
+        -subMenu 1
+        -tearOff 0
+        -enable 1
+        -data 0
+        -radialPosition "W" 
+        -allowOptionBoxes 1
+        -postMenuCommandOnce 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem32;
+
+        menuItem
+            -label "Merge ALL Selected Vertices" 
+            -divider 0
+            -subMenu 0
+            -command "polyPerformAction \"polyMergeVertex -d 200\" v 0" 
+            -altModifier 0
+            -optionModifier 0
+            -commandModifier 0
+            -ctrlModifier 0
+            -shiftModifier 0
+            -optionBox 0
+            -enable 1
+            -data 0
+            -radialPosition "N" 
+            -enableCommandRepeat 1
+            -image "commandButton.xpm" 
+            -echoCommand 0
+            -italicized 0
+            -boldFont 0
+            menuEditorMenuItem33;
+
+        menuItem
+            -label "Merge Selected Vertices" 
+            -divider 0
+            -subMenu 0
+            -command "string $selection[] = `ls -sl -l -fl`; \r\npolyPerformAction \"polyMergeVertex -d 0.001\" v 0;\r\nselect $selection;" 
+            -altModifier 0
+            -optionModifier 0
+            -commandModifier 0
+            -ctrlModifier 0
+            -shiftModifier 0
+            -optionBox 0
+            -enable 1
+            -data 0
+            -radialPosition "S" 
+            -enableCommandRepeat 1
+            -image "commandButton.xpm" 
+            -echoCommand 0
+            -italicized 0
+            -boldFont 0
+            menuEditorMenuItem34;
+
+    setParent -m ..;
+
+    menuItem
+        -label "Delete Edge " 
+        -divider 0
+        -subMenu 0
+        -command "polyPerformAction \"polyDelEdge -cv true\" e 0" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -radialPosition "NW" 
+        -enableCommandRepeat 1
+        -image "polyDelEdge.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem2;
+
+    menuItem
+        -label "Reverse" 
+        -divider 0
+        -subMenu 0
+        -command "ReversePolygonNormals" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -enableCommandRepeat 1
+        -image "polyNormal.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem10;
+
+    menuItem
+        -label "Spin Faces" 
+        -divider 0
+        -subMenu 0
+        -command "spinFaces" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem30;
+
+    menuItem
+        -label "Delete Component Tool" 
+        -divider 0
+        -subMenu 0
+        -command "source fix_delCompTool;\r\nfix_delCompTool;" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -enableCommandRepeat 1
+        -image "commandButton.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem35;
+
+    menuItem
+        -label "Append to Polygon Tool" 
+        -divider 0
+        -subMenu 0
+        -command "setToolTo polyAppendFacetContext ; polyAppendFacetCtx -e -pc `optionVar -q polyKeepFacetsPlanar` polyAppendFacetContext" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 0
+        -enable 1
+        -data 0
+        -enableCommandRepeat 1
+        -image "polyAppendFacet.xpm" 
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem15;
+
+    menuItem
+        -label "ELFdefaultMenuItem" 
+        -divider 0
+        -subMenu 0
+        -command "setToolTo polyAppendFacetContext ; polyAppendFacetCtx -e -pc `optionVar -q polyKeepFacetsPlanar` polyAppendFacetContext; toolPropertyWindow" 
+        -altModifier 0
+        -optionModifier 0
+        -commandModifier 0
+        -ctrlModifier 0
+        -shiftModifier 0
+        -optionBox 1
+        -enable 1
+        -data 0
+        -enableCommandRepeat 1
+        -echoCommand 0
+        -italicized 0
+        -boldFont 0
+        menuEditorMenuItem16;
+
+setParent -m ..;
+

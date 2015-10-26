@@ -1,0 +1,198 @@
+global proc watch()
+{
+	print ("\n#watch: main procedure\n");
+}
+
+proc int wOpenLog()
+{
+	$fileId = `fopen "c:\\watch.log" "a"`;
+	if (!$fileId) error ("Can't open c:\\watch.log for writing.");
+	return $fileId;
+}
+
+proc string wGetDateAndTime()
+{
+	string $crntDate = system("date /t");
+	$crntDate = `substitute " " $crntDate ""`;
+	$crntDate = `substitute "\r" $crntDate ""`;
+	$crntDate = `substitute "\n" $crntDate ""`;
+	
+	string $crntTime = system("time /t");
+	$crntTime = `substitute " " $crntTime ""`;
+	$crntTime = `substitute "\r" $crntTime ""`;
+	$crntTime = `substitute "\n" $crntTime ""`;
+	
+	return ("[" + $crntDate + " " + $crntTime + "]");
+}
+
+global proc watchStr(string $var, string $varName)
+{
+	print ("#watch: "+$varName+" = \""+$var+"\"\n");
+}
+
+global proc fwatchStr(string $var, string $varName)
+{
+	$fileId = wOpenLog();
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": "+$varName+" = \""+$var+"\"\n");
+	fclose $fileId;
+}
+
+global proc watchNum(float $var, string $varName)
+{
+	print ("#watch: "+$varName+" = "+$var+"\n");
+}
+
+global proc fwatchNum(float $var, string $varName)
+{
+	$fileId = wOpenLog();
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": "+$varName+" = "+$var+"\n");
+	fclose $fileId;
+}
+
+global proc watchVec(vector $var, string $varName)
+{
+	print ("#watch: "+$varName+" = "+$var.x+", "+$var.y+", "+$var.z+"\n");
+}
+
+global proc fwatchVec(vector $var, string $varName)
+{
+	$fileId = wOpenLog();
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": "+$varName+" = "+$var.x+", "+$var.y+", "+$var.z+"\n");
+	fclose $fileId;
+}
+
+global proc watchStrArr (string $var[], string $varName)
+{
+	string $tmp;
+	int $i = 0;
+
+	print ("#watch: ----- "+$varName+" (array) -----\n");
+	for ($tmp in $var) 
+		{
+		print ("#watch: "+$varName+"["+$i+"] = \""+$var[$i]+"\"\n");
+		$i++;
+		}
+	print ("#watch: ---------------------------\n");
+}
+
+global proc fwatchStrArr (string $var[], string $varName)
+{
+	string $tmp;
+	int $i = 0;
+
+	$fileId = wOpenLog();
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": ----- "+$varName+" (array) -----\n");
+	for ($tmp in $var) 
+		{
+		fprint $fileId ("#watch " + wGetDateAndTime() + ": "+$varName+"["+$i+"] = \""+$var[$i]+"\"\n");
+		$i++;
+		}
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": ---------------------------\n");
+	fclose $fileId;
+}
+
+global proc watchVecArr (vector $var[], string $varName)
+{
+vector $tmp;
+int $i = 0;
+
+print ("#watch: ----- "+$varName+" (array) -----\n");
+for ($tmp in $var) 
+	{
+	print ("#watch: "+$varName+"["+$i+"] = "+$tmp.x+", "+$tmp.y+", "+$tmp.z+"\n");
+	$i++;
+	}
+print ("#watch: ---------------------------\n");
+}
+
+global proc fwatchVecArr (vector $var[], string $varName)
+{
+	vector $tmp;
+	int $i = 0;
+
+	$fileId = wOpenLog();
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": ----- "+$varName+" (array) -----\n");
+	for ($tmp in $var) 
+		{
+		fprint $fileId ("#watch " + wGetDateAndTime() + ": "+$varName+"["+$i+"] = "+$tmp.x+", "+$tmp.y+", "+$tmp.z+"\n");
+		$i++;
+		}
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": ---------------------------\n");
+	fclose $fileId;
+}
+
+global proc watchFloatArr (float $var[], string $varName)
+{
+	float $tmp;
+	int $i = 0;
+
+	print ("#watch: ----- "+$varName+" (array) -----\n");
+	for ($tmp in $var) 
+		{
+		print ("#watch: "+$varName+"["+$i+"] = "+$var[$i]+"\n");
+		$i++;
+		}
+	print ("#watch: ---------------------------\n");
+}
+
+global proc fwatchFloatArr (float $var[], string $varName)
+{
+	float $tmp;
+	int $i = 0;
+
+	$fileId = wOpenLog();
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": ----- "+$varName+" (array) -----\n");
+	for ($tmp in $var) 
+		{
+		fprint $fileId ("#watch " + wGetDateAndTime() + ": "+$varName+"["+$i+"] = "+$var[$i]+"\n");
+		$i++;
+		}
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": ---------------------------\n");
+	fclose $fileId;
+}
+
+global proc watchIntArr (int $var[], string $varName)
+{
+	int $tmp;
+	int $i = 0;
+
+	print ("#watch: ----- "+$varName+" (array) -----\n");
+	for ($tmp in $var) 
+		{
+		print ("#watch: "+$varName+"["+$i+"] = "+$var[$i]+"\n");
+		$i++;
+		}
+	print ("#watch: ---------------------------\n");
+}
+
+global proc fwatchIntArr (int $var[], string $varName)
+{
+	int $tmp;
+	int $i = 0;
+
+	$fileId = wOpenLog();
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": ----- "+$varName+" (array) -----\n");
+	for ($tmp in $var) 
+		{
+		fprint $fileId ("#watch " + wGetDateAndTime() + ": "+$varName+"["+$i+"] = "+$var[$i]+"\n");
+		$i++;
+		}
+	fprint $fileId ("#watch " + wGetDateAndTime() + ": ---------------------------\n");
+	fclose $fileId;
+}
+
+global proc wtrace(string $arg)
+{
+	print ("\n\n-----------------------------\n");			
+	print ("#trace: "+$arg+"\n");			
+	print ("-----------------------------\n\n");			
+}
+
+global proc fwtrace(string $arg)
+{
+	$fileId = wOpenLog();
+	fprint $fileId ("\n\n---------------------------------------------------\n");			
+	fprint $fileId ("#trace " + wGetDateAndTime() + ": "+$arg+"\n");			
+	fprint $fileId ("---------------------------------------------------\n\n");
+	fclose $fileId;
+}

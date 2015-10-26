@@ -1,0 +1,566 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: Selection Wizard v1.1
+''    Author: Bogdan Stancescu
+''    Last Updated: February 14, 2001
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=utilities#828
+''  
+''  History:
+''    Selection Wizard v1.1 on February 11, 2001 by Bogdan Stancescu
+''    Selection Wizard v1.11 on February 9, 2001 by Bogdan Stancescu
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+
+
+
+
+//
+//    Selection Wizard v. 1.1
+//
+//	(C) Bogdan Stancescu <mgv@fx.ro> 1999
+//
+//	Updated August 2000
+//		added the collapsable frames and
+//		the Template/Untemplate options
+//
+//    Usage: selectionWizard
+//
+//
+//  Usage comments
+//  --------------
+//
+//  I guess the usage is quite intuitive - the single thing I should probably explain
+//  is that double-clicking a set will exclusively select that set. The rest of the options
+//  are quite self-explanatory. For example, if you have a selection and you click "+" in the
+//  "Set -> Selection" category while having a set selected you should end up with a selection
+//  containing both the previous selection and the objects in the selected set. If you
+//  select "+" in the "Selection -> Set" category you add the current selection to the selected
+//  set. You should be careful about selecting the sets you want things happening to - I repeatedly
+//  found myself clicking "Delete" with no set selected.
+//
+//  One other "trick": pressing the numeric pad Enter upon typing a name in the "Name" field will
+//  result in creating a set with the name in the Name field containing the selected objects - it's
+//  actually a shortcut for "Create set".
+//
+//  Please note that because quick selection sets allow creating selection sets including vertices
+//  and other sub-object components, so does Selection Wizard - this may be very useful in
+//  polygonal modeling.
+//
+//  The script is not aware of when you open a different scene - thus it it not aware of the changes
+//  in the selection sets on such an operation - that's the reason for the "Update" button - it will
+//  reread the quick selection sets in the scene.
+//
+//  Quick selection sets are very useful because they are nodes in the scene - i.e. they get saved
+//  and loaded along with the scene.
+//
+//
+//  Programmer's comments
+//  ---------------------
+//
+//  The basic idea is that you can create and manage quick selection sets with a more
+//  intuitive interface than Maya's default. I found that quick selection sets are a
+//  great way of managing your objects in a scene but I also found that Maya's interface
+//  lacks usability, so I started creating this script. It has been thoroughly tested in
+//  actual workflow and I found it very useful - that's why I want to share it with you.
+//
+//  Please feel free to e-mail me for any bug or suggestion you think of - I'd like to hear
+//  from you! Actually, I'd really appreciate some feedback, including suggestions and
+//  reporting bugs.
+//
+//
+//  ..and of course,
+//  ----------------
+//
+//  YOU ARE USING THIS PROGRAM AT YOUR OWN RISK! I SHALL NOT BE LIABLE FOR ANY KIND OF DAMAGE
+//  THIS PROGRAM MAY CAUSE TO YOU IN ANY POSSIBLE WAY. ALTHOUGH TESTED AND DISTRIBUTED WITH
+//  NO HARM INTENDED, I MAY NOT GUARANTEE ANY SAFETY UPON USING THIS PIECE OF SOFTWARE.
+//
+//  You may use this script free of charge and distribute it, but please don't modify it
+//  and acknowledge my copyright.
+//
+//  Also, if distributing it on sites or hard copy such as CD-ROMs please at least let me
+//  know about it. Thanks!
+
+global proc updateScroll()
+{
+  textScrollList -edit -ra scrollul;
+  string $a[];
+  string $b;
+  $a=`ls -sets`;
+  for ($b in $a)
+  if (`sets -q -t $b` == "gCharacterSet" )
+  {
+   textScrollList -edit -append $b scrollul;
+  }
+}
+
+global proc createSet()
+{
+  string $d;
+  if ((($d=`textField -q -tx "selWiz|mainFormul|numeField"`)!="") && ( `isTrue SomethingSelected` ))
+  {
+    sets -text "gCharacterSet" -name $d;
+  updateScroll;
+  }
+}
+
+global proc deleteSet()
+{
+  string $a[];
+  string $b;
+  if (size($a=`textScrollList -q -si scrollul`)!=0)
+  {
+    for ($b in $a)
+    {
+      delete $b;
+    }
+  }
+  updateScroll;
+}
+
+global proc renameSet()
+{
+  string $a[];
+  string $b, $d;
+  if ((($d=`textField -q -tx "selWiz|mainFormul|numeField"`)!="") && (size($a=`textScrollList -q -si scrollul`)!=0))
+  {
+    for ($b in $a)
+    {
+      rename $b $d;
+    }
+  }
+  updateScroll;
+}
+
+global proc replaceSet()
+{
+  string $c[]=`textScrollList -q -si scrollul`;
+  delete $c[0];
+  sets -text "gCharacterSet" -name $c[0];
+}
+
+global proc addSet()
+
+{
+  string $a[];
+  $a=`ls -sl`;
+  string $b;
+  string $c[]=`textScrollList -q -si scrollul`;
+  if (size($c)==0)
+  {
+    error("What set should it be added to?!");
+  }
+  if (size($c)>1)
+  {
+    error("Can not add to multiple sets!");
+  }
+  for ($b in $a)
+  {
+    sets -in $c[0] $b;
+  }
+}
+
+global proc removeSet()
+
+{
+  string $a[];
+  $a=`ls -sl`;
+  string $b, $d;
+  string $c[]=`textScrollList -q -si scrollul`;
+  if (size($c)!=0)
+  {
+    for ($d in $c)
+    {
+      for ($b in $a)
+      {
+        if (`sets -im $d $b`)
+          sets -rm $c[0] $b;
+      }
+    }
+  }
+}
+
+global proc intersectSet()
+
+{
+  string $a[], $d[];
+  string $b;
+  string $c[]=`textScrollList -q -si scrollul`;
+  if (size($c)==0)
+  {
+    error("What set should it be intersected with?!");
+  }
+  if (size($c)>1)
+  {
+    error("Can not intersect with multiple sets - confuse destination.");
+  }
+  sets -text gAbsolutTemporar -n TEmP_SeT; 
+  $d=`sets -int TEmP_SeT $c[0]`;
+  delete $c[0];
+  select $d;
+  sets -text "gCharacterSet" -name $c[0];
+  select `sets -q TEmP_SeT`;
+  delete TEmP_SeT;
+}
+
+global proc addSel()
+{
+  string $a[], $c[];
+  string $b;
+  if (size($a=`textScrollList -q -si scrollul`)!=0)
+  {
+    for ($b in $a)
+    {
+      $c=`sets -q $b`;
+      for ($b in $c)
+      {
+        select -add $b;
+      }
+    }
+  }
+}
+
+global proc removeSel()
+{
+  string $a[], $c[];
+  string $b;
+  if (size($a=`textScrollList -q -si scrollul`)!=0)
+  {
+    for ($b in $a)
+    {
+      $c=`sets -q $b`;
+      for ($b in $c)
+      {
+        select -d $b;
+      }
+    }
+  }
+}
+
+global proc intersectSel()
+{
+  string $a[], $c[], $d[],$f[];
+  string $b,$e;
+  if (size($a=`textScrollList -q -si scrollul`)!=0)
+  {
+    sets -text gAbsolutTemporar -n TEmP_SeT;
+    select -cl;
+    for ($b in $a)
+    {
+      $c=`sets -int $b TEmP_SeT`;
+      for ($e in $c)
+      {
+        select -add $e;
+      }
+    }
+    delete TEmP_SeT;
+  }
+}
+
+global proc showSet()
+{
+  string $a[]=`textScrollList -q -si scrollul`;
+  string $b;
+  if (size($a)==0)
+    error("Show what?!");
+  for ($b in $a)
+    showHidden `sets -q $b`;
+}
+
+global proc hideSet()
+{
+  string $a[]=`textScrollList -q -si scrollul`;
+  string $b;
+  if (size($a)==0)
+    error("Hide what?!");
+  for ($b in $a)
+    hide `sets -q $b`;
+}
+
+global proc templateSet()
+{
+  string $a[]=`textScrollList -q -si scrollul`;
+  string $b;
+  if (size($a)==0)
+    error("Show what?!");
+  for ($b in $a)
+  {
+    $c=`sets -q $b`;
+    for ($e in $c)
+    {
+      $f=$e+".template";
+      eval("setAttr "+$f+" 1");
+    }
+  }
+}
+
+global proc untemplateSet()
+{
+  string $a[]=`textScrollList -q -si scrollul`;
+  string $b;
+  if (size($a)==0)
+    error("Hide what?!");
+  for ($b in $a)
+  {
+    $c=`sets -q $b`;
+    for ($e in $c)
+    {
+      $f=$e+".template";
+      eval("setAttr "+$f+" 0");
+    }
+  }
+}
+
+global proc replaceSel()
+{
+  string $a[], $c[];
+  string $b;
+  select -cl;
+  if (size($a=`textScrollList -q -si scrollul`)!=0)
+  {
+    for ($b in $a)
+    {
+      $c=`sets -q $b`;
+      for ($b in $c)
+      {
+        select -add $b;
+      }
+    }
+  }
+}
+
+global proc closeScroll()
+{
+  string $s;
+  $s="-w "+`window -q -w selWiz`;
+  $s=$s+" -h "+`window -q -h selWiz`;
+  $s=$s+" -te "+`window -q -te selWiz`;
+  $s=$s+" -le "+`window -q -le selWiz`;
+  if (`frameLayout -q -collapse miscel`)
+    $s="1"+$s;
+  else
+    $s="0"+$s;
+  if (`frameLayout -q -collapse setSel`)
+    $s="1"+$s;
+  else
+    $s="0"+$s;
+  if (`frameLayout -q -collapse selSet`)
+    $s="1"+$s;
+  else
+    $s="0"+$s;
+  if (`frameLayout -q -collapse manag`)
+    $s="1"+$s;
+  else
+    $s="0"+$s;
+  $fnum=fopen(`internalVar -uad`+"wizwin.cfg","w");
+  fprint($fnum,$s);
+  fflush $fnum;
+  fclose($fnum);
+  deleteUI -window selWiz;
+}
+
+global proc selectionWizard()
+{
+  $win="selWiz";
+  if (`window -exists $win`)
+    {deleteUI -window $win;}
+  $fnum=fopen(`internalVar -uad`+"wizwin.cfg","r");
+  string $s;
+  $s=fread($fnum,$s);
+  fclose $fnum;
+  $s2=substring($s,5,size($s));
+  eval("window "+$s2+" -title \"Selection wizard\" "+$win);
+  int $c;
+
+  formLayout -numberOfDivisions 100 mainFormul;
+    $c=substring($s,1,1);
+    frameLayout
+	-collapsable 1 -label "Management"
+	-borderStyle "etchedIn" -collapse $c manag;
+      formLayout -numberOfDivisions 100 managFormul;
+        button -l "Create set" -c "createSet" createSetul;
+        button -l "Delete" -c "deleteSet" deleteSetul;
+        button -l "Rename" -c "renameSet" renameSetul;
+      setParent ..;
+    setParent ..;
+
+    $c=substring($s,2,2);
+    frameLayout -collapsable 1 -label "Selection -> Set"
+	-borderStyle "etchedIn" -collapse $c selSet;
+      formLayout -numberOfDivisions 100 selSetFormul;
+        button -l "Replace" -c "replaceSet" replaceSetul;
+        button -l "+" -c "addSet" addSetul;
+        button -l "-" -c "removeSet" removeSetul;
+        button -l "INT" -c "intersectSet" intersectSetul;
+      setParent ..;
+    setParent ..;
+
+    $c=substring($s,3,3);
+    frameLayout -collapsable 1 -label "Set -> Selection"
+	-borderStyle "etchedIn" -collapse $c setSel;
+      formLayout -numberOfDivisions 100 setSelFormul;
+        button -l "Replace (dbl clk)" -c "replaceSel" replaceSelul;
+        button -l "+" -c "addSel" addSelul;
+        button -l "-" -c "removeSel" removeSelul;
+        button -l "INT" -c "intersectSel" intersectSelul;
+      setParent ..;
+    setParent ..;
+
+    $c=substring($s,4,4);
+    frameLayout -collapsable 1 -label "Miscellaneous"
+	-borderStyle "etchedIn" -collapse $c miscel;
+      formLayout -numberOfDivisions 100 miscelFormul;
+        button -l "Show" -c "showSet" showSetul;
+        button -l "Hide" -c "hideSet" hideSetul;
+        button -l "Template" -c "templateSet" templateSetul;
+        button -l "Untemplate" -c "untemplateSet" untemplateSetul;
+      setParent ..;
+    setParent ..;
+    text -label "Name:" numeText;
+    textField -ec "createSet" numeField;
+    button -l "Update" -c "updateScroll" updatul;
+    button -l "Close" -c "closeScroll" Closul;
+    textScrollList -dcc "replaceSel" -allowMultiSelection true scrollul;
+  setParent ..;
+
+  formLayout -edit
+	-attachForm	createSetul	"top"	2
+	-attachNone	createSetul	"bottom"
+	-attachForm	createSetul	"left"	3
+	-attachForm	createSetul	"right"	3
+
+	-attachControl	deleteSetul	"top"	0	createSetul
+	-attachForm	deleteSetul	"bottom" 3
+	-attachForm	deleteSetul	"left"	3
+	-attachPosition	deleteSetul	"right"	0	50
+
+	-attachControl	renameSetul	"top"	0	createSetul
+	-attachForm	renameSetul	"bottom" 3
+	-attachPosition	renameSetul	"left"	0	50
+	-attachForm	renameSetul	"right"	3
+    managFormul;
+
+  formLayout -edit
+	-attachForm	addSetul		"top"	2
+	-attachNone	addSetul		"bottom"
+	-attachForm	addSetul		"left"	3
+	-attachPosition	addSetul		"right"	0	25
+
+	-attachForm	removeSetul	"top"	2
+	-attachNone	removeSetul	"bottom"
+	-attachPosition	removeSetul	"left"	0	25
+	-attachPosition	removeSetul	"right"	0	50
+
+	-attachForm	intersectSetul	"top"	2
+	-attachNone	intersectSetul	"bottom"
+	-attachPosition	intersectSetul	"left"	0	50
+	-attachForm	intersectSetul	"right"	3
+
+	-attachControl	replaceSetul	"top"	0	intersectSetul
+	-attachForm	replaceSetul	"bottom"	3
+	-attachForm	replaceSetul	"left"	3
+	-attachForm	replaceSetul	"right"	3
+    selSetFormul;
+
+  formLayout -edit
+	-attachForm	addSelul		"top"	2
+	-attachNone	addSelul		"bottom"
+	-attachForm	addSelul		"left"	3
+	-attachPosition	addSelul		"right"	0	25
+
+	-attachForm	removeSelul	"top"	2
+	-attachNone	removeSelul	"bottom"
+	-attachPosition	removeSelul	"left"	0	25
+	-attachPosition	removeSelul	"right"	0	50
+
+	-attachForm	intersectSelul	"top"	2
+	-attachNone	intersectSelul	"bottom"
+	-attachPosition	intersectSelul	"left"	0	50
+	-attachForm	intersectSelul	"right"	3
+
+	-attachControl	replaceSelul	"top"	0	intersectSelul
+	-attachForm	replaceSelul	"bottom"	2
+	-attachForm	replaceSelul	"left"	3
+	-attachForm	replaceSelul	"right"	3
+    setSelFormul;
+
+  formLayout -edit
+	-attachForm	showSetul	"top"	2
+	-attachNone	showSetul	"bottom"
+	-attachForm	showSetul	"left"	3
+	-attachPosition	showSetul	"right"	0	50
+
+	-attachForm	hideSetul		"top"	2
+	-attachNone	hideSetul		"bottom"
+	-attachPosition	hideSetul		"left"	0	50
+	-attachForm	hideSetul		"right"	3
+
+	-attachControl	templateSetul	"top"	0	hideSetul
+	-attachForm	templateSetul	"bottom"	2
+	-attachForm	templateSetul	"left"	3
+	-attachPosition	templateSetul	"right"	0	50
+
+	-attachControl	untemplateSetul	"top"	0	hideSetul
+	-attachForm	untemplateSetul	"bottom"	2
+	-attachPosition	untemplateSetul	"left"	0	50
+	-attachForm	untemplateSetul	"right"	3
+    miscelFormul;
+
+  formLayout -edit
+	-attachForm	numeText		"top"	5
+	-attachForm	numeText		"left"	5
+	-attachNone	numeText		"right"
+	-attachNone	numeText		"bottom"
+
+	-attachOppositeControl numeField	"top"	0	numeText
+	-attachControl	numeField	"left"	5	numeText
+	-attachNone	numeField	"bottom"
+	-attachForm	numeField	"right"	5
+
+      -attachControl manag	"top"	2	numeField
+	-attachForm	manag	"left"	2
+	-attachNone	manag	"bottom"
+	-attachForm	manag	"right"	2
+
+	-attachControl	selSet		"top"	2	manag
+	-attachNone	selSet		"bottom"
+	-attachForm	selSet		"left"	2
+	-attachForm	selSet		"right"	2
+
+	-attachControl	setSel		"top"	2	selSet
+	-attachNone	setSel		"bottom"
+	-attachForm	setSel		"left"	2
+	-attachForm	setSel		"right"	2
+
+	-attachControl	miscel	"top"	2	setSel
+	-attachNone	miscel	"bottom"
+	-attachForm	miscel	"right"	2
+	-attachForm	miscel	"left"	2
+
+	-attachControl	scrollul		"top"	5	miscel
+	-attachControl	scrollul		"bottom"	7	updatul
+	-attachForm	scrollul		"left"	5
+	-attachForm	scrollul		"right"	5
+
+	-attachNone	updatul		"top"
+	-attachControl	updatul		"bottom"	0	Closul
+	-attachForm	updatul		"left"	5
+	-attachForm	updatul		"right"	5
+
+	-attachNone	Closul		"top"
+	-attachForm	Closul		"bottom"	5
+	-attachForm	Closul		"left"	5
+	-attachForm	Closul		"right"	5
+  mainFormul;
+  updateScroll;
+  showWindow $win;
+}
+
+selectionWizard;

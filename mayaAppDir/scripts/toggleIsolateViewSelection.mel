@@ -1,0 +1,51 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: Hotkey_toggle_isolate_view_selection_2 v0.0
+''    Author: Zza
+''    Last Updated: July 7, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=interface#1811
+''  
+''  History:
+''    Hotkey_toggle_isolate_view_selection v0.0 on March 1, 2002 by March 1, 2002
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+
+
+/*
+slighlty modified as the original missed out a bracket at the end of the script.
+Plus changed 'getPanel-up' to 'getPanel -wf'
+Changing it to withFocus allows it to be placed as a shelf button and as a hotkey.
+
+
+hotkey to toggle "view selection" on your current modeling panel.
+Copy/paste the following lines in your hotkey editor in maya.
+*/
+
+global proc toggleIsolateViewSelection( )
+{
+
+string $currentPanel;
+$currentPanel = `getPanel -wf`;
+$currentPanelType = `getPanel -to $currentPanel`;
+if ($currentPanelType == "modelPanel")
+	{
+	int $currentState = `isolateSelect -q -s $currentPanel`;
+	if ($currentState == 0)
+		{
+		enableIsolateSelect $currentPanel 1;
+		isolateSelect -state 1 $currentPanel;
+		}
+	if ($currentState == 1)
+		{
+		enableIsolateSelect $currentPanel 0;
+		isolateSelect -state 0 $currentPanel;
+		}
+	}
+}

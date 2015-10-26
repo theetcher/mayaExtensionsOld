@@ -1,0 +1,245 @@
+// LICENSE AGREEMENT
+// 
+// 
+// PLEASE READ THIS AGREEMENT CAREFULLY.
+// 
+// ALIAS | WAVEFRONT, A DIVISION OF SILICON GRAPHICS LIMITED
+// ("ALIAS|WAVEFRONT") IS WILLING TO LICENSE THIS SOFTWARE AND ANY
+// DOCUMENTATION THAT MAY BE PROVIDED THEREWITH (THE "SOFTWARE") TO YOU
+// ONLY ON THE CONDITION THAT ALL OF THE TERMS CONTAINED IN THIS LICENSE
+// AGREEMENT ARE ACCEPTED.
+// 
+// This is a license agreement and NOT an agreement for sale.
+// Alias|Wavefront continues to own all copies of the Software and all
+// intellectual property rights therein.  Your rights to use the Software
+// are specified in this Agreement, and Alias|Wavefront retains all rights
+// not expressly granted to you.
+// 
+// Alias|Wavefront grants to you a nonöexclusive, non-transferable license
+// to use the Software, subject to the terms and conditions of this
+// Agreement. Without the prior written consent of A|W, you may not: (i)
+// copy, modify or transfer copies of the Software (except one copy for
+// backup purposes); (ii) disassemble, decompile or unlock, reverse
+// engineer or translate, or in any manner decode the Software for any
+// reason; (iii) place the Software onto a server so that it is accessible
+// via a public network such as the Internet; or (iv) sublicense, lease,
+// distribute or rent the Software.  Alias|Wavefront and/or its suppliers
+// and/or its licensors retain all right, title, and interest in and to the
+// Software (including, without limitation, all trade secrets and
+// intellectual property rights therein) furnished by Alias|Wavefront and
+// to any backup copy thereof made by you.   You shall not remove any
+// copyright or proprietary rights notice included in with the Software and
+// shall reproduce all such notices on any backup copies made of the
+// Software made by you.
+// 
+// THE SOFTWARE IS PROVIDED AS IS.  ALIAS|WAVEFRONT DOES NOT WARRANT THAT
+// THE SOFTWARE WILL MEET YOUR REQUIREMENTS OR THAT ITS OPERATION WILL BE
+// UNINTERRUPTED OR ERROR-FREE. ALIAS|WAVEFRONT MAKES NO WARRANTIES,
+// EXPRESS, IMPLIED OR ARISING BY CUSTOM OR TRADE USAGE WITH RESPECT TO THE
+// SOFTWARE, AND WITHOUT LIMITING THE GENERALITY OF THE FOREGOING, TO THE
+// EXTENT PERMITTED BY APPLICABLE LAW, SPECIFICALLY DISCLAIMS ANY IMPLIED
+// WARRANTIES OF TITLE, NONINFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A
+// PARTICULAR PURPOSE. ALIAS|WAVEFRONT SHALL HAVE NO LIABILITY IN CONTRACT,
+// TORT OR OTHERWISE ARISING OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+// THIS AGREEMENT.  NO SUPPORT OR MAINTENANCE OF ANY KIND IS PROVIDED WITH
+// RESPECT TO THE SOFTWARE.
+// 
+// This Agreement is effective until terminated.   If you breach of any of
+// your obligations hereunder, Alias|Wavefront may terminate this Agreement
+// and the license provided hereunder by giving written notice of
+// termination to you, effective immediately upon its sending.  Upon
+// termination, you must immediately cease all use of the Software and
+// destroy all copies of the Software in your possession, custody or
+// control.  This Agreement shall be governed by the substantive law of the
+// Province of Ontario, Canada, without regard to its conflicts of law
+// principles.  This Agreement shall be binding upon and enure to the
+// benefit of the parties and their respective successors, assigns and
+// legal representatives, provided, however, that your rights and
+// obligations hereunder may not be assigned, sublicensed or otherwise
+// transferred in whole or in part, without the prior written consent of
+// Alias|Wavefront.
+// 
+// Copyright (c) 2001 Alias|Wavefront, a division of Silicon Graphics
+// Limited. All rights reserved.
+//
+//
+//  Alias|Wavefront Script File
+//  MODIFY THIS AT YOUR OWN RISK
+//
+// ----------------------------------------------------------------------
+//
+// Creation Date:  May 2, 2000
+// Authors:         jp, lag
+//
+//
+//  Procedure Name:
+//
+//      swSprites 
+//
+//  Description:
+//
+//     	Use this script to create software renderable "particle sprites".
+//
+//	Creates a camera called spriteCam. Also creates a polygon plane and
+//	attaches one instance (pseudoCopy) of the plane to each particle in the selected particle 
+// 	object. This is done using the particle instancer. Expressions are added
+//	to the particle object so the orientation of the polygon planes will always aim
+//	at the spriteCam in the same fasion that hardware particles do.
+//
+//	The advantage is that you can use SW rendering to gain access to reflections/refractions, shadows,
+// 	motion blur, etc. Hardware particle sprites can only be rendered in the HW render buffer
+//	
+//	This script also creates a lambert shader and assigns that shader to the polygon
+//	plane with a premade default file texture called snowFlakeWithAlpha.rgb. You can use
+//	any file texture you want by replacing the file texture path with another image
+//	path (just locate the shader attached to the plane and browse to the new file texture).
+//      This script requires that the image used contains an alpha channel.
+//		
+//     	
+//  Usage:
+//   Make sure there is a particle object in your scene. Select the particle object
+//   and type swSprites in the command line or Script Editor. For this script to work
+//   without errors, you should also have the image snowFlakeWithAlpha.rgb in the sourceimages
+//   directory of your current maya project.
+
+proc makeSpriteCam()
+  {
+	camera -centerOfInterest 5 -focalLength 35 -lensSqueezeRatio 1 -cameraScale 1 -horizontalFilmAperture 1.4173 -horizontalFilmOffset 0 -verticalFilmAperture 0.9449 -verticalFilmOffset 0 -filmFit Horizontal -overscan 1 -motionBlur 0 -shutterAngle 144 -nearClipPlane 0.01 -farClipPlane 1000 -orthographic 0 -orthographicWidth 30; objectMoveCommand; cameraMakeNode 1 "";
+	rename spriteCam;
+	CreateLocator;
+	rename "locator1" "camLocal";
+	parent camLocal spriteCam ;
+	duplicate -rr;
+	rename "camLocal1" "camUpLocal";
+	setAttr "camUpLocal.translateY" 2;
+	CreateLocator;
+	rename "locator1" "camWorld";
+	duplicate -rr;
+	rename "camWorld1" "camUpWorld";
+	select -cl  ;
+	select -r camLocal ;
+	select -add camWorld ;
+	performPointConstraint 0;
+	pointConstraint -weight 1;
+	select -cl;
+	select -r camUpLocal;
+	select -add camUpWorld;
+	performPointConstraint 0;
+	pointConstraint -weight 1;
+  }
+
+ global proc swSprites ()
+{
+	
+	string $particleName[0] = `ls -type "particle"`;
+	
+	if (size($particleName) < 1)
+	   error( "No Particle object is selected, please select one particle object that you want to setup software sprites for");
+	
+	else
+     {	
+	
+	makeSpriteCam;
+	
+	print ("Adding 4 new vector array attributes to " + $particleName[0] + "\n");
+
+	addAttr -ln spriteWorldUp0 -dt vectorArray  $particleName[0];
+	addAttr -ln spriteWorldUp -dt vectorArray  $particleName[0];
+	setAttr -e -keyable true ($particleName[0] + ".spriteWorldUp");
+	
+	addAttr -ln spriteAimPos0 -dt vectorArray  $particleName[0];
+	addAttr -ln spriteAimPos -dt vectorArray  $particleName[0];
+	setAttr -e -keyable true ($particleName[0] + ".spriteAimPos");
+
+	addAttr -ln spriteAimAxis0 -dt vectorArray  $particleName[0];
+	addAttr -ln spriteAimAxis -dt vectorArray  $particleName[0];
+	setAttr -e -keyable true ($particleName[0] + ".spriteAimAxis");
+
+	addAttr -ln spriteAimUpAxis0 -dt vectorArray  $particleName[0];
+	addAttr -ln spriteAimUpAxis -dt vectorArray  $particleName[0];
+	setAttr -e -keyable true ($particleName[0] + ".spriteAimUpAxis");
+
+//create particle expressions
+
+	dynExpression -s "spriteAimAxis = <<0,1,0>>;\r\nspriteAimUpAxis = <<0,0,1>>;\r\nvector $camPos = <<camWorld.tx, camWorld.ty, camWorld.tz>>;\r\nvector $camUp = <<camUpWorld.tx, camUpWorld.ty, camUpWorld.tz>>;\r\nvector $upDir = $camUp - $camPos;\r\nspriteWorldUp = $upDir;" -c particleShape1;
+	dynExpression -s "spriteAimPos = <<spriteCam.tx, spriteCam.ty, spriteCam.tz>>;\r\nvector $camPos = <<camWorld.tx, camWorld.ty, camWorld.tz>>;\r\nvector $camUp = <<camUpWorld.tx, camUpWorld.ty, camUpWorld.tz>>;\r\nvector $upDir = $camUp - $camPos;\r\nspriteWorldUp = $upDir;" -r particleShape1;
+	
+
+//create a polygon plane and use the particle instancer to attach it to each particle
+
+	polyPlane -w 1 -h 1 -sx 10 -sy 10 -ax 0 1 0 -tx 1 -ch 1;
+	rename "pPlane1" "spritePlane";
+	particleInstancer  -addObject -object  spritePlane -cycle None -cycleStep 1 -cycleStepUnits Frames -levelOfDetail Geometry -rotationUnits Degrees -rotationOrder XYZ -position worldPosition -aimPosition spriteAimPos -aimAxis spriteAimAxis -aimUpAxis spriteAimUpAxis -aimWorldUp spriteWorldUp -age age $particleName;
+
+//set the layout and camera so the user is looking through the sprite camera.
+
+	setNamedPanelLayout "Persp/Outliner";
+	lookThroughModelPanel spriteCamShape modelPanel4;
+
+//build a lambert shader with a reverse node on transparency and assign it
+//to the particles
+
+	string $shadeName = "swSpriteSG";
+	select -clear ;
+	$lamb = `shadingNode -asShader lambert`;
+	sets -renderable true -noSurfaceShader true -empty -name $shadeName;
+	connectAttr -f ($lamb + ".outColor ") ($shadeName + ".surfaceShader");
+ 
+ //hook up a file texture to the color of the lambert
+	$fileTex = `shadingNode -asTexture file`;
+	$place = `shadingNode -asUtility place2dTexture`;
+	connectAttr -f ($place + ".coverage ") ($fileTex + ".coverage");
+	connectAttr -f ($place + ".translateFrame ") ($fileTex + ".translateFrame");
+	connectAttr -f ($place + ".rotateFrame ") ($fileTex + ".rotateFrame");
+	connectAttr -f ($place + ".mirror ") ($fileTex + ".mirror");
+	connectAttr -f ($place + ".stagger ") ($fileTex + ".stagger");
+	connectAttr -f ($place + ".wrapU ") ($fileTex + ".wrapU");
+	connectAttr -f ($place + ".wrapV ") ($fileTex + ".wrapV");
+	connectAttr -f ($place + ".repeatUV ") ($fileTex + ".repeatUV");
+	connectAttr -f ($place + ".offset ") ($fileTex + ".offset");
+	connectAttr -f ($place + ".rotateUV ") ($fileTex + ".rotateUV");
+	connectAttr ($place + ".outUV ") ($fileTex + ".uv");
+	connectAttr ($place + ".outUvFilterSize ") ($fileTex + ".uvFilterSize");
+	
+	setAttr -type "string" ($fileTex + ".fileTextureName ") ("sourceimages/snowflake_wAlpha.rgb");
+	
+//create a reverse node and hook it from the alpha of the file texture to the transparency of the shader. 
+//This is done so the alpha
+//channel of the mapped image will render properly in the sw render. If this isn't done, 
+//the alpha punches out the image in the hw view of the persp window but not when rendered in the
+//final image. 
+
+	$reverse = `shadingNode -asUtility reverse`;
+	
+	connectAttr -f ($fileTex + ".outAlpha") ($reverse + ".inputX");
+	connectAttr -f ($fileTex + ".outAlpha") ($reverse + ".inputY");
+	connectAttr -f ($fileTex + ".outAlpha") ($reverse + ".inputZ");
+	
+	connectAttr -f ($reverse + ".output ")  ($lamb + ".transparency");
+
+//Assign the material to the polygon "sprite"
+	
+	select -clear; 
+	select spritePlane; 
+	sets -e -forceElement $shadeName;
+	
+//Frame the camera on the particles
+	
+	select -clear;
+	select $particleName[0]; 
+	setFocus modelPanel4;
+	string $camFoc = `modelEditor -q -camera modelPanel4`;viewFit $camFoc;
+	
+//Advnace the timeline to make sure the creation/runtime expressions evaluate.
+
+	currentTime 9;
+	playButtonStepForward;
+	
+	print ("Advancing and the frame number so the expressions evaluate properly for swSprites " + "\n");
+
+	} //close for else statement
+};
+
+//swSprites
+
+  

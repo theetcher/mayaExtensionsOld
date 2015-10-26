@@ -1,0 +1,390 @@
+
+// objects cleanup, which was converted from Softimage through Polytrans //
+
+global proc fix_SIImportCleanup( )
+{
+
+
+	string $decision = confirmDialog ("-title","Confirmation",
+			"-message","This will start Softimage Import Cleanup",
+			"-button","OK",
+			"-button","Cancel");
+
+	if ($decision == "dismiss" || $decision == "Cancel") error "Operation was cancelled\n";
+
+	string $fileAllTextures[];
+	$fileAllTextures = `ls -typ file`;
+	
+	string $meshList[];
+	$meshList = `ls -l -type mesh`;
+
+	if ( ($fileAllTextures[0] == "") || ($meshList[0] == "") )
+		{
+		confirmDialog ("-title","Error !!!",
+					"-message","There is no objects to cleanup.",
+					"-button","OK");
+		error "There is no objects to cleanup.\n";
+		}
+
+	
+	
+	
+	
+	print ("\n\n\n\n--- Imported Materials Cleanup Started ---\n\n");
+	
+	
+		
+	progressWindow
+	-title "Working"
+	-status "Deleting unused render nodes"
+	-isInterruptable 0;
+
+	/////////////////////
+
+	MLdeleteUnused;
+	
+	/////////////////////
+
+	progressWindow -endProgress;
+
+	string $fileTextures[];
+	string $crntMaterials[];
+	string $crntSGs[];
+	string $crntObjects[];
+	string $tmp;
+	string $tmp1;
+	string $tmpArr1[];
+	string $cmd = "";
+	string $assignCandidate;
+	string $assignSG[];
+	int $intTmp = 0;
+	int $Erased = size (`ls -typ lambert`);
+
+
+
+
+////// detecting all file textures
+
+	$fileAllTextures = `ls -typ file`;
+	
+////// detecting only color maps
+
+	float $amount = 0;
+	float $MaxAmount = size ($fileAllTextures);
+	progressWindow
+	-title "Working"
+	-status "Detecting color maps"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+
+
+	for ($tmp in $fileAllTextures)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		$tmpArr1 = `listConnections -p 0 -t lambert $tmp`;
+		if ( $tmpArr1[0] != "")
+			{
+			$fileTextures[$intTmp] = $tmp;
+			$intTmp ++;
+			}
+		}
+			
+	/////////////////////
+
+	progressWindow -endProgress;
+
+////// working
+
+	float $amount = 0;
+	float $MaxAmount = size ($fileTextures);
+	progressWindow
+	-title "Working"
+	-status "Optimizing materialz"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+
+
+	for ($tmp in $fileTextures)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		$crntMaterials = `listConnections -p 0 -t lambert $tmp`;
+		$crntSGs = `listConnections -p 0 -t shadingEngine $crntMaterials`;
+		$cmd = "";
+		
+		for ($intTmp=0; $intTmp<`size $crntSGs`; $intTmp++)
+			$cmd = $cmd + $crntSGs[$intTmp]+" ";
+
+		if (1 != `size $crntSGs`)
+			$crntObjects = eval("sets -un "+$cmd);
+			else
+			$crntObjects = eval("sets -q "+$cmd);
+
+		
+		$assignCandidate = $crntMaterials[0];
+		for ($tmp1 in $crntMaterials)
+			{
+			$tmpArr1 = `listConnections -p 0 -t bump2d $tmp1`;
+			if ($tmpArr1[0] != "") 
+				{
+				$assignCandidate = $tmp1;
+				break;
+				}
+			}
+		$assignSG = `listConnections -p 0 -t shadingEngine $assignCandidate`;
+		sets -e -forceElement $assignSG $crntObjects; 
+		
+		
+		}
+	
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+/////////////////////////////////////////////////////////////////////	
+	
+	progressWindow
+	-title "Working"
+	-status "Reducing material list"
+	-isInterruptable 0;
+
+	/////////////////////
+
+	MLdeleteUnused;
+	
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+
+
+	string $materials[] = `ls -mat`;
+	string $SG[];
+	float $amount = 0;
+	float $MaxAmount = size ($materials);
+	progressWindow
+	-title "Working"
+	-status "Renaming Nodes"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+	/////////////////////
+
+	for ($tmp in $materials)
+		{
+
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+
+		$SG = `listConnections -p 0 -t shadingEngine $tmp`;
+		$err = catch(`rename $tmp "Mat"`);
+		if ($err == 0)
+			{
+			catch(`rename $SG[0] "SG"`);
+			}
+		}
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+
+
+// Breaking connection to Ambient
+	
+	string $MatList[];
+	string $MatType[];
+	string $Inputs[];
+	$MatList = `ls -l -mat`;
+
+	float $amount = 0;
+	float $MaxAmount = size ($MatList);
+	progressWindow
+	-title "Working"
+	-status "Breaking connection to Ambient"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+
+	/////////////////////
+
+	for ($tmp in $MatList)
+		{
+		$MatType = `ls -st $tmp`;
+		if ($MatType[1] == "lambert" || $MatType[1] == "phong" || $MatType[1] == "blinn" || $MatType[1] == "phongE")
+			{
+			$Inputs = eval("listConnections -p 0 -t file "+$tmp+".ambc");
+			if ($Inputs[0] != "") catch(`eval("disconnectAttr "+$Inputs[0]+".outColor "+$tmp+".ambc")`);
+			}
+
+		};
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+
+// Setting Refl, Spec, Amb, Inc -> 0
+	
+	string $MatList[];
+	string $MatType[];
+	$MatList = `ls -l -mat`;
+
+	float $amount = 0;
+	float $MaxAmount = size ($MatList);
+	progressWindow
+	-title "Working"
+	-status "Setting Refl, Spec, Amb, Inc -> 0"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+
+	/////////////////////
+
+	for ($tmp in $MatList)
+		{
+		$amount = $amount + 1;
+		progressWindow -edit -progress $amount;
+		$MatType = `ls -st $tmp`;
+		if ($MatType[1] == "phong" || $MatType[1] == "blinn" || $MatType[1] == "phongE")
+			{
+			eval("setAttr "+$tmp+".rfl 0");
+			eval("setAttr "+$tmp+".sc 0 0 0");
+			}
+		if ($MatType[1] == "lambert" || $MatType[1] == "phong" || $MatType[1] == "blinn" || $MatType[1] == "phongE")
+			{
+			eval("setAttr "+$tmp+".ambc 0 0 0");
+			eval("setAttr "+$tmp+".ic 0 0 0");
+			}
+		};
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+
+
+// correcting Texture nodes
+	
+	string $MatList[];
+	string $MatType[];
+	$fileAllTextures = `ls -typ file`;
+
+	float $amount = 0;
+	float $MaxAmount = size ($fileAllTextures);
+	progressWindow
+	-title "Working"
+	-status "correcting Texture nodes"
+	-isInterruptable 0
+	-min 0
+	-max $MaxAmount;
+
+
+	/////////////////////
+
+	for ($tmp in $fileAllTextures){
+		setAttr ($tmp+".alphaGain") 1;
+		setAttr ($tmp+".alphaOffset") 0;
+	};
+
+	/////////////////////
+
+	progressWindow -endProgress;
+
+	
+// Correcting Placements
+	
+	string $PlaceList[];
+	$PlaceList = `ls -l -et place2dTexture`;
+	float $Repeat;
+	
+	if ($PlaceList[0] != "")
+		{
+		float $amount = 0;
+		float $MaxAmount = size ($PlaceList);
+		progressWindow
+		-title "Working"
+		-status "Correcting Placements"
+		-isInterruptable 0
+		-min 0
+		-max $MaxAmount;
+
+
+		/////////////////////
+
+		for ($tmp in $PlaceList){
+			$amount = $amount + 1;
+			progressWindow -edit -progress $amount;
+			
+			eval("setAttr "+$tmp+".wu 1");
+			eval("setAttr "+$tmp+".wv 1");
+			eval("setAttr "+$tmp+".ofu 0");
+			eval("setAttr "+$tmp+".ofv 0");
+			
+			$Repeat = eval("getAttr "+$tmp+".reu");
+			eval("setAttr "+$tmp+".reu "+trunc($Repeat));
+			$Repeat = eval("getAttr "+$tmp+".rev");
+			eval("setAttr "+$tmp+".rev "+trunc($Repeat));
+			
+		}
+
+		/////////////////////
+
+		progressWindow -endProgress;
+		
+	}
+
+
+
+// Deleting construction history
+
+	progressWindow
+	-title "Working"
+	-status "Deleting construction history"
+	-isInterruptable 0;
+
+	/////////////////////
+
+	delete -all -constructionHistory;
+
+	/////////////////////
+
+	progressWindow -endProgress;
+//	waitCursor -state off;
+
+	// deleting animation script nodes. ones i found millions of them in scene wich was assemblied from Softimage objects
+	delete (`ls -type "script" "*animationScriptNode*"`);
+	delete (`ls -type "brush"`);
+
+	cleanUpScene 1;
+	
+	source deleteEmptyShapes; // one useful script
+	deleteEmptyShapes;
+
+
+	$Erased = $Erased - size (`ls -typ lambert`);
+	string $Message = "Imported Materials CleanUp successfully finished.\n "+$Erased+" material(s) erased.";
+	confirmDialog -title "Information" -message $Message
+	-button "OK" -defaultButton "OK";
+
+
+
+
+	print ("\n\n--- Imported Materials Cleanup Finished ---\n\n\n\n");
+}

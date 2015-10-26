@@ -1,0 +1,17 @@
+global proc animatedDuplicate ( )
+{
+        int $startTime = `playbackOptions -q -min`;
+        int $endTime = `playbackOptions -q -max`;
+        int $tmp1;
+        int $crntTime;
+        for ( $tmp1 = $startTime; $tmp1 <= $endTime; $tmp1++)
+		{
+		duplicate s;
+		$crntTime = `getAttr time1.outTime`;
+		$crntTime = $crntTime+1;
+		eval("playButtonStepForward");
+		
+		print ($crntTime+"\n");
+		}
+
+}

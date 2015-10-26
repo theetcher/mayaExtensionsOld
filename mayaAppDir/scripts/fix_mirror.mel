@@ -1,0 +1,14 @@
+
+global proc fix_mirror( int $mirrParam[] )
+{
+
+	string $selElem;
+	string $selection[] = `selectedNodes`;
+
+	for ($selELem in $selection){
+		scale -r $mirrParam[0] $mirrParam[1] $mirrParam[2] $selELem;
+		makeIdentity -apply true -t 0 -r 0 -s 1 $selELem;
+	}
+
+
+}

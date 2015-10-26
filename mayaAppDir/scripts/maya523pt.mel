@@ -1,0 +1,109 @@
+/*  This file downloaded from Highend3d.com
+''
+''  Highend3d.com File Information:
+''
+''    Script Name: maya423 v1.0
+''    Author: Morris Olmsted
+''    Last Updated: July 5, 2001
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=utilities#1132
+''
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+// maya423.mel --------------------------------------------------- //
+//                                                                 //
+// Script Name:   maya423                                          //
+//                                                                 //
+// Creation Date: 06/13/01                                         //
+//                                                                 //
+// Last Updated:  06/14/01                                         //
+//                                                                 //
+// Author:        Morris Olmsted                                   //
+//                                                                 //
+// Description:   This script was created specifically to make a   //
+//                Maya 4.0 Beta file into a Maya 3.01 file with a  //
+//                simple GUI that identifies where to save the     //
+//                current file as a .ma Maya file.                 //
+//                                                                 //
+//                                                                 //
+// --------------------------------------------------------------- //
+global string $myExportedFile;
+
+
+// --------------------------------------------------------------- //
+// This procedure simply opens a window to house the $maya423      //
+// program.                                                        //
+// --------------------------------------------------------------- //
+global proc maya523pt()
+{
+    projectViewer ExportAll;
+    global string $myExportedFile;
+
+    string $maya3 = ("requires maya \"3.0\";\n");
+    string $maya4 = ("requires maya \"5.0\";\n");
+
+    string $fullFileName = $myExportedFile;
+    string $bufferFileName = "C:/tmpBuffer.tmp.ma";
+
+    if ($fullFileName != "")
+    {
+        int $opened = `fopen $fullFileName "r"`;
+        int $buffer = `fopen $bufferFileName "w"`;
+
+        if ($opened)    // if it was succesfully opened //
+        {
+            string $nextLine = `fgetline $opened`;
+
+            while ( (`size $nextLine` > 0) && (!`feof $opened`) )
+            {
+                if ( ($nextLine == $maya4) || (1 == gmatch($nextLine,"*fileInfo*")) )
+                    fprint $buffer $maya3;
+                else
+                    fprint $buffer $nextLine;
+
+                $nextLine = `fgetline $opened`;
+
+            }    // end of while loop //
+
+            fclose $opened;
+            fclose $buffer;
+
+        }    // end of if loop //
+
+        int $opened = `fopen $fullFileName "w"`;
+        int $buffer = `fopen $bufferFileName "r"`;
+
+        string $nextLine = `fgetline $buffer`;
+
+        while ( (`size $nextLine`>0) && (!`feof $buffer`) )
+        {
+            fprint $opened $nextLine;
+            $nextLine = `fgetline $buffer`;
+
+        }    // end of while loop //
+
+        fclose $opened;
+        fclose $buffer;
+
+        sysFile -del "C:\\tmpBuffer.tmp.ma";    // call to delete the tmpBuffer.ma file //
+
+    }    // end of if loop //
+
+    else
+        print ("\nNo action taken!\n");
+
+    if ($fullFileName != "")
+	{
+	system ("start D:/AW/Maya3.0/bin/maya.exe -prompt -command ptConvertString -file "+ $myExportedFile) ;
+	}
+
+    $myExportedFile = "";    // reset this global variable to make sure I don't misread the information after a second try //
+
+}    // end of procedure maya423 //
+
+
+
+
