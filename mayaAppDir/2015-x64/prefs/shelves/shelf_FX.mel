@@ -215,7 +215,7 @@ global proc shelf_FX () {
         -style "iconOnly" 
         -marginWidth 1
         -marginHeight 1
-        -command "from fxpt import fx_flyCamera\nfrom fxpt.fx_utils import rreload\nrreload.rreload(fx_flyCamera)\nfx_flyCamera.run()" 
+        -command "from fxpt import fx_fly_camera\nfrom fxpt.fx_utils import rreload\nrreload.rreload(fx_fly_camera)\nfx_fly_camera.run()" 
         -sourceType "python" 
         -commandRepeatable 1
         -flat 1

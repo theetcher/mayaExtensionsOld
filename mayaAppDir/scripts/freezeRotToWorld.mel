@@ -1,6 +1,3 @@
-
-// Combines objects, parents it to the first selected object's parent and deletes history //
-
 global proc freezeRotToWorld( )
 {
 
